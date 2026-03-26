@@ -79,8 +79,13 @@ local gems = Action()
 
 function gems.onUse(player, item, fromPosition, target, toPosition, isHotkey)
 	local questStorage = player:getStorageValue(Storage.Quest.U10_70.LionsRock.Questline)
-	if questStorage == 10 or questStorage == 11 then
-		player:setStorageValue(Storage.Quest.U10_70.LionsRock.Questline, 6)
+	if questStorage >= 11 then
+		if player:getStorageValue(Storage.Quest.U10_70.LionsRock.Time) < os.time() then
+			player:setStorageValue(Storage.Quest.U10_70.LionsRock.Questline, 6)
+			player:setStorageValue(Storage.Quest.U10_70.LionsRock.LionsRockFields, 0)
+		else
+			return true
+		end
 	end
 
 	-- Small emerald for Kilmaresh quest
@@ -173,7 +178,7 @@ function gems.onUse(player, item, fromPosition, target, toPosition, isHotkey)
 				item:remove(1)
 				player:setStorageValue(setting.storage, setting.value + 1)
 				addEvent(lionsRockCreateField, 2 * 1000, setting.itemPos, setting.fieldId, setting.storage)
-				addEvent(lionsRockFieldReset, 60 * 1000)
+				addEvent(lionsRockFieldReset, 60 * 1000, setting)
 				return true
 			end
 		end
