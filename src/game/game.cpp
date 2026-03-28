@@ -8563,11 +8563,9 @@ void Game::checkImbuementsAndSereneStatus() {
 			continue;
 		}
 
-		const auto &party = mapPlayer->getParty();
-		bool hasNearbyPartyMembers = party ? hasPartyMembersNearby(mapPlayer) : false;
 		bool hasLessThanSixMonsters = isPlayerNoBoxed(mapPlayer);
 
-		bool condition1 = !party || !hasNearbyPartyMembers;
+		bool condition1 = !hasNearbyNonPartyPlayers(mapPlayer);
 		bool condition2 = hasLessThanSixMonsters;
 
 		mapPlayer->setSerene(condition1 && condition2);
