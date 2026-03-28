@@ -12034,6 +12034,38 @@ bool Game::hasPartyMembersNearby(const std::shared_ptr<Player> &player) {
 	return false;
 }
 
+bool Game::hasNearbyNonPartyPlayers(const std::shared_ptr<Player> &player) {
+	if (!player) {
+		return false;
+	}
+
+	const Position &centerPos = player->getPosition();
+	for (int offsetX = -1; offsetX <= 1; ++offsetX) {
+		for (int offsetY = -1; offsetY <= 1; ++offsetY) {
+			if (offsetX == 0 && offsetY == 0) {
+				continue;
+			}
+
+			const auto &tile = g_game().map.getTile(static_cast<uint16_t>(centerPos.x + offsetX), static_cast<uint16_t>(centerPos.y + offsetY), centerPos.z);
+			if (!tile) {
+				continue;
+			}
+
+			const auto &topCreature = tile->getTopCreature();
+			if (!topCreature) {
+				continue;
+			}
+
+			const auto &nearbyPlayer = topCreature->getPlayer();
+			if (nearbyPlayer && nearbyPlayer != player) {
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
 bool Game::isPlayerNoBoxed(const std::shared_ptr<Player> &player) {
 	if (!player) {
 		return true;
