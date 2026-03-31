@@ -34,6 +34,8 @@ struct Outfit {
 		name(std::move(initName)), from(std::move(initFrom)), premium(initPremium), unlocked(initUnlocked), lookType(initLookType) {
 		std::memset(skills, 0, sizeof(skills));
 		std::memset(stats, 0, sizeof(stats));
+		std::memset(addonSkills, 0, sizeof(addonSkills));
+		std::memset(addonStats, 0, sizeof(addonStats));
 	}
 
 	std::string name = "";
@@ -63,6 +65,16 @@ struct Outfit {
 
 	int32_t skills[SKILL_LAST + 1] = { 0 };
 	int32_t stats[STAT_LAST + 1] = { 0 };
+
+	// Per-addon bonuses: index 0 = addon 1, index 1 = addon 2
+	int32_t addonSkills[2][SKILL_LAST + 1];
+	int32_t addonStats[2][STAT_LAST + 1];
+	double addonLifeLeechChance[2] = { 0.0, 0.0 };
+	double addonLifeLeechAmount[2] = { 0.0, 0.0 };
+	double addonManaLeechChance[2] = { 0.0, 0.0 };
+	double addonManaLeechAmount[2] = { 0.0, 0.0 };
+	double addonCriticalChance[2] = { 0.0, 0.0 };
+	double addonCriticalDamage[2] = { 0.0, 0.0 };
 };
 
 struct ProtocolOutfit {
@@ -88,5 +100,5 @@ public:
 	uint32_t getOutfitId(PlayerSex_t sex, uint16_t lookType) const;
 
 	bool addAttributes(uint32_t playerId, uint32_t outfitId, uint16_t sex, uint16_t addons);
-	bool removeAttributes(uint32_t playerId, uint32_t outfitId, uint16_t sex);
+	bool removeAttributes(uint32_t playerId, uint32_t outfitId, uint16_t sex, uint16_t addons);
 };

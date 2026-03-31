@@ -6753,17 +6753,11 @@ bool Player::changeOutfit(Outfit_t outfit, bool checkList) {
 	requestedOutfit = false;
 	if (outfitAttributes) {
 		auto oldId = Outfits::getInstance().getOutfitId(getSex(), defaultOutfit.lookType);
-		if (defaultOutfit.lookAddons == 3) {
-			outfitAttributes = !Outfits::getInstance().removeAttributes(getID(), oldId, getSex());
-		}
+	outfitAttributes = !Outfits::getInstance().removeAttributes(getID(), oldId, getSex(), defaultOutfit.lookAddons);
 	}
 
 	defaultOutfit = outfit;
-	if (outfit.lookAddons == 3) {
-		outfitAttributes = Outfits::getInstance().addAttributes(getID(), outfitId, getSex(), defaultOutfit.lookAddons);
-	} else {
-		outfitAttributes = false;
-	}
+	outfitAttributes = Outfits::getInstance().addAttributes(getID(), outfitId, getSex(), defaultOutfit.lookAddons);
 
 	return true;
 }
@@ -11213,11 +11207,7 @@ void Player::onCreatureAppear(const std::shared_ptr<Creature> &creature, bool is
 
 		const auto &outfit = Outfits::getInstance().getOutfitByLookType(getPlayer(), defaultOutfit.lookType);
 		if (outfit) {
-			if (defaultOutfit.lookAddons == 3) {
-				outfitAttributes = Outfits::getInstance().addAttributes(getID(), defaultOutfit.lookType, getSex(), defaultOutfit.lookAddons);
-			} else {
-				outfitAttributes = false;
-			}
+		outfitAttributes = Outfits::getInstance().addAttributes(getID(), defaultOutfit.lookType, getSex(), defaultOutfit.lookAddons);
 		}
 
 		if (g_configManager().getBoolean(ALWAYS_MOUNT_LOGIN) && getCurrentMount() != 0) {

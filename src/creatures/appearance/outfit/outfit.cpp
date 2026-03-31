@@ -181,6 +181,82 @@ bool Outfits::loadFromXml() {
 			}
 		}
 
+		// Parse per-addon bonuses: <addon id="1"> and <addon id="2"> child nodes
+		auto parseAddonBonuses = [&outfit](pugi::xml_node addonNode, int idx) {
+			if (auto skillsNode = addonNode.child("skills")) {
+				for (auto skillNode : skillsNode.children()) {
+					std::string skillName = skillNode.name();
+					int32_t skillValue = skillNode.attribute("value").as_int();
+					if (skillName == "fist") {
+						outfit->addonSkills[idx][SKILL_FIST] += skillValue;
+					} else if (skillName == "club") {
+						outfit->addonSkills[idx][SKILL_CLUB] += skillValue;
+					} else if (skillName == "axe") {
+						outfit->addonSkills[idx][SKILL_AXE] += skillValue;
+					} else if (skillName == "sword") {
+						outfit->addonSkills[idx][SKILL_SWORD] += skillValue;
+					} else if (skillName == "distance" || skillName == "dist") {
+						outfit->addonSkills[idx][SKILL_DISTANCE] += skillValue;
+					} else if (skillName == "shielding" || skillName == "shield") {
+						outfit->addonSkills[idx][SKILL_SHIELD] += skillValue;
+					} else if (skillName == "fishing" || skillName == "fish") {
+						outfit->addonSkills[idx][SKILL_FISHING] += skillValue;
+					} else if (skillName == "melee") {
+						outfit->addonSkills[idx][SKILL_FIST] += skillValue;
+						outfit->addonSkills[idx][SKILL_CLUB] += skillValue;
+						outfit->addonSkills[idx][SKILL_SWORD] += skillValue;
+						outfit->addonSkills[idx][SKILL_AXE] += skillValue;
+					} else if (skillName == "weapon" || skillName == "weapons") {
+						outfit->addonSkills[idx][SKILL_CLUB] += skillValue;
+						outfit->addonSkills[idx][SKILL_SWORD] += skillValue;
+						outfit->addonSkills[idx][SKILL_AXE] += skillValue;
+						outfit->addonSkills[idx][SKILL_DISTANCE] += skillValue;
+					}
+				}
+			}
+			if (auto statsNode = addonNode.child("stats")) {
+				for (auto statNode : statsNode.children()) {
+					std::string statName = statNode.name();
+					int32_t statValue = statNode.attribute("value").as_int();
+					if (statName == "maxHealth" || statName == "maxhealth") {
+						outfit->addonStats[idx][STAT_MAXHITPOINTS] += statValue;
+					} else if (statName == "maxMana" || statName == "maxmana") {
+						outfit->addonStats[idx][STAT_MAXMANAPOINTS] += statValue;
+					} else if (statName == "cap" || statName == "capacity") {
+						outfit->addonStats[idx][STAT_CAPACITY] += statValue * 100;
+					} else if (statName == "magLevel" || statName == "magicLevel" || statName == "magiclevel" || statName == "ml") {
+						outfit->addonStats[idx][STAT_MAGICPOINTS] += statValue;
+					}
+				}
+			}
+			if (auto imbuingNode = addonNode.child("imbuing")) {
+				for (auto imbuing : imbuingNode.children()) {
+					std::string imbuingName = imbuing.name();
+					double imbuingValue = imbuing.attribute("value").as_double() * 100.0;
+					if (imbuingName == "lifeLeechChance" || imbuingName == "lifeleechchance") {
+						outfit->addonLifeLeechChance[idx] += imbuingValue;
+					} else if (imbuingName == "lifeleechAmount" || imbuingName == "lifeleechamount") {
+						outfit->addonLifeLeechAmount[idx] += imbuingValue;
+					} else if (imbuingName == "manaLeechChance" || imbuingName == "manaleechchance") {
+						outfit->addonManaLeechChance[idx] += imbuingValue;
+					} else if (imbuingName == "manaLeechAmount" || imbuingName == "manaleechamount") {
+						outfit->addonManaLeechAmount[idx] += imbuingValue;
+					} else if (imbuingName == "criticalChance" || imbuingName == "criticalchance") {
+						outfit->addonCriticalChance[idx] += imbuingValue;
+					} else if (imbuingName == "criticalDamage" || imbuingName == "criticaldamage") {
+						outfit->addonCriticalDamage[idx] += imbuingValue;
+					}
+				}
+			}
+		};
+
+		for (auto addonNode : outfitNode.children("addon")) {
+			int addonId = addonNode.attribute("id").as_int(0);
+			if (addonId == 1 || addonId == 2) {
+				parseAddonBonuses(addonNode, addonId - 1);
+			}
+		}
+
 		outfits[type].emplace_back(outfit);
 	}
 
@@ -345,6 +421,49 @@ bool Outfits::addAttributes(uint32_t playerId, uint32_t outfitId, uint16_t sex, 
 		}
 	}
 
+	// Apply per-addon bonuses based on the addons bitmask
+	for (int addonIdx = 0; addonIdx < 2; ++addonIdx) {
+		if (!(addons & (1 << addonIdx))) {
+			continue;
+		}
+		for (uint32_t i = SKILL_FIRST; i <= SKILL_LAST; ++i) {
+			if (outfit->addonSkills[addonIdx][i]) {
+				player->setVarSkill(static_cast<skills_t>(i), outfit->addonSkills[addonIdx][i]);
+				update = true;
+			}
+		}
+		if (outfit->addonLifeLeechChance[addonIdx] > 0) {
+			player->setVarSkill(SKILL_LIFE_LEECH_CHANCE, outfit->addonLifeLeechChance[addonIdx]);
+			update = true;
+		}
+		if (outfit->addonLifeLeechAmount[addonIdx] > 0) {
+			player->setVarSkill(SKILL_LIFE_LEECH_AMOUNT, outfit->addonLifeLeechAmount[addonIdx]);
+			update = true;
+		}
+		if (outfit->addonManaLeechChance[addonIdx] > 0) {
+			player->setVarSkill(SKILL_MANA_LEECH_CHANCE, outfit->addonManaLeechChance[addonIdx]);
+			update = true;
+		}
+		if (outfit->addonManaLeechAmount[addonIdx] > 0) {
+			player->setVarSkill(SKILL_MANA_LEECH_AMOUNT, outfit->addonManaLeechAmount[addonIdx]);
+			update = true;
+		}
+		if (outfit->addonCriticalChance[addonIdx] > 0) {
+			player->setVarSkill(SKILL_CRITICAL_HIT_CHANCE, outfit->addonCriticalChance[addonIdx]);
+			update = true;
+		}
+		if (outfit->addonCriticalDamage[addonIdx] > 0) {
+			player->setVarSkill(SKILL_CRITICAL_HIT_DAMAGE, outfit->addonCriticalDamage[addonIdx]);
+			update = true;
+		}
+		for (uint32_t s = STAT_FIRST; s <= STAT_LAST; ++s) {
+			if (outfit->addonStats[addonIdx][s]) {
+				player->setVarStats(static_cast<stats_t>(s), outfit->addonStats[addonIdx][s]);
+				update = true;
+			}
+		}
+	}
+
 	if (update) {
 		player->sendStats();
 		player->sendSkills();
@@ -352,7 +471,7 @@ bool Outfits::addAttributes(uint32_t playerId, uint32_t outfitId, uint16_t sex, 
 	return true;
 }
 
-bool Outfits::removeAttributes(uint32_t playerId, uint32_t outfitId, uint16_t sex) {
+bool Outfits::removeAttributes(uint32_t playerId, uint32_t outfitId, uint16_t sex, uint16_t addons) {
 	const auto &player = g_game().getPlayerByID(playerId);
 	if (!player) {
 		return false;
@@ -434,6 +553,49 @@ bool Outfits::removeAttributes(uint32_t playerId, uint32_t outfitId, uint16_t se
 		if (outfit->stats[s]) {
 			player->setVarStats(static_cast<stats_t>(s), -outfit->stats[s]);
 			update = true;
+		}
+	}
+
+	// Remove per-addon bonuses based on the addons bitmask
+	for (int addonIdx = 0; addonIdx < 2; ++addonIdx) {
+		if (!(addons & (1 << addonIdx))) {
+			continue;
+		}
+		for (uint32_t i = SKILL_FIRST; i <= SKILL_LAST; ++i) {
+			if (outfit->addonSkills[addonIdx][i]) {
+				player->setVarSkill(static_cast<skills_t>(i), -outfit->addonSkills[addonIdx][i]);
+				update = true;
+			}
+		}
+		if (outfit->addonLifeLeechChance[addonIdx] > 0) {
+			player->setVarSkill(SKILL_LIFE_LEECH_CHANCE, -outfit->addonLifeLeechChance[addonIdx]);
+			update = true;
+		}
+		if (outfit->addonLifeLeechAmount[addonIdx] > 0) {
+			player->setVarSkill(SKILL_LIFE_LEECH_AMOUNT, -outfit->addonLifeLeechAmount[addonIdx]);
+			update = true;
+		}
+		if (outfit->addonManaLeechChance[addonIdx] > 0) {
+			player->setVarSkill(SKILL_MANA_LEECH_CHANCE, -outfit->addonManaLeechChance[addonIdx]);
+			update = true;
+		}
+		if (outfit->addonManaLeechAmount[addonIdx] > 0) {
+			player->setVarSkill(SKILL_MANA_LEECH_AMOUNT, -outfit->addonManaLeechAmount[addonIdx]);
+			update = true;
+		}
+		if (outfit->addonCriticalChance[addonIdx] > 0) {
+			player->setVarSkill(SKILL_CRITICAL_HIT_CHANCE, -outfit->addonCriticalChance[addonIdx]);
+			update = true;
+		}
+		if (outfit->addonCriticalDamage[addonIdx] > 0) {
+			player->setVarSkill(SKILL_CRITICAL_HIT_DAMAGE, -outfit->addonCriticalDamage[addonIdx]);
+			update = true;
+		}
+		for (uint32_t s = STAT_FIRST; s <= STAT_LAST; ++s) {
+			if (outfit->addonStats[addonIdx][s]) {
+				player->setVarStats(static_cast<stats_t>(s), -outfit->addonStats[addonIdx][s]);
+				update = true;
+			}
 		}
 	}
 
