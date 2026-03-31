@@ -12304,7 +12304,7 @@ void Player::addWeaponProficiencyExperience(const std::shared_ptr<MonsterType> &
 			const BosstiaryRarity_t bosstiaryRace = mType->info.bosstiaryRace;
 			switch (bosstiaryRace) {
 				case BosstiaryRarity_t::RARITY_BANE:
-					addProficiencyExperience = 500;
+					addProficiencyExperience = 1000;
 					break;
 				case BosstiaryRarity_t::RARITY_ARCHFOE:
 					addProficiencyExperience = 5000;
@@ -12321,22 +12321,22 @@ void Player::addWeaponProficiencyExperience(const std::shared_ptr<MonsterType> &
 			const uint8_t bestiaryStars = mType->info.bestiaryStars;
 			switch (bestiaryStars) {
 				case 0:
-					addProficiencyExperience = 1;
+					addProficiencyExperience = 10;
 					break;
 				case 1:
-					addProficiencyExperience = 30;
+					addProficiencyExperience = 60;
 					break;
 				case 2:
-					addProficiencyExperience = 70;
+					addProficiencyExperience = 140;
 					break;
 				case 3:
-					addProficiencyExperience = 100;
+					addProficiencyExperience = 200;
 					break;
 				case 4:
-					addProficiencyExperience = 165;
+					addProficiencyExperience = 330;
 					break;
 				case 5:
-					addProficiencyExperience = 240;
+					addProficiencyExperience = 480;
 					break;
 				default:
 					g_logger().error("[{}] Monster {} Invalid bestiaryStars value: {}.", __FUNCTION__, mType->name, bestiaryStars);
@@ -12345,7 +12345,7 @@ void Player::addWeaponProficiencyExperience(const std::shared_ptr<MonsterType> &
 			}
 
 			if (classification == ForgeClassifications_t::FORGE_INFLUENCED_MONSTER) {
-				addProficiencyExperience = static_cast<uint32_t>(addProficiencyExperience * 1.1);
+				addProficiencyExperience = static_cast<uint32_t>(addProficiencyExperience * 1.5);
 			} else if (classification == ForgeClassifications_t::FORGE_FIENDISH_MONSTER) {
 				addProficiencyExperience = static_cast<uint32_t>(addProficiencyExperience * 2.5);
 			}
