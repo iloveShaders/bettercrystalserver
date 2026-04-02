@@ -6365,10 +6365,6 @@ void Game::playerChangeOutfit(uint32_t playerId, Outfit_t outfit, bool isMounted
 		return;
 	}
 
-	if (!player->changeOutfit(outfit, true)) {
-		return;
-	}
-
 	if (player->isWearingSupportOutfit() || !isMounted) {
 		outfit.lookMount = 0;
 		randomizeMount = false;
@@ -6424,6 +6420,11 @@ void Game::playerChangeOutfit(uint32_t playerId, Outfit_t outfit, bool isMounted
 	} else if (player->isMounted()) {
 		player->dismount();
 	}
+
+		if (!player->changeOutfit(outfit, true)) {
+		return;
+	}
+
 
 	if (player->canWearOutfit(outfit.lookType, outfit.lookAddons)) {
 		player->defaultOutfit = outfit;

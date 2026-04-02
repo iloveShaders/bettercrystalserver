@@ -11314,6 +11314,9 @@ void Player::onRemoveCreature(const std::shared_ptr<Creature> &creature, bool is
 		}
 
 		closeShopWindow();
+		if (isMounted()) {
+			dismount();
+		}
 		IOLoginData::updateOnlineStatus(guid, false);
 		g_saveManager().savePlayer(player);
 	}
