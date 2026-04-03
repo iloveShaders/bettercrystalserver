@@ -1841,7 +1841,7 @@ bool ConditionDamage::doDamage(const std::shared_ptr<Creature> &creature, int32_
 	}
 
 	CombatDamage damage;
-	damage.origin = ORIGIN_CONDITION;
+	damage.origin = (!field && attacker && attacker->getPlayer()) ? ORIGIN_SPELL : ORIGIN_CONDITION;
 	damage.primary.value = healthChange;
 	damage.primary.type = Combat::ConditionToDamageType(conditionType);
 

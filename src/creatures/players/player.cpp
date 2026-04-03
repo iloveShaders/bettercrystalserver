@@ -6300,6 +6300,7 @@ void Player::onAddCondition(ConditionType_t type) {
 
 	if (type == CONDITION_OUTFIT && isMounted()) {
 		dismount();
+		g_game().internalCreatureChangeOutfit(static_self_cast<Player>(), defaultOutfit);
 		wasMounted = true;
 	}
 
