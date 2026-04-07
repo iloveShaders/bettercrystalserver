@@ -4635,7 +4635,7 @@ void Game::playerWrapableItem(uint32_t playerId, const Position &pos, uint8_t st
 		return;
 	}
 
-	if (house->getHouseAccessLevel(player) < HOUSE_OWNER) {
+	if (house->getHouseAccessLevel(player) < HOUSE_SUBOWNER) {
 		player->sendCancelMessage("You are not allowed to construct this here.");
 		return;
 	}
