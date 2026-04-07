@@ -2103,7 +2103,7 @@ std::string Item::parseImbuementDescription(const std::shared_ptr<Item> &item) {
 
 bool Item::isSavedToHouses() {
 	const auto &it = items[id];
-	return it.movable || it.isWrappable() || it.isCarpet() || getDoor() || (getContainer() && !getContainer()->empty()) || it.canWriteText || getBed() || it.m_transformOnUse;
+	return it.movable || it.isWrappable() || it.isCarpet() || getDoor() || (getContainer() && !getContainer()->empty()) || it.canWriteText || getBed() || it.m_transformOnUse || id == ITEM_DECORATION_KIT;
 }
 
 SoundEffect_t Item::getMovementSound(const std::shared_ptr<Cylinder> &toCylinder) const {
