@@ -112,6 +112,7 @@
 	<raid name="porthope.midnightpanther3" file="port_hope/midnight_panther3.xml" interval2="1440" margin="360" />	
 	<raid name="porthope.serpentspawns" file="port_hope/serpent_spawns.xml" interval2="1440" margin="180" />
 	<raid name="porthope.smugglerbaronsilvertoe" file="port_hope/smuggler_baron_silvertoe.xml" interval2="1440" margin="360" />
+	<raid name="porthope.stampede" file="port_hope/stampede.xml" interval2="1440" margin="360" />
 	<raid name="porthope.terrorbirds" file="port_hope/terror_birds.xml" interval2="1440" margin="180" />
 	<raid name="porthope.thewelter" file="port_hope/the_welter.xml" interval2="1440" margin="360" />
 	<raid name="porthope.tiquandasrevenge1" file="port_hope/tiquandas_revenge1.xml" interval2="1440" margin="180" />

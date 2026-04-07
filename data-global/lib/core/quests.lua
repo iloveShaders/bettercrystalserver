@@ -3944,7 +3944,7 @@ if not Quests then
 						[2] = "Snake Eye told you to visit Ahmet in Ankrahmun.",
 						[3] = "Ahmet told you that he will only help a friend and asked you to kill at least one Nomad.",
 						[4] = "You have killed a Nomad, go back to Ahmet!",
-						[5] = "You have received the forged documents from Ahmet, next is to get a disguise from Percybald in Venore!",
+						[5] = "You have received the forged documents from Ahmet, next is to get a disguise from Percybald in Carlin!",
 						[6] = "You have received the dwarf disguise from Percybald. Now go do the deal with Nurik.",
 						[7] = "You have traded the forged documents for the painting, report back to Dorian.",
 						[8] = "You have delivered the painting to Dorian, ask him for a new mission!",
