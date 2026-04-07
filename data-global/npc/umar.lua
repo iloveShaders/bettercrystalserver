@@ -168,4 +168,7 @@ npcHandler:setCallback(CALLBACK_GREET, greetCallback)
 npcHandler:addModule(FocusModule:new(), npcConfig.name, true, true, true)
 
 -- npcType registering the npcConfig table
+-- add "passage" button to npc ui
+npcType:addButton(KEYWORDBUTTONICON_SAIL)
+
 npcType:register(npcConfig)

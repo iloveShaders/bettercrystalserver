@@ -363,4 +363,7 @@ npcHandler:setMessage(MESSAGE_FAREWELL, "Go and be careful. Remember what you ha
 npcHandler:setMessage(MESSAGE_WALKAWAY, "Take care, |PLAYERNAME|.")
 
 npcHandler:addModule(FocusModule:new(), npcConfig.name, true, true, true)
+-- add "passage" button to npc ui
+npcType:addButton(KEYWORDBUTTONICON_SAIL)
+
 npcType:register(npcConfig)
