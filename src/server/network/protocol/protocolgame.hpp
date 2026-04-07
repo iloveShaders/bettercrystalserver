@@ -21,6 +21,7 @@
 #include <unordered_map>
 #include "game/movement/position.hpp"
 #include "utils/utils_definitions.hpp"
+#include "creatures/npcs/npc.hpp"
 
 enum class PlayerIcon : uint8_t;
 enum class IconBakragore : uint8_t;
@@ -194,7 +195,7 @@ private:
 	void parseSendResourceBalance();
 	void parseRuleViolationReport(NetworkMessage &msg);
 
-	void parseBestiarySendRaces();
+	void sendBestiaryRaces();
 	void parseBestiarySendCreatures(NetworkMessage &msg);
 	void sendBestiaryCharms();
 	void sendBestiaryEntryChanged(uint16_t raceid);
@@ -206,7 +207,7 @@ private:
 	void parseLeaderFinderWindow(NetworkMessage &msg);
 	void parseMemberFinderWindow(NetworkMessage &msg);
 	void parseSendBuyCharmRune(NetworkMessage &msg);
-	void parseBestiarysendMonsterData(NetworkMessage &msg);
+	void parseSendBestiaryMonsterData(NetworkMessage &msg);
 	void parseCyclopediaMonsterTracker(NetworkMessage &msg);
 
 	void parseTeleport(NetworkMessage &msg);
@@ -274,7 +275,7 @@ private:
 	void parseCloseChannel(NetworkMessage &msg);
 
 	// Imbuement info
-	void addImbuementInfo(NetworkMessage &msg, uint16_t imbuementId, bool isScroll) const;
+	void AddImbuementInfo(NetworkMessage &msg, uint16_t imbuementId, bool isScroll) const;
 
 	// Send functions
 	void sendChannelMessage(const std::string &author, const std::string &text, SpeakClasses type, uint16_t channel);
@@ -291,7 +292,7 @@ private:
 	void sendIconBakragore(const IconBakragore icon);
 	void sendFYIBox(const std::string &message);
 
-	void openImbuementWindow(const Imbuement_Window_t type, const std::shared_ptr<Item> &item = nullptr);
+	void sendOpenImbuementWindow(const Imbuement_Window_t type, const std::shared_ptr<Item> &item = nullptr);
 	void sendImbuementResult(const std::string &message);
 	void closeImbuementWindow();
 
@@ -307,13 +308,14 @@ private:
 
 	void sendForgeResult(ForgeAction_t actionType, uint16_t leftItemId, uint8_t leftTier, uint16_t rightItemId, uint8_t rightTier, bool success, uint8_t bonus, uint8_t coreCount, bool convergence);
 	void sendForgeHistory(uint8_t page);
+	void AddForgeSkillStats(NetworkMessage &msg) const;
 	double getForgeSkillStat(Slots_t slot, bool applyAmplification = true) const;
 
 	void sendBosstiaryData();
 	void parseSendBosstiary();
 	void parseSendBosstiarySlots();
 	void parseBosstiarySlot(NetworkMessage &msg);
-	void sendPodiumDetails(NetworkMessage &msg, const std::vector<uint16_t> &toSendMonsters, bool isBoss) const;
+	void AddPodiumDetails(NetworkMessage &msg, const std::vector<uint16_t> &toSendMonsters, bool isBoss) const;
 	void sendMonsterPodiumWindow(const std::shared_ptr<Item> &podium, const Position &position, uint16_t itemId, uint8_t stackPos);
 	void parseSetMonsterPodium(NetworkMessage &msg) const;
 	void sendBosstiaryCooldownTimer();
@@ -333,6 +335,8 @@ private:
 	void sendPartyCreatureShowStatus(const std::shared_ptr<Creature> &target, bool showStatus);
 	void sendPartyPlayerVocation(const std::shared_ptr<Player> &target);
 	void sendPlayerVocation(const std::shared_ptr<Player> &target);
+	void sendLocalPlayer(const Position &pos, const bool isLogin);
+	void sendServerConfig();
 	void sendSkills();
 	void sendPing();
 	void sendPingBack();
@@ -382,6 +386,7 @@ private:
 	void sendCreatureType(const std::shared_ptr<Creature> &creature, uint8_t creatureType);
 
 	void sendShop(const std::shared_ptr<Npc> &npc);
+	void sendNpcChatWindow();
 	void sendCloseShop();
 	void sendClientCheck();
 	void sendGameNews();
@@ -409,9 +414,10 @@ private:
 	void sendOutfitWindow();
 	void sendPodiumWindow(const std::shared_ptr<Item> &podium, const Position &position, uint16_t itemId, uint8_t stackpos);
 
-	void sendUpdatedVIPStatus(uint32_t guid, VipStatus_t status);
+	void sendUpdatedVIPStatus(uint32_t guid, VipStatus_t newStatus);
 	void sendVIP(uint32_t guid, const std::string &name, const std::string &description, uint32_t icon, bool notify, VipStatus_t status);
 	void sendVIPGroups();
+	void sendFullVipList();
 
 	void sendPendingStateEntered();
 	void sendEnterWorld();
@@ -428,6 +434,7 @@ private:
 
 	void sendSpellCooldown(uint16_t spellId, uint32_t time);
 	void sendSpellGroupCooldown(SpellGroup_t groupId, uint32_t time);
+	void sendPassiveCooldown(uint8_t passiveId, uint32_t currentCooldown, uint32_t maxCooldown, bool paused);
 	void sendUseItemCooldown(uint32_t time);
 
 	void sendCoinBalance();
@@ -526,7 +533,7 @@ private:
 	void sendPlayerTyping(const std::shared_ptr<Creature> &creature, uint8_t typing);
 	void parsePlayerTyping(NetworkMessage &msg);
 	void AddOutfitCustomOTCR(NetworkMessage &msg, const Outfit_t &outfit);
-	void sendOutfitWindowCustomOTCR(NetworkMessage &msg);
+	void addOutfitWindowFeaturesOTCR(NetworkMessage &msg);
 	void parseInventoryImbuements(NetworkMessage &msg);
 	void sendInventoryImbuements(const std::map<Slots_t, std::shared_ptr<Item>> &items);
 
@@ -583,15 +590,30 @@ private:
 	void sendOpenStash();
 	void parseStashWithdraw(NetworkMessage &msg);
 	void sendSpecialContainersAvailable();
-	void addBless();
+	void AddBlessings();
 	void parsePacketDead(uint8_t recvbyte);
-	void addCreatureIcon(NetworkMessage &msg, const std::shared_ptr<Creature> &creature);
-
+	void AddCreatureIcon(NetworkMessage &msg, const std::shared_ptr<Creature> &creature);
+	void AddNpcButton(NetworkMessage &msg, const KeywordButtonIcon buttonId);
 	void sendSingleSoundEffect(const Position &pos, SoundEffect_t id, SourceEffect_t source);
 	void sendDoubleSoundEffect(const Position &pos, SoundEffect_t mainSoundId, SourceEffect_t mainSource, SoundEffect_t secondarySoundId, SourceEffect_t secondarySource);
 
-	void sendTakeScreenshot(Screenshot_t screenshotType);
+	// milestones
+	void sendClientEvent(ClientEvent_t eventType);
+	void sendUnlockedAchievement(const std::string& achievement);
+	void sendUnlockedTitle(const std::string& title);
+	void sendUnlockedSkin(const std::string& skinName, uint16_t lookType, uint8_t skinType);
+	void sendSkillAdvance(skills_t skill, uint16_t newLevel);
+	void sendProgressRace(uint16_t raceId, uint8_t progressLevel, bool isBoss);
+	void sendProgressQuest(const std::string& questName, bool isCompleted);
+	void sendProficiencyProgress(uint16_t itemId, const std::string& message);
+
 	void sendDisableLoginMusic();
+
+	static void addNPCButtonIfExists(std::vector<KeywordButtonIcon>& buttons, KeywordButtonIcon icon, uint16_t flags) {
+		if ((flags & (1 << icon)) != 0) {
+			buttons.push_back(icon);
+		}
+	}
 
 	uint8_t m_playerDeathTime = 0;
 

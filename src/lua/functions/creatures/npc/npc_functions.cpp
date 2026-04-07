@@ -58,6 +58,12 @@ void NpcFunctions::init(lua_State* L) {
 
 	Lua::registerMethod(L, "Npc", "getDistanceTo", NpcFunctions::luaNpcGetDistanceTo);
 
+	// npc chat window 15.20
+	Lua::registerMethod(L, "Npc", "hasDialogueButton", NpcFunctions::luaNpcHasDialogueButton);
+	Lua::registerMethod(L, "Npc", "setDialogueButton", NpcFunctions::luaNpcSetDialogueButton);
+	Lua::registerMethod(L, "Npc", "removeDialogueButton", NpcFunctions::luaNpcRemoveDialogueButton);
+	Lua::registerMethod(L, "Npc", "getDialogueButtons", NpcFunctions::luaNpcGetDialogueButtons);
+
 	ShopFunctions::init(L);
 	NpcTypeFunctions::init(L);
 }
@@ -94,7 +100,7 @@ int NpcFunctions::luaNpcCreate(lua_State* L) {
 
 int NpcFunctions::luaNpcIsNpc(lua_State* L) {
 	// npc:isNpc()
-	Lua::pushBoolean(L, Lua::getUserdataShared<const Npc>(L, 1) != nullptr);
+	Lua::pushBoolean(L, Lua::getUserdataShared<Npc>(L, 1) != nullptr);
 	return 1;
 }
 
@@ -732,5 +738,59 @@ int NpcFunctions::luaNpcGetDistanceTo(lua_State* L) {
 		const int32_t dist = std::max<int32_t>(Position::getDistanceX(npcPos, thingPos), Position::getDistanceY(npcPos, thingPos));
 		lua_pushnumber(L, dist);
 	}
+	return 1;
+}
+
+int NpcFunctions::luaNpcHasDialogueButton(lua_State* L) {
+	// npc:hasDialogueButton(buttonEnum)
+	const auto &npc = Lua::getUserdataShared<Npc>(L, 1);
+	if (!npc) {
+		Lua::reportErrorFunc(Lua::getErrorDesc(LUA_ERROR_NPC_NOT_FOUND));
+		lua_pushnil(L);
+		return 1;
+	}
+
+	Lua::pushBoolean(L, npc->hasDialogueButton(Lua::getNumber<KeywordButtonIcon>(L, 2)));
+	return 1;
+}
+
+int NpcFunctions::luaNpcSetDialogueButton(lua_State* L) {
+	// npc:setDialogueButton(buttonEnum)
+	const auto &npc = Lua::getUserdataShared<Npc>(L, 1);
+	if (!npc) {
+		Lua::reportErrorFunc(Lua::getErrorDesc(LUA_ERROR_NPC_NOT_FOUND));
+		lua_pushnil(L);
+		return 1;
+	}
+
+	npc->setDialogueButton(Lua::getNumber<KeywordButtonIcon>(L, 2));
+	Lua::pushBoolean(L, true);
+	return 1;
+}
+
+int NpcFunctions::luaNpcRemoveDialogueButton(lua_State* L) {
+	// npc:removeDialogueButton(buttonEnum)
+	const auto &npc = Lua::getUserdataShared<Npc>(L, 1);
+	if (!npc) {
+		Lua::reportErrorFunc(Lua::getErrorDesc(LUA_ERROR_NPC_NOT_FOUND));
+		lua_pushnil(L);
+		return 1;
+	}
+
+	npc->removeDialogueButton(Lua::getNumber<KeywordButtonIcon>(L, 2));
+	Lua::pushBoolean(L, true);
+	return 1;
+}
+
+int NpcFunctions::luaNpcGetDialogueButtons(lua_State* L) {
+	// npc:getDialogueButtons()
+	const auto &npc = Lua::getUserdataShared<Npc>(L, 1);
+	if (!npc) {
+		Lua::reportErrorFunc(Lua::getErrorDesc(LUA_ERROR_NPC_NOT_FOUND));
+		lua_pushnil(L);
+		return 1;
+	}
+
+	Lua::pushNumber(L, npc->getDialogueButtons());
 	return 1;
 }

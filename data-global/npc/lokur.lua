@@ -94,12 +94,13 @@ local function creatureSayCallback(npc, creature, type, message)
 	elseif MsgContains(message, "no") and npcHandler:getTopic(playerId) > 0 then
 		npcHandler:say("No then.", npc, creature)
 		npcHandler:setTopic(playerId, 0)
-	end
-
-	if MsgContains(message, "measurements") then
+	elseif MsgContains(message, "measurements") then
 		if player:getStorageValue(Storage.Quest.U7_24.ThePostmanMissions.Mission07) >= 6 and player:getStorageValue(Storage.Quest.U7_24.ThePostmanMissions.MeasurementsKroox) ~= 1 then
 			npcHandler:say("Come on, I have no clue what they are. Better ask my armorer Kroox for such nonsense.Go and ask him for good ol' Lokurs measurements, he'll know.", npc, creature)
 			player:setStorageValue(Storage.Quest.U7_24.ThePostmanMissions.Mission07, player:getStorageValue(Storage.Quest.U7_24.ThePostmanMissions.Mission07) + 1)
+		else
+			npcHandler:say("...", npc, creature)
+			npcHandler:setTopic(playerId, 0)
 		end
 	end
 
@@ -112,6 +113,9 @@ npcHandler:setMessage(MESSAGE_WALKAWAY, "Have a nice day.")
 npcHandler:setCallback(CALLBACK_GREET, NpcBankGreetCallback)
 npcHandler:setCallback(CALLBACK_MESSAGE_DEFAULT, creatureSayCallback)
 npcHandler:addModule(FocusModule:new(), npcConfig.name, true, true, true)
+
+-- add bank buttons to the npc ui
+npcType:addBankButtons()
 
 -- npcType registering the npcConfig table
 npcType:register(npcConfig)

@@ -150,6 +150,7 @@ function createHirelingType(HirelingName)
 			{ itemName = "exercise sword", clientId = 28552, buy = 347222, subType = 500 },
 			{ itemName = "exercise wand", clientId = 28557, buy = 347222, subType = 500 },
 			{ itemName = "exercise wraps", clientId = 50293, buy = 347222, subType = 500 },
+			{ itemName = "exercise shield", clientId = 44065, buy = 347222, subType = 500 },
 			{ itemName = "durable exercise axe", clientId = 35280, buy = 1250000, subType = 1800 },
 			{ itemName = "durable exercise bow", clientId = 35282, buy = 1250000, subType = 1800 },
 			{ itemName = "durable exercise club", clientId = 35281, buy = 1250000, subType = 1800 },
@@ -157,6 +158,7 @@ function createHirelingType(HirelingName)
 			{ itemName = "durable exercise sword", clientId = 35279, buy = 1250000, subType = 1800 },
 			{ itemName = "durable exercise wand", clientId = 35284, buy = 1250000, subType = 1800 },
 			{ itemName = "durable exercise wraps", clientId = 50294, buy = 1250000, subType = 1800 },
+			{ itemName = "durable exercise shield", clientId = 44066, buy = 1250000, subType = 1800 },
 			{ itemName = "lasting exercise axe", clientId = 35286, buy = 10000000, subType = 14400 },
 			{ itemName = "lasting exercise bow", clientId = 35288, buy = 10000000, subType = 14400 },
 			{ itemName = "lasting exercise club", clientId = 35287, buy = 10000000, subType = 14400 },
@@ -164,6 +166,7 @@ function createHirelingType(HirelingName)
 			{ itemName = "lasting exercise sword", clientId = 35285, buy = 10000000, subType = 14400 },
 			{ itemName = "lasting exercise wand", clientId = 35290, buy = 10000000, subType = 14400 },
 			{ itemName = "lasting exercise wraps", clientId = 50295, buy = 10000000, subType = 14400 },
+			{ itemName = "lasting exercise shield", clientId = 44067, buy = 10000000, subType = 14400 },
 		},
 		["equipment"] = {
 			{ itemName = "axe", clientId = 3274, buy = 20, sell = 7 },
@@ -247,7 +250,7 @@ function createHirelingType(HirelingName)
 			{ itemName = "vortex bolt", clientId = 14252, buy = 6 },
 		},
 		["rods"] = {
-			{ itemName = "exercise rod", clientId = 28556, buy = 236250, subType = 500 },
+			{ itemName = "exercise rod", clientId = 28556, buy = 347222, subType = 500 },
 			{ itemName = "hailstorm rod", clientId = 3067, buy = 15000 },
 			{ itemName = "moonlight rod", clientId = 3070, buy = 1000 },
 			{ itemName = "necrotic rod", clientId = 3069, buy = 5000 },
@@ -258,7 +261,7 @@ function createHirelingType(HirelingName)
 			{ itemName = "underworld rod", clientId = 8082, buy = 22000 },
 		},
 		["wands"] = {
-			{ itemName = "exercise wand", clientId = 28557, buy = 236250, subType = 500 },
+			{ itemName = "exercise wand", clientId = 28557, buy = 347222, subType = 500 },
 			{ itemName = "wand of cosmic energy", clientId = 3073, buy = 10000 },
 			{ itemName = "wand of decay", clientId = 3072, buy = 5000 },
 			{ itemName = "wand of draconia", clientId = 8093, buy = 7500 },
@@ -351,6 +354,32 @@ function createHirelingType(HirelingName)
 			{ itemName = "label", clientId = 3507, buy = 1 },
 			{ itemName = "letter", clientId = 3505, buy = 8 },
 			{ itemName = "parcel", clientId = 3503, buy = 15 },
+		},
+		["imbuement powerful scrolls"] = {
+			{ itemName = "powerful strike scroll", clientId = 51462, buy = 50000 },
+			{ itemName = "powerful vampirism scroll", clientId = 51464, buy = 50000 },
+			{ itemName = "powerful void scroll", clientId = 51467, buy = 50000 },
+			{ itemName = "powerful epiphany scroll", clientId = 51451, buy = 50000 },
+			{ itemName = "powerful punch scroll", clientId = 51456, buy = 50000 },
+			{ itemName = "powerful bash scroll", clientId = 51444, buy = 50000 },
+			{ itemName = "powerful slash scroll", clientId = 51460, buy = 50000 },
+			{ itemName = "powerful chop scroll", clientId = 51446, buy = 50000 },
+			{ itemName = "powerful precision scroll", clientId = 51455, buy = 50000 },
+			{ itemName = "powerful blockade scroll", clientId = 51445, buy = 50000 },
+			{ itemName = "powerful featherweight scroll", clientId = 51452, buy = 50000 },
+			{ itemName = "powerful swiftness scroll", clientId = 51463, buy = 50000 },
+			{ itemName = "powerful vibrancy scroll", clientId = 51466, buy = 50000 },
+			{ itemName = "powerful lich shroud scroll", clientId = 51454, buy = 50000 },
+			{ itemName = "powerful demon presence scroll", clientId = 51448, buy = 50000 },
+			{ itemName = "powerful cloud fabric scroll", clientId = 51447, buy = 50000 },
+			{ itemName = "powerful dragon hide scroll", clientId = 51449, buy = 50000 },
+			{ itemName = "powerful snake skin scroll", clientId = 51461, buy = 50000 },
+			{ itemName = "powerful quara scale scroll", clientId = 51457, buy = 50000 },
+			{ itemName = "powerful reap scroll", clientId = 51458, buy = 50000 },
+			{ itemName = "powerful electrify scroll", clientId = 51450, buy = 50000 },
+			{ itemName = "powerful scorch scroll", clientId = 51459, buy = 50000 },
+			{ itemName = "powerful venom scroll", clientId = 51465, buy = 50000 },
+			{ itemName = "powerful frost scroll", clientId = 51453, buy = 50000 },
 		},
 		["buy loot"] = {
 			-- Sell all loot in loot pouch
@@ -2095,6 +2124,7 @@ function createHirelingType(HirelingName)
 
 	local TOPIC_FOOD = {
 		SKILL_CHOOSE = 1301,
+		SKILL_SURPRISE = 1302,
 	}
 
 	local GREETINGS = {
@@ -2323,6 +2353,78 @@ function createHirelingType(HirelingName)
 			npcHandler:setTopic(playerId, TOPIC.NONE)
 			npcHandler:say(imbuementPackages, npc, creature)
 		end
+		local skillMapping = {--test hireling mapping
+			["bank"] = {
+				skill = HIRELING_SKILLS.BANKER[2],
+				topic = TOPIC.BANK,
+				action = function()
+					npcHandler:setTopic(playerId, TOPIC.BANK)
+					count[playerId], transfer[playerId] = nil, nil
+					npcHandler:say(GREETINGS.BANK, npc, creature)
+				end,
+			},
+			["food"] = {
+				skill = HIRELING_SKILLS.COOKING[2],
+				topic = TOPIC.FOOD,
+				action = function()
+					npcHandler:setTopic(playerId, TOPIC.FOOD)
+					npcHandler:say(GREETINGS.FOOD, npc, creature)
+				end,
+			},
+			["stash"] = {
+				skill = HIRELING_SKILLS.STEWARD[2],
+				topic = TOPIC.SERVICES,
+				action = function()
+					npcHandler:say(GREETINGS.STASH, npc, creature)
+					player:setSpecialContainersAvailable(true)
+					player:openStash(true)
+					player:sendTextMessage(MESSAGE_FAILURE, "Your supply stash contains " .. player:getStashCount() .. " item" .. (player:getStashCount() > 1 and "s." or "."))
+				end,
+			},
+			["goods"] = {
+				skill = HIRELING_SKILLS.TRADER[2],
+				topic = TOPIC.GOODS,
+				action = function()
+					local string
+					if not hireling:hasSkill(HIRELING_SKILLS.TRADER[2]) then
+						string = "While I'm not a trader, I still have a collection of {various} items to sell if you like!"
+					else
+						string = "I sell a selection of {various} items, {exercise weapons}, {equipment}, " .. "{distance} weapons, {wands} and {rods}, {potions}, {runes}, " .. "{supplies}, {tools} and {postal} goods. Just ask!"
+					end
+					npcHandler:setTopic(playerId, TOPIC.GOODS)
+					npcHandler:say(string, npc, creature)
+				end,
+			},
+		}
+
+		for keyword, data in pairs(skillMapping) do
+			if MsgContains(message, keyword) then
+				if hireling:hasSkill(data.skill) then
+					data.action()
+				else
+					sendSkillNotLearned(npc, creature, keyword)
+				end
+				return true
+			end
+		end
+
+		if hireling:hasSkill(HIRELING_SKILLS.TRADER[2]) then
+			local categoryTable = itemsTable[message:lower()]
+			if categoryTable then
+				npc:closeShopWindow(player)
+				npcHandler:say("Here are the items for the category " .. message .. ".", npc, creature)
+				npc:openShopWindowTable(player, categoryTable)
+				return true
+			end
+		end
+
+		if MsgContains(message, "outfit") then
+			if player:getGuid() ~= hireling:getOwnerId() then
+				return false
+			end
+			hireling:requestOutfitChange()
+			npcHandler:say("As you wish!", npc, creature)
+		end
 
 		-- roleplay
 		if MsgContains(message, "sword of fury") then
@@ -2369,7 +2471,7 @@ function createHirelingType(HirelingName)
 				if not hireling:hasSkill(HIRELING_SKILLS.TRADER[2]) then
 					string = "While I'm not a trader, I still have a collection of {various} items to sell if you like!"
 				else
-					string = "I sell a selection of {various} items, {exercise weapons}, {equipment}, " .. "{distance} weapons, {wands} and {rods}, {potions}, {runes}, " .. "{supplies}, {tools} and {postal} goods and {imbuement packages}. I can also {buy loot}. Just ask!"
+					string = "I sell a selection of {various} items, {exercise weapons}, {equipment}, " .. "{distance} weapons, {wands}, {rods}, {potions}, {runes}, " .. "{supplies}, {tools}, {postal} goods, {imbuement packages} and {imbuement powerful scrolls}. I can also {buy loot}. Just ask!"
 				end
 				npcHandler:setTopic(playerId, TOPIC.GOODS)
 				npcHandler:say(string, npc, creature)
@@ -2430,6 +2532,22 @@ function createHirelingType(HirelingName)
 		return true
 	end
 
+	local function greetCallback(npc, creature)
+		if hireling:hasSkill(HIRELING_SKILLS.TRADER[2]) then
+			npc:setDialogueButton(KEYWORDBUTTONICON_POTIONTRADE)
+			npc:setDialogueButton(KEYWORDBUTTONICON_EQUIPMENTTRADE)
+		end
+
+		if hireling:hasSkill(HIRELING_SKILLS.BANKER[2]) then
+			npc:setDialogueButton(KEYWORDBUTTONICON_DEPOSITALL)
+			npc:setDialogueButton(KEYWORDBUTTONICON_WITHDRAW)
+			npc:setDialogueButton(KEYWORDBUTTONICON_BALANCE)
+		end
+
+		return true
+	end
+
+	npcHandler:setCallback(CALLBACK_GREET, greetCallback)
 	npcHandler:setMessage(MESSAGE_GREET, "It is good to see you. I'm always at your {service}.")
 	npcHandler:setMessage(MESSAGE_FAREWELL, "Farewell, |PLAYERNAME|, I'll be here if you need me again.")
 	npcHandler:setMessage(MESSAGE_WALKAWAY, "Come back soon!")

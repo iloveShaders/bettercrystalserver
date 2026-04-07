@@ -33,7 +33,7 @@ class PlayerFunctions {
 
 	static int luaPlayerUnlockAllCharmRunes(lua_State* L);
 	static int luaPlayerResetCharmsMonsters(lua_State* L);
-	static int luaPlayeraddCharmPoints(lua_State* L);
+	static int luaPlayerAddCharmPoints(lua_State* L);
 	static int luaPlayerAddMinorCharmEchoes(lua_State* L);
 	static int luaPlayerGetCharmTier(lua_State* L);
 	static int luaPlayerGetCharmChance(lua_State* L);
@@ -403,7 +403,8 @@ class PlayerFunctions {
 
 	static int luaPlayerCreateTransactionSummary(lua_State* L);
 
-	static int luaPlayerTakeScreenshot(lua_State* L);
+	static int luaPlayerSendClientEvent(lua_State* L);
+	static int luaPlayerSendQuestStatusUpdate(lua_State* L);
 	static int luaPlayerSendIconBakragore(lua_State* L);
 	static int luaPlayerRemoveIconBakragore(lua_State* L);
 

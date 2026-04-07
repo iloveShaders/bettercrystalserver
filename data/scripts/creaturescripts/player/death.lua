@@ -3,7 +3,7 @@ local deathListEnabled = true
 local playerDeath = CreatureEvent("PlayerDeath")
 function playerDeath.onDeath(player, corpse, killer, mostDamageKiller, unjustified, mostDamageUnjustified)
 	if player:getStorageValue(Storage.Quest.U8_0.BarbarianArena.PitDoor) > 0 then
-		player:setStorageValue(Storage.Quest.U8_0.BarbarianArena.PitDoor, 0)
+		SvargrondArena.cancelEvents(player.uid)
 	end
 
 	if not deathListEnabled then
@@ -44,10 +44,10 @@ function playerDeath.onDeath(player, corpse, killer, mostDamageKiller, unjustifi
 		mostDamageName = "field item"
 	end
 
-	player:takeScreenshot(byPlayer and SCREENSHOT_TYPE_DEATHPVP or SCREENSHOT_TYPE_DEATHPVE)
+	player:sendClientEvent(byPlayer and CLIENT_EVENT_DEATHPVP or CLIENT_EVENT_DEATHPVE)
 
 	if mostDamageKiller and mostDamageKiller:isPlayer() then
-		mostDamageKiller:takeScreenshot(SCREENSHOT_TYPE_PLAYERKILL)
+		mostDamageKiller:sendClientEvent(CLIENT_EVENT_PLAYERKILL)
 	end
 
 	local playerGuid = player:getGuid()

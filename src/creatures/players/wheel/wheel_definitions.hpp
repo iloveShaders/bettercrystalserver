@@ -93,8 +93,8 @@ enum class WheelStage_t : uint8_t {
 	AVATAR_OF_NATURE = 9,
 	AVATAR_OF_STEEL = 10,
 	AVATAR_OF_STORM = 11,
-	DIVINE_GRENADE = 12,
-	AVATAR_OF_BALANCE = 13,
+	AVATAR_OF_BALANCE = 12,
+	DIVINE_GRENADE = 13,
 	SPIRITUAL_OUTBURST = 14,
 	ASCETIC = 15,
 
@@ -123,18 +123,18 @@ enum class WheelStat_t : uint8_t {
 	MANA = 1,
 	CAPACITY = 2,
 	MITIGATION = 3,
-	MELEE = 4,
-	DISTANCE = 5,
-	MAGIC = 6,
-	LIFE_LEECH = 7,
-	MANA_LEECH = 8,
-	HEALING = 9,
-	DAMAGE = 10,
-	LIFE_LEECH_CHANCE = 11,
-	MANA_LEECH_CHANCE = 12,
-	DODGE = 13,
-	CRITICAL_DAMAGE = 14,
-	FIST = 15,
+	FIST = 4,
+	MELEE = 5,
+	DISTANCE = 6,
+	MAGIC = 7,
+	LIFE_LEECH = 8,
+	MANA_LEECH = 9,
+	HEALING = 10,
+	DAMAGE = 11,
+	LIFE_LEECH_CHANCE = 12,
+	MANA_LEECH_CHANCE = 13,
+	DODGE = 14,
+	CRITICAL_DAMAGE = 15,
 
 	TOTAL_COUNT = 16
 };
@@ -163,8 +163,8 @@ enum class WheelInstant_t : uint8_t {
 	HEALING_LINK = 4,
 	RUNIC_MASTERY = 5,
 	FOCUS_MASTERY = 6,
-	GUIDING_PRESENCE = 7,
-	SANCTUARY = 8,
+	SANCTUARY = 7,
+	GUIDING_PRESENCE = 8,
 
 	INSTANT_COUNT = 9
 };
@@ -233,13 +233,13 @@ struct PlayerWheelMethodsBonusData {
 		bool healingLink = false; // Druid
 		bool runicMastery = false; // Druid/sorcerer
 		bool focusMastery = false; // Sorcerer
-		bool guidingPresence = false; // Monk
 		bool sanctuary = false; // Monk
+		bool guidingPresence = false; // Monk
 	};
 
 	struct Stages {
 		int combatMastery = 0; // Knight
-		int giftOfLife = 0; // Knight/Paladin/Druid/Sorcerer
+		int giftOfLife = 0; // Knight/Paladin/Druid/Sorcerer/Monk
 		int divineEmpowerment = 0; // Paladin
 		int divineGrenade = 0; // Paladin
 		int blessingOfTheGrove = 0; // Druid

@@ -502,6 +502,9 @@ function Player.updateStorage(self, key, value, oldValue, currentFrameTime)
 		LastQuestlogUpdate[playerId] = currentFrameTime
 		if value ~= oldValue then
 			self:sendTextMessage(MESSAGE_EVENT_ADVANCE, "Your questlog has been updated.")
+			-- this needs a rework
+			-- data to be pushed: quest name, bool isQuestCompleted
+			-- self:sendQuestProgress("", false)
 		end
 	end
 

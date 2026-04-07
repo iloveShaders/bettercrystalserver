@@ -46,6 +46,9 @@ class NpcType final : public SharedObject {
 
 		uint16_t currencyId = ITEM_GOLD_COIN;
 
+		// buttons in npc ui
+		uint16_t buttonFlags = 0;
+
 		uint32_t yellChance = 0;
 		uint32_t yellSpeedTicks = 0;
 		uint32_t baseSpeed = 55;
@@ -93,6 +96,7 @@ public:
 	NpcType &operator=(const NpcType &) = delete;
 
 	std::string name;
+	std::string m_lowerName;
 	std::string typeName;
 	std::string nameDescription;
 	NpcInfo info;

@@ -568,7 +568,7 @@ bool Combat::setParam(CombatParam_t param, uint32_t value) {
 		}
 
 		case COMBAT_PARAM_CHAIN_EFFECT: {
-			params.chainEffect = static_cast<uint8_t>(value);
+			params.chainEffect = static_cast<uint16_t>(value);
 			return true;
 		}
 	}
@@ -1224,7 +1224,7 @@ void Combat::addDistanceEffect(const std::shared_ptr<Creature> &caster, const Po
 	}
 }
 
-void Combat::doChainEffect(const Position &origin, const Position &dest, uint8_t effect) {
+void Combat::doChainEffect(const std::shared_ptr<Creature> &caster, const Position &origin, const Position &dest, uint16_t effect) {
 	if (effect > 0) {
 		std::vector<Direction> dirList;
 
@@ -1365,7 +1365,7 @@ bool Combat::doCombatChain(const std::shared_ptr<Creature> &caster, const std::s
 			g_dispatcher().scheduleEvent(
 				delay, [combat, caster, nextTarget, from, affected]() {
 					if (combat && caster && nextTarget) {
-						Combat::doChainEffect(from, nextTarget->getPosition(), combat->params.chainEffect);
+						Combat::doChainEffect(caster, from, nextTarget->getPosition(), combat->params.chainEffect);
 						combat->doCombat(caster, nextTarget, from, affected);
 					}
 				},

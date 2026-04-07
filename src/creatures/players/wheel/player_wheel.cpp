@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////
-// Crystal Server - an opensource roleplaying game
+// Erindor Server - an opensource roleplaying game
 ////////////////////////////////////////////////////////////////////////
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -1525,24 +1525,9 @@ void PlayerWheel::sendOpenWheelWindow(NetworkMessage &msg, uint32_t ownerId) {
 }
 
 void PlayerWheel::sendGiftOfLifeCooldown() const {
-	if (!m_player.client || m_player.client->oldProtocol) {
-		return;
-	}
-
-	NetworkMessage msg;
-	msg.addByte(0x5E);
-	msg.addByte(0x01); // Gift of life ID
-	msg.addByte(0x00); // Cooldown ENUM
-	msg.add<uint32_t>(getGiftOfCooldown());
-	msg.add<uint32_t>(getGiftOfLifeTotalCooldown());
-	// Checking if the cooldown if decreasing or it's stopped
-	if (m_player.getZoneType() != ZONE_PROTECTION && m_player.hasCondition(CONDITION_INFIGHT)) {
-		msg.addByte(0x01);
-	} else {
-		msg.addByte(0x00);
-	}
-
-	m_player.client->writeToOutputBuffer(msg);
+	// gift of life passive id is 1
+	bool paused = m_player.getZoneType() == ZONE_PROTECTION || !m_player.hasCondition(CONDITION_INFIGHT);
+	m_player.sendPassiveCooldown(1, getGiftOfCooldown(), getGiftOfLifeTotalCooldown(), paused);
 }
 
 bool PlayerWheel::checkSavePointsBySlotType(WheelSlots_t slotType, uint16_t points) {
@@ -2087,10 +2072,10 @@ void PlayerWheel::registerPlayerBonusData() {
 	addStat(WheelStat_t::HEALING, m_playerBonusData.stats.healing);
 
 	// Skills
+	addStat(WheelStat_t::FIST, m_playerBonusData.skills.fist);
 	addStat(WheelStat_t::MELEE, m_playerBonusData.skills.melee);
 	addStat(WheelStat_t::DISTANCE, m_playerBonusData.skills.distance);
 	addStat(WheelStat_t::MAGIC, m_playerBonusData.skills.magic);
-	addStat(WheelStat_t::FIST, m_playerBonusData.skills.fist);
 
 	// Leech
 	setPlayerCombatStats(COMBAT_LIFEDRAIN, m_playerBonusData.leech.lifeLeech * 100);
@@ -2104,8 +2089,8 @@ void PlayerWheel::registerPlayerBonusData() {
 	setSpellInstant("Healing Link", m_playerBonusData.instant.healingLink);
 	setSpellInstant("Runic Mastery", m_playerBonusData.instant.runicMastery);
 	setSpellInstant("Focus Mastery", m_playerBonusData.instant.focusMastery);
-	setSpellInstant("Guiding Presence", m_playerBonusData.instant.guidingPresence);
 	setSpellInstant("Sanctuary", m_playerBonusData.instant.sanctuary);
+	setSpellInstant("Guiding Presence", m_playerBonusData.instant.guidingPresence);
 
 	// Stages (Revelation)
 	if (m_playerBonusData.stages.combatMastery > 0) {
@@ -2218,11 +2203,16 @@ void PlayerWheel::registerPlayerBonusData() {
 			setSpellInstant("Executioner's Throw", true);
 		}
 		WheelSpells::Bonus bonus;
-		bonus.decrease.cooldown = 4 * 1000;
+		if (m_playerBonusData.stages.executionersThrow >= 1) {
+			bonus.decrease.cooldown = 14 * 1000;
+			addSpellBonus("Executioner's Throw", bonus);
+		}
 		if (m_playerBonusData.stages.executionersThrow >= 2) {
+			bonus.decrease.cooldown = 4 * 1000;
 			addSpellBonus("Executioner's Throw", bonus);
 		}
 		if (m_playerBonusData.stages.executionersThrow >= 3) {
+			bonus.decrease.cooldown = 4 * 1000;
 			addSpellBonus("Executioner's Throw", bonus);
 		}
 	} else {

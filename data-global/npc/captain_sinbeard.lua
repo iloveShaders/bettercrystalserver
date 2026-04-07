@@ -129,4 +129,7 @@ npcHandler:setMessage(MESSAGE_WALKAWAY, "Good bye then.")
 
 npcHandler:addModule(FocusModule:new(), npcConfig.name, true, true, true)
 
+-- add "passage" button to npc ui
+npcType:addButton(KEYWORDBUTTONICON_SAIL)
+
 npcType:register(npcConfig)

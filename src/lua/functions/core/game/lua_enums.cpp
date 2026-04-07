@@ -107,6 +107,7 @@ void LuaEnums::init(lua_State* L) {
 	initTextColorEnums(L);
 	initTileStateEnums(L);
 	initSpeechBubbleEnums(L);
+	initKeywordButtonIcons(L);
 	initMapMarkEnums(L);
 	initReturnValueEnums(L);
 	initReloadTypeEnums(L);
@@ -227,20 +228,21 @@ void LuaEnums::initOthersEnums(lua_State* L) {
 	registerEnum(L, WEAPON_MISSILE);
 	registerEnum(L, WEAPON_FIST);
 
-	registerEnum(L, SCREENSHOT_TYPE_NONE);
-	registerEnum(L, SCREENSHOT_TYPE_ACHIEVEMENT);
-	registerEnum(L, SCREENSHOT_TYPE_BESTIARYENTRYCOMPLETED);
-	registerEnum(L, SCREENSHOT_TYPE_BESTIARYENTRYUNLOCKED);
-	registerEnum(L, SCREENSHOT_TYPE_BOSSDEFEATED);
-	registerEnum(L, SCREENSHOT_TYPE_DEATHPVE);
-	registerEnum(L, SCREENSHOT_TYPE_DEATHPVP);
-	registerEnum(L, SCREENSHOT_TYPE_LEVELUP);
-	registerEnum(L, SCREENSHOT_TYPE_PLAYERKILLASSIST);
-	registerEnum(L, SCREENSHOT_TYPE_PLAYERKILL);
-	registerEnum(L, SCREENSHOT_TYPE_PLAYERATTACKING);
-	registerEnum(L, SCREENSHOT_TYPE_TREASUREFOUND);
-	registerEnum(L, SCREENSHOT_TYPE_SKILLUP);
-	registerEnum(L, SCREENSHOT_TYPE_GIFTOFLIFE);
+	registerEnum(L, CLIENT_EVENT_NONE);
+	registerEnum(L, CLIENT_EVENT_BOSSDEFEATED);
+	registerEnum(L, CLIENT_EVENT_DEATHPVE);
+	registerEnum(L, CLIENT_EVENT_DEATHPVP);
+	registerEnum(L, CLIENT_EVENT_PLAYERKILLASSIST);
+	registerEnum(L, CLIENT_EVENT_PLAYERKILL);
+	registerEnum(L, CLIENT_EVENT_PLAYERATTACKING);
+	registerEnum(L, CLIENT_EVENT_TREASUREFOUND);
+	registerEnum(L, CLIENT_EVENT_GIFTOFLIFE);
+	registerEnum(L, CLIENT_EVENT_ATTACKSTOPPED);
+	registerEnum(L, CLIENT_EVENT_CAPACITYLIMIT);
+	registerEnum(L, CLIENT_EVENT_OUTOFAMMO);
+	registerEnum(L, CLIENT_EVENT_TARGETTOOCLOSE);
+	registerEnum(L, CLIENT_EVENT_OUTOFSOULPOINTS);
+	registerEnum(L, CLIENT_EVENT_TUTORIALCOMPLETE);
 }
 
 void LuaEnums::initWorldTypeEnums(lua_State* L) {
@@ -1168,6 +1170,13 @@ void LuaEnums::initSpeechBubbleEnums(lua_State* L) {
 	registerEnum(L, SPEECHBUBBLE_QUEST);
 	registerEnum(L, SPEECHBUBBLE_QUESTTRADER);
 	registerEnum(L, SPEECHBUBBLE_HIRELING);
+}
+
+// Use with npc:setDialogueButton
+void LuaEnums::initKeywordButtonIcons(lua_State* L) {
+	for (auto value : magic_enum::enum_values<KeywordButtonIcon>()) {
+		registerMagicEnum(L, value);
+	}
 }
 
 // Use with player:addMapMark

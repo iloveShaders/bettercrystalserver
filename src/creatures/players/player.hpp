@@ -334,7 +334,7 @@ public:
 
 	void sendFYIBox(const std::string &message) const;
 
-	void parseBestiarySendRaces() const;
+	void sendBestiaryRaces() const;
 	void sendBestiaryCharms() const;
 	void addBestiaryKillCount(uint16_t raceid, uint32_t amount);
 	uint32_t getBestiaryKillCount(uint16_t raceid) const;
@@ -584,8 +584,8 @@ public:
 	void setLevel(uint32_t newLevel) {
 		level = newLevel;
 	}
-	uint8_t getLevelPercent() const {
-		return levelPercent;
+	uint16_t getLevelProgress() const {
+		return levelProgress;
 	}
 	uint32_t getMagicLevel() const;
 	uint32_t getLoyaltyMagicLevel() const;
@@ -909,8 +909,6 @@ public:
 
 	// tile
 	// send methods
-	// tile
-	// send methods
 	void sendAddTileItem(const std::shared_ptr<Tile> &itemTile, const Position &pos, const std::shared_ptr<Item> &item);
 	void sendUpdateTileItem(const std::shared_ptr<Tile> &updateTile, const Position &pos, const std::shared_ptr<Item> &item);
 	void sendRemoveTileThing(const Position &pos, int32_t stackpos) const;
@@ -936,6 +934,7 @@ public:
 	void sendCreatureType(const std::shared_ptr<Creature> &creature, uint8_t creatureType) const;
 	void sendSpellCooldown(uint16_t spellId, uint32_t time) const;
 	void sendSpellGroupCooldown(SpellGroup_t groupId, uint32_t time) const;
+	void sendPassiveCooldown(uint8_t passiveId, uint32_t currentCooldown, uint32_t maxCooldown, bool paused) const;
 	void sendUseItemCooldown(uint32_t time) const;
 	void reloadCreature(const std::shared_ptr<Creature> &creature) const;
 	void sendModalWindow(const ModalWindow &modalWindow);
@@ -1121,7 +1120,14 @@ public:
 
 	void sendOpenStash(bool isNpc = false) const;
 
-	void sendTakeScreenshot(Screenshot_t screenshotType) const;
+	void sendClientEvent(ClientEvent_t EventType) const;
+	void sendUnlockedAchievement(const std::string& achievement) const;
+	void sendUnlockedTitle(const std::string& title) const;
+	void sendUnlockedSkin(const std::string& skinName, uint16_t lookType, uint8_t skinType) const;
+	void sendSkillAdvance(skills_t skill, uint16_t newLevel) const;
+	void sendProgressRace(uint16_t raceId, uint8_t progressLevel, bool isBoss = false) const;
+	void sendProgressQuest(const std::string& questName, bool isCompleted = false) const;
+	void sendProficiencyProgress(uint16_t itemId, const std::string& message) const;
 
 	void onThink(uint32_t interval) override;
 
@@ -1252,7 +1258,7 @@ public:
 	uint16_t parseRacebyCharm(charmRune_t charmId, bool set = false, uint16_t newRaceid = 0);
 
 	uint64_t getItemCustomPrice(uint16_t itemId, bool buyPrice = false) const;
-	uint16_t getFreeBackpackSlots() const;
+	uint32_t getFreeBackpackSlots() const;
 
 	bool canAutoWalk(const Position &toPosition, const std::function<void()> &function, uint32_t delay = 500);
 
@@ -1400,6 +1406,8 @@ public:
 
 	void sendInventoryImbuements(const std::map<Slots_t, std::shared_ptr<Item>> &items) const;
 
+	void sendNpcChatWindow() const;
+
 	/*******************************************************************************
 	 * Hazard system
 	 ******************************************************************************/
@@ -1510,6 +1518,8 @@ public:
 	void resetOldCharms();
 	[[nodiscard]] bool isFirstOnStack() const;
 
+	void addNpcFocus(const uint32_t npcId, const uint16_t buttonFlags);
+	void removeNpcFocus(const uint32_t npcId);
 	/*******************************************************************************
 	 * Deflect Condition
 	 * Responsible for defining the conditions that when trying to be
@@ -1656,6 +1666,8 @@ private:
 
 	std::vector<std::unique_ptr<PreySlot>> preys;
 	std::vector<std::unique_ptr<TaskHuntingSlot>> taskHunting;
+
+	std::map<uint32_t, uint16_t> focusedNpcs;
 
 	GuildWarVector guildWarVector;
 
@@ -1812,7 +1824,7 @@ private:
 	std::pair<ConditionType_t, uint64_t> m_rootCondition = { CONDITION_NONE, 0 };
 
 	uint8_t soul = 0;
-	uint8_t levelPercent = 0;
+	uint8_t levelProgress = 0;
 	uint16_t loyaltyBonusPercent = 0;
 	double_t magLevelPercent = 0;
 
@@ -1877,7 +1889,7 @@ private:
 
 	uint32_t getAttackSpeed() const;
 
-	static double_t getPercentLevel(uint64_t count, uint64_t nextLevelCount);
+	static uint16_t calculateLevelProgress(uint64_t count, uint64_t nextLevelCount);
 	double getLostPercent() const;
 	uint64_t getLostExperience() const override {
 		return skillLoss ? static_cast<uint64_t>(experience * getLostPercent()) : 0;

@@ -59,6 +59,8 @@ public:
 
 	void setName(std::string newName) const;
 
+	const std::string &getLowerName() const;
+
 	CreatureType_t getType() const override;
 
 	const Position &getMasterPos() const;
@@ -117,6 +119,19 @@ public:
 
 	void onCreatureWalk() override;
 
+	bool hasDialogueButton(KeywordButtonIcon btnId) const {
+		return (buttonFlags & (1 << btnId)) != 0;
+	}
+	void setDialogueButton(KeywordButtonIcon btnId) {
+		buttonFlags |= (1 << btnId);
+	}
+	void removeDialogueButton(KeywordButtonIcon btnId) {
+		buttonFlags &= ~(1 << btnId);
+	}
+	uint16_t getDialogueButtons() {
+		return buttonFlags;
+	}
+
 private:
 	void onThinkYell(uint32_t interval);
 	void onThinkWalk(uint32_t interval);
@@ -136,6 +151,7 @@ private:
 	std::shared_ptr<SpawnNpc> spawnNpc;
 
 	uint8_t speechBubble {};
+	uint8_t buttonFlags = 0;
 
 	uint32_t yellTicks = 0;
 	uint32_t walkTicks = 0;

@@ -145,4 +145,8 @@ npcType.onSellItem = function(npc, player, itemId, subtype, amount, ignore, name
 end
 
 npcType.onCheckItem = function(npc, player, clientId, subType) end
+
+-- add "passage" button to npc ui
+npcType:addButton(KEYWORDBUTTONICON_SAIL)
+
 npcType:register(npcConfig)

@@ -3541,12 +3541,12 @@ void Game::playerEquipItem(uint32_t playerId, uint16_t itemId, bool hasTier /* =
 
 	if (slot == CONST_SLOT_NECKLACE) {
 		if (!player->canEquipNecklace()) {
-			return;
-		}
+		return;
+	}
 	} else if (slot == CONST_SLOT_RING) {
 		if (!player->canEquipRing()) {
-			return;
-		}
+		return;
+	}
 	} else if (!player->canDoAction()) {
 		uint32_t delay = player->getNextActionTime();
 		if (delay > 0) {
@@ -3608,10 +3608,10 @@ void Game::playerEquipItem(uint32_t playerId, uint16_t itemId, bool hasTier /* =
 
 			// Check if trying to equip a shield while a two-handed weapon is equipped in the left slot
 			if (slot == CONST_SLOT_RIGHT && !it.isQuiver() && leftItem && leftItem->getSlotPosition() & SLOTP_TWO_HAND) {
-				ret = internalMoveItem(leftItem->getParent(), player, INDEX_WHEREEVER, leftItem, leftItem->getItemCount(), nullptr);
+					ret = internalMoveItem(leftItem->getParent(), player, INDEX_WHEREEVER, leftItem, leftItem->getItemCount(), nullptr);
 				if (ret != RETURNVALUE_NOERROR) {
-					player->sendCancelMessage(ret);
-					return;
+						player->sendCancelMessage(ret);
+						return;
 				}
 			}
 
@@ -4160,7 +4160,7 @@ void Game::playerUseWithCreature(uint32_t playerId, const Position &fromPos, uin
 		return;
 	} else if (!canUseHouseItem) {
 		player->sendCancelMessage(RETURNVALUE_ITEMCANNOTBEMOVEDTHERE);
-		return;
+				return;
 	}
 
 	const ItemType &it = Item::items[item->getID()];
@@ -4574,7 +4574,7 @@ void Game::playerSetShowOffSocket(uint32_t playerId, Outfit_t &outfit, const Pos
 		name << item->getName() << " displaying the ";
 		bool outfited = false;
 		if (outfit.lookType != 0) {
-			const auto &outfitInfo = Outfits::getInstance().getOutfitByLookType(player, outfit.lookType);
+			const auto &outfitInfo = Outfits::getInstance().getOutfitByLookType(player->getSex(), outfit.lookType);
 			if (!outfitInfo) {
 				return;
 			}
@@ -4735,9 +4735,6 @@ std::shared_ptr<Item> Game::wrapItem(const std::shared_ptr<Item> &item, const st
 	}
 
 	newItem->setAttribute(ItemAttribute_t::OWNER, item->getAttribute<uint16_t>(ItemAttribute_t::OWNER));
-	if (const int64_t storeAttribute = item->getAttribute<int64_t>(ItemAttribute_t::STORE); storeAttribute > 0) {
-		newItem->setAttribute(ItemAttribute_t::STORE, storeAttribute);
-	}
 	newItem->startDecaying();
 	return newItem;
 }
@@ -4755,7 +4752,6 @@ void Game::unwrapItem(const std::shared_ptr<Item> &item, uint16_t unWrapId, cons
 	}
 
 	const uint16_t ownerAttr = item->getAttribute<uint16_t>(ItemAttribute_t::OWNER);
-	const int64_t storeAttr = item->getAttribute<int64_t>(ItemAttribute_t::STORE);
 	const uint16_t amountAttr = item->getAttribute<uint16_t>(ItemAttribute_t::AMOUNT);
 	const uint16_t amount = amountAttr ? amountAttr : 1;
 
@@ -4776,9 +4772,6 @@ void Game::unwrapItem(const std::shared_ptr<Item> &item, uint16_t unWrapId, cons
 		newItem->removeAttribute(ItemAttribute_t::DESCRIPTION);
 		newItem->startDecaying();
 		newItem->setAttribute(ItemAttribute_t::OWNER, ownerAttr);
-		if (storeAttr > 0) {
-			newItem->setAttribute(ItemAttribute_t::STORE, storeAttr);
-		}
 	}
 }
 
@@ -6377,7 +6370,7 @@ void Game::playerChangeOutfit(uint32_t playerId, Outfit_t outfit, bool isMounted
 		outfit.lookMount = randomMount->clientId;
 	}
 
-	const auto playerOutfit = Outfits::getInstance().getOutfitByLookType(player, outfit.lookType);
+	const auto playerOutfit = Outfits::getInstance().getOutfitByLookType(player->getSex(), outfit.lookType);
 	if (!playerOutfit) {
 		outfit.lookMount = 0;
 	}
