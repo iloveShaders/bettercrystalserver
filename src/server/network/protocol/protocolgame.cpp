@@ -1909,6 +1909,9 @@ void ProtocolGame::parseSetOutfit(NetworkMessage &msg) {
 				newOutfit.lookMountFeet = std::min<uint8_t>(132, msg.getByte());
 
 				bool isMounted = msg.getByte();
+				if (player->isMounted()) {
+					isMounted = true;
+				}
 				newOutfit.lookFamiliarsType = msg.get<uint16_t>();
 				g_logger().debug("Bool isMounted: {}", isMounted);
 

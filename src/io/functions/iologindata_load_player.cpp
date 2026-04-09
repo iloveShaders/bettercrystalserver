@@ -334,12 +334,6 @@ void IOLoginDataLoad::loadPlayerDefaultOutfit(const std::shared_ptr<Player> &pla
 	player->defaultOutfit.lookMountLegs = static_cast<uint8_t>(result->getNumber<uint16_t>("lookmountlegs"));
 	player->defaultOutfit.lookMountFeet = static_cast<uint8_t>(result->getNumber<uint16_t>("lookmountfeet"));
 	player->currentMount = result->getNumber<uint16_t>("currentmount");
-	if (player->currentMount != 0) {
-		const auto loadMount = g_game().mounts->getMountByID(player->currentMount);
-		if (loadMount) {
-			player->defaultOutfit.lookMount = loadMount->clientId;
-		}
-	}
 	player->defaultOutfit.lookFamiliarsType = result->getNumber<uint16_t>("lookfamiliarstype");
 
 	if (g_configManager().getBoolean(WARN_UNSAFE_SCRIPTS) && player->defaultOutfit.lookFamiliarsType != 0 && !g_game().isLookTypeRegistered(player->defaultOutfit.lookFamiliarsType)) {

@@ -6351,20 +6351,8 @@ void Game::playerChangeOutfit(uint32_t playerId, Outfit_t outfit, bool isMounted
 		return;
 	}
 
-	if (player->isWearingSupportOutfit() || (!isMounted && !player->isMounted())) {
+	if (player->isWearingSupportOutfit() || !isMounted) {
 		outfit.lookMount = 0;
-		randomizeMount = false;
-	} else if (!isMounted && player->isMounted()) {
-		// Client sent isMounted=false while player is physically mounted.
-		// Preserve the current mount to prevent accidental dismount during colour changes.
-		const auto &currentMountPtr = mounts->getMountByID(player->getCurrentMount());
-		if (currentMountPtr) {
-			outfit.lookMount = currentMountPtr->clientId;
-			outfit.lookMountHead = player->defaultOutfit.lookMountHead;
-			outfit.lookMountBody = player->defaultOutfit.lookMountBody;
-			outfit.lookMountLegs = player->defaultOutfit.lookMountLegs;
-			outfit.lookMountFeet = player->defaultOutfit.lookMountFeet;
-		}
 		randomizeMount = false;
 	}
 
