@@ -43,6 +43,7 @@
 #include "creatures/players/player.hpp"
 #include "utils/tools.hpp"
 #include "kv/kv.hpp"
+#include "creatures/appearance/mounts/mounts.hpp"
 
 void IOLoginDataLoad::loadItems(ItemsMap &itemsMap, const DBResult_ptr &result, const std::shared_ptr<Player> &player) {
 	try {
@@ -334,7 +335,7 @@ void IOLoginDataLoad::loadPlayerDefaultOutfit(const std::shared_ptr<Player> &pla
 	player->defaultOutfit.lookMountFeet = static_cast<uint8_t>(result->getNumber<uint16_t>("lookmountfeet"));
 	player->currentMount = result->getNumber<uint16_t>("currentmount");
 	if (player->currentMount != 0) {
-		const auto &loadMount = g_game().mounts->getMountByID(player->currentMount);
+		const auto loadMount = g_game().mounts->getMountByID(player->currentMount);
 		if (loadMount) {
 			player->defaultOutfit.lookMount = loadMount->clientId;
 		}
