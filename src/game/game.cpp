@@ -3287,37 +3287,40 @@ ReturnValue Game::internalCollectManagedItems(const std::shared_ptr<Player> &pla
 		return RETURNVALUE_NOTPOSSIBLE;
 	}
 
-	// Send money to the bank
-	if (g_configManager().getBoolean(AUTOBANK)) {
-		if (item->getID() == ITEM_GOLD_COIN || item->getID() == ITEM_PLATINUM_COIN || item->getID() == ITEM_CRYSTAL_COIN) {
-			uint64_t money = 0;
-			if (item->getID() == ITEM_PLATINUM_COIN) {
-				money = item->getItemCount() * 100;
-			} else if (item->getID() == ITEM_CRYSTAL_COIN) {
-				money = item->getItemCount() * 10000;
-			} else {
-				money = item->getItemCount();
+	// These checks only apply when looting (not when obtaining items from NPCs)
+	if (isLootContainer) {
+		// Send money to the bank
+		if (g_configManager().getBoolean(AUTOBANK)) {
+			if (item->getID() == ITEM_GOLD_COIN || item->getID() == ITEM_PLATINUM_COIN || item->getID() == ITEM_CRYSTAL_COIN) {
+				uint64_t money = 0;
+				if (item->getID() == ITEM_PLATINUM_COIN) {
+					money = item->getItemCount() * 100;
+				} else if (item->getID() == ITEM_CRYSTAL_COIN) {
+					money = item->getItemCount() * 10000;
+				} else {
+					money = item->getItemCount();
+				}
+				auto parent = item->getParent();
+				if (parent) {
+					parent->removeThing(item, item->getItemCount());
+				} else {
+					g_logger().debug("Item has no parent");
+					return RETURNVALUE_NOTPOSSIBLE;
+				}
+				player->setBankBalance(player->getBankBalance() + money);
+				g_metrics().addCounter("balance_increase", money, { { "player", player->getName() }, { "context", "loot" } });
+				return RETURNVALUE_NOERROR;
 			}
-			auto parent = item->getParent();
-			if (parent) {
-				parent->removeThing(item, item->getItemCount());
-			} else {
-				g_logger().debug("Item has no parent");
+		}
+
+		if (!player->quickLootListItemIds.empty()) {
+			uint16_t itemId = item->getID();
+			bool isInList = std::ranges::find(player->quickLootListItemIds, itemId) != player->quickLootListItemIds.end();
+			if (player->quickLootFilter == QuickLootFilter_t::QUICKLOOTFILTER_ACCEPTEDLOOT && !isInList) {
+				return RETURNVALUE_NOTPOSSIBLE;
+			} else if (player->quickLootFilter == QuickLootFilter_t::QUICKLOOTFILTER_SKIPPEDLOOT && isInList) {
 				return RETURNVALUE_NOTPOSSIBLE;
 			}
-			player->setBankBalance(player->getBankBalance() + money);
-			g_metrics().addCounter("balance_increase", money, { { "player", player->getName() }, { "context", "loot" } });
-			return RETURNVALUE_NOERROR;
-		}
-	}
-
-	if (!player->quickLootListItemIds.empty()) {
-		uint16_t itemId = item->getID();
-		bool isInList = std::ranges::find(player->quickLootListItemIds, itemId) != player->quickLootListItemIds.end();
-		if (player->quickLootFilter == QuickLootFilter_t::QUICKLOOTFILTER_ACCEPTEDLOOT && !isInList) {
-			return RETURNVALUE_NOTPOSSIBLE;
-		} else if (player->quickLootFilter == QuickLootFilter_t::QUICKLOOTFILTER_SKIPPEDLOOT && isInList) {
-			return RETURNVALUE_NOTPOSSIBLE;
 		}
 	}
 
