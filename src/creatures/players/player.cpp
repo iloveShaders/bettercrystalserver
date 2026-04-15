@@ -714,17 +714,9 @@ float Player::getAttackFactor() const {
 float Player::getDefenseFactor(bool sendToClient /* = false*/) const {
 	switch (fightMode) {
 		case FIGHTMODE_ATTACK:
-			if (sendToClient) {
-				return 0.5f;
-			}
-
-			return (OTSYS_TIME() - lastAttack) < getAttackSpeed() ? 0.5f : 1.0f;
+			return 0.5f;
 		case FIGHTMODE_BALANCED:
-			if (sendToClient) {
-				return 0.75f;
-			}
-
-			return (OTSYS_TIME() - lastAttack) < getAttackSpeed() ? 0.75f : 1.0f;
+			return 0.75f;
 		case FIGHTMODE_DEFENSE:
 			return 1.0f;
 		default:
@@ -963,7 +955,8 @@ void Player::updateInventoryImbuement() {
 				continue;
 			}
 			// If the item is not in the backpack slot and it's not a agressive imbuement, ignore it.
-			if (categoryImbuement && !categoryImbuement->agressive && parent && parent != getPlayer()) {
+			// Also skip non-aggressive imbuements in protection zones (they should not tick in PZ).
+			if (categoryImbuement && !categoryImbuement->agressive && (isInProtectionZone || (parent && parent != getPlayer()))) {
 				continue;
 			}
 
