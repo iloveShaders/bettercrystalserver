@@ -1909,6 +1909,8 @@ void ProtocolGame::parseSetOutfit(NetworkMessage &msg) {
 				newOutfit.lookMountFeet = std::min<uint8_t>(132, msg.getByte());
 
 				bool isMounted = msg.getByte();
+				// If the player is already mounted, preserve mount state.
+				// The client sends isMounted=false during colour changes even when mounted.
 				if (player->isMounted()) {
 					isMounted = true;
 				}
@@ -4437,9 +4439,11 @@ void ProtocolGame::sendCyclopediaCharacterOffenceStats() {
 		msg.add<uint16_t>(static_cast<uint16_t>(player->getPerfectShotDamage(range)));
 	}
 
-	const auto flatBonus = player->calculateFlatDamageHealing();
-	msg.add<uint16_t>(flatBonus); // Flat Damage and Healing Total
-	msg.add<uint16_t>(flatBonus);
+	const auto baseFlatBonus = player->calculateFlatDamageHealing();
+	const auto flatBonus = static_cast<uint16_t>(baseFlatBonus + player->wheel()->getStat(WheelStat_t::DAMAGE));
+	const auto flatHealingBonus = static_cast<uint16_t>(baseFlatBonus + player->wheel()->getStat(WheelStat_t::HEALING));
+	msg.add<uint16_t>(flatBonus); // Flat Damage Total
+	msg.add<uint16_t>(flatHealingBonus); // Flat Healing Total
 	msg.add<uint16_t>(0x00);
 
 	const auto &weapon = player->getWeapon();
@@ -8501,7 +8505,7 @@ void ProtocolGame::AddPlayerSkills(NetworkMessage &msg) {
 	msg.add<uint32_t>(player->getCapacity()); // Total Capacity
 	msg.add<uint32_t>(player->getBaseCapacity()); // Base Total Capacity
 
-	const auto flatBonus = player->calculateFlatDamageHealing();
+	const auto flatBonus = static_cast<uint16_t>(player->calculateFlatDamageHealing() + player->wheel()->getStat(WheelStat_t::DAMAGE));
 	msg.add<uint16_t>(flatBonus); // Flat Damage and Healing Total
 
 	const auto &weapon = player->getWeapon();
