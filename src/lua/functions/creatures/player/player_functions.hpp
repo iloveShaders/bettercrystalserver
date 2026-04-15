@@ -80,6 +80,7 @@ class PlayerFunctions {
 	static int luaPlayerGetReward(lua_State* L);
 	static int luaPlayerRemoveReward(lua_State* L);
 	static int luaPlayerGetRewardList(lua_State* L);
+	static int luaPlayerCollectRewardChestItems(lua_State* L);
 
 	static int luaPlayerSetDailyReward(lua_State* L);
 

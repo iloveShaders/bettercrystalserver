@@ -104,6 +104,7 @@ void PlayerFunctions::init(lua_State* L) {
 	Lua::registerMethod(L, "Player", "getReward", PlayerFunctions::luaPlayerGetReward);
 	Lua::registerMethod(L, "Player", "removeReward", PlayerFunctions::luaPlayerRemoveReward);
 	Lua::registerMethod(L, "Player", "getRewardList", PlayerFunctions::luaPlayerGetRewardList);
+	Lua::registerMethod(L, "Player", "collectRewardChestItems", PlayerFunctions::luaPlayerCollectRewardChestItems);
 
 	Lua::registerMethod(L, "Player", "setDailyReward", PlayerFunctions::luaPlayerSetDailyReward);
 
@@ -1272,6 +1273,26 @@ int PlayerFunctions::luaPlayerGetRewardList(lua_State* L) {
 		lua_pushnumber(L, static_cast<lua_Number>(rewardId));
 		lua_rawseti(L, -2, ++index);
 	}
+	return 1;
+}
+
+int PlayerFunctions::luaPlayerCollectRewardChestItems(lua_State* L) {
+	// player:collectRewardChestItems()
+	const auto &player = Lua::getUserdataShared<Player>(L, 1);
+	if (!player) {
+		lua_pushnil(L);
+		return 1;
+	}
+
+	const auto &rewardChest = player->getRewardChest();
+	if (rewardChest) {
+		for (const auto &[mapRewardId, reward] : player->rewardMap) {
+			reward->setParent(rewardChest);
+		}
+	}
+
+	ReturnValue ret = g_game().collectRewardChestItems(player);
+	Lua::pushBoolean(L, ret == RETURNVALUE_NOERROR);
 	return 1;
 }
 
