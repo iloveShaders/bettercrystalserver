@@ -101,6 +101,7 @@ public:
 
 	// Party analyzer
 	time_t trackerTime = time(nullptr);
+	uint32_t pzElapsedSeconds = 0; // Seconds spent in protection zone, excluded from session time
 	PartyAnalyzer_t priceType = MARKET_PRICE;
 	std::vector<std::shared_ptr<PartyAnalyzer>> membersData;
 

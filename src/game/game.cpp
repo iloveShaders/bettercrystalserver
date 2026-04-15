@@ -8545,6 +8545,18 @@ void Game::checkImbuementsAndSereneStatus() {
 		}
 
 		mapPlayer->updateInventoryImbuement();
+
+		// Track hunt analyzer PZ time: if the party leader is in a protection zone,
+		// accumulate the elapsed second so it can be excluded from the session time.
+		if (const auto &party = mapPlayer->getParty()) {
+			if (party->getLeader() == mapPlayer) {
+				const auto &leaderTile = mapPlayer->getTile();
+				if (leaderTile && leaderTile->hasFlag(TILESTATE_PROTECTIONZONE)) {
+					party->pzElapsedSeconds++;
+				}
+			}
+		}
+
 		if (mapPlayer->getVocation()->getBaseId() != 5) {
 			continue;
 		}
