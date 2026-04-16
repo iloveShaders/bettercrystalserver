@@ -1284,13 +1284,6 @@ int PlayerFunctions::luaPlayerCollectRewardChestItems(lua_State* L) {
 		return 1;
 	}
 
-	const auto &rewardChest = player->getRewardChest();
-	if (rewardChest) {
-		for (const auto &[mapRewardId, reward] : player->rewardMap) {
-			reward->setParent(rewardChest);
-		}
-	}
-
 	ReturnValue ret = g_game().collectRewardChestItems(player);
 	Lua::pushBoolean(L, ret == RETURNVALUE_NOERROR);
 	return 1;
