@@ -1613,6 +1613,9 @@ void PlayerWheel::saveSlotPointsOnPressSaveButton(NetworkMessage &msg) {
 		return a.order < b.order;
 	});
 
+	// Snapshot current slot values so we can fully restore on failure (atomic save).
+	const auto slotSnapshot = m_wheelSlots;
+
 	int errors = 0;
 	std::vector<SlotInfo> sortedTableRetry;
 
@@ -1637,6 +1640,8 @@ void PlayerWheel::saveSlotPointsOnPressSaveButton(NetworkMessage &msg) {
 
 	// If there is still data in the retry vector after the error loop, an error message is sent to the player.
 	if (!sortedTableRetry.empty()) {
+		// Restore the snapshot so the player's wheel is not left in a partial/corrupted state.
+		m_wheelSlots = slotSnapshot;
 		m_player.sendTextMessage(MESSAGE_TRADE, "Something went wrong, try relogging and try again");
 		g_logger().error("[parseSaveWheel] Player '{}' tried to select a slot without the valid requirements", m_player.getName());
 	}
