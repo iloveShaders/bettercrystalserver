@@ -6143,6 +6143,8 @@ void Game::playerSetFightModes(uint32_t playerId, FightMode_t fightMode, bool ch
 	player->setFightMode(fightMode);
 	player->setChaseMode(chaseMode);
 	player->setSecureMode(secureMode);
+	player->sendStats();
+	player->sendSkills();
 	player->sendCyclopediaCharacterDefenceStats();
 	player->sendCyclopediaCharacterOffenceStats();
 }
