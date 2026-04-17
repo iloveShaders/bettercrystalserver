@@ -3205,7 +3205,21 @@ uint16_t Player::getXpBoostPercent() const {
 }
 
 uint16_t Player::getDisplayXpBoostPercent() const {
-	return std::clamp<uint16_t>(xpBoostPercent * (baseXpGain / 100), 0, std::numeric_limits<uint16_t>::max());
+	uint32_t total = xpBoostPercent + getPreyXpBonusPercent();
+	return std::clamp<uint16_t>(total * (baseXpGain / 100), 0, std::numeric_limits<uint16_t>::max());
+}
+
+uint16_t Player::getPreyXpBonusPercent() const {
+	if (!g_configManager().getBoolean(PREY_ENABLED)) {
+		return 0;
+	}
+	uint16_t bonus = 0;
+	for (const auto &slot : preys) {
+		if (slot && slot->isOccupied() && slot->bonus == PreyBonus_Experience) {
+			bonus += slot->bonusPercentage;
+		}
+	}
+	return bonus;
 }
 
 void Player::setXpBoostPercent(uint16_t percent) {
@@ -9505,6 +9519,7 @@ void Player::reloadPreySlot(PreySlot_t slotid) {
 	if (g_configManager().getBoolean(PREY_ENABLED) && client) {
 		client->sendPreyData(getPreySlotById(slotid));
 		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints());
+		sendStats();
 	}
 }
 
