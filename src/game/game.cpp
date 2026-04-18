@@ -4749,11 +4749,11 @@ void Game::unwrapItem(const std::shared_ptr<Item> &item, uint16_t unWrapId, cons
 	const uint16_t amount = amountAttr ? amountAttr : 1;
 
 	std::shared_ptr<Item> newItem = transformItem(item, unWrapId, amount);
-	if (house && newiType.isBed()) {
-		house->addBed(newItem->getBed());
-	}
-
 	if (newItem) {
+		if (house && newiType.isBed()) {
+			house->addBed(newItem->getBed());
+		}
+
 		if (isCaskItem(unWrapId)) {
 			const uint16_t hiddenCharges = item->getAttribute<uint16_t>(ItemAttribute_t::DATE);
 			if (hiddenCharges > 0) {
