@@ -3205,8 +3205,7 @@ uint16_t Player::getXpBoostPercent() const {
 }
 
 uint16_t Player::getDisplayXpBoostPercent() const {
-	uint32_t total = xpBoostPercent + getPreyXpBonusPercent();
-	return std::clamp<uint16_t>(total * (baseXpGain / 100), 0, std::numeric_limits<uint16_t>::max());
+	return std::clamp<uint16_t>(xpBoostPercent * (baseXpGain / 100), 0, std::numeric_limits<uint16_t>::max());
 }
 
 uint16_t Player::getPreyXpBonusPercent() const {
