@@ -140,6 +140,8 @@ void PlayerFunctions::init(lua_State* L) {
 	Lua::registerMethod(L, "Player", "setMaxMana", PlayerFunctions::luaPlayerSetMaxMana);
 	Lua::registerMethod(L, "Player", "getManaSpent", PlayerFunctions::luaPlayerGetManaSpent);
 	Lua::registerMethod(L, "Player", "addManaSpent", PlayerFunctions::luaPlayerAddManaSpent);
+	Lua::registerMethod(L, "Player", "getSpecializedMagicLevel", PlayerFunctions::luaPlayerGetSpecializedMagicLevel);
+	Lua::registerMethod(L, "Player", "setSpecializedMagicLevel", PlayerFunctions::luaPlayerSetSpecializedMagicLevel);
 
 	Lua::registerMethod(L, "Player", "getBaseMaxHealth", PlayerFunctions::luaPlayerGetBaseMaxHealth);
 	Lua::registerMethod(L, "Player", "getBaseMaxMana", PlayerFunctions::luaPlayerGetBaseMaxMana);
@@ -1608,6 +1610,32 @@ int PlayerFunctions::luaPlayerAddManaSpent(lua_State* L) {
 	const auto &player = Lua::getUserdataShared<Player>(L, 1);
 	if (player) {
 		player->addManaSpent(Lua::getNumber<uint64_t>(L, 2));
+		Lua::pushBoolean(L, true);
+	} else {
+		lua_pushnil(L);
+	}
+	return 1;
+}
+
+int PlayerFunctions::luaPlayerGetSpecializedMagicLevel(lua_State* L) {
+	// player:getSpecializedMagicLevel(combatType)
+	const auto &player = Lua::getUserdataShared<Player>(L, 1);
+	if (player) {
+		CombatType_t combatType = Lua::getNumber<CombatType_t>(L, 2);
+		lua_pushnumber(L, player->getSpecializedMagicLevel(combatType, false));
+	} else {
+		lua_pushnil(L);
+	}
+	return 1;
+}
+
+int PlayerFunctions::luaPlayerSetSpecializedMagicLevel(lua_State* L) {
+	// player:setSpecializedMagicLevel(combatType, amount)
+	const auto &player = Lua::getUserdataShared<Player>(L, 1);
+	if (player) {
+		CombatType_t combatType = Lua::getNumber<CombatType_t>(L, 2);
+		int32_t amount = Lua::getNumber<int32_t>(L, 3);
+		player->setSpecializedMagicLevel(combatType, amount);
 		Lua::pushBoolean(L, true);
 	} else {
 		lua_pushnil(L);

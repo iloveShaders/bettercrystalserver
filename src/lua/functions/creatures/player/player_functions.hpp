@@ -116,6 +116,8 @@ class PlayerFunctions {
 	static int luaPlayerSetMaxMana(lua_State* L);
 	static int luaPlayerGetManaSpent(lua_State* L);
 	static int luaPlayerAddManaSpent(lua_State* L);
+	static int luaPlayerGetSpecializedMagicLevel(lua_State* L);
+	static int luaPlayerSetSpecializedMagicLevel(lua_State* L);
 
 	static int luaPlayerGetBaseMaxHealth(lua_State* L);
 	static int luaPlayerGetBaseMaxMana(lua_State* L);
