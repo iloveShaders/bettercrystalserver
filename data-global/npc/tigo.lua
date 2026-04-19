@@ -57,6 +57,7 @@ local function greetCallback(npc, creature)
 
 	if player:getStorageValue(Storage.Quest.U11_40.CultsOfTibia.Barkless.Mission) < 2 then
 		npcHandler:setMessage(MESSAGE_GREET, "There, there initiate. You will now become one of us, as so many before you. One of the {Barkless}. Walk with us and you will walk tall my friend.")
+		player:setStorageValue(Storage.Quest.U11_40.CultsOfTibia.Barkless.Mission, 1)
 		npcHandler:setTopic(playerId, 1)
 	end
 

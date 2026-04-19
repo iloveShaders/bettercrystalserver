@@ -56,8 +56,8 @@ npcType.onCloseChannel = function(npc, creature)
 	npcHandler:onCloseChannel(npc, creature)
 end
 
-local node1 = keywordHandler:addKeyword({ "summon paladin familiar" }, StdModule.say, { npcHandler = npcHandler, onlyFocus = true, text = "Would you like to learn {summon paladin familiar} magic spell for 50000 gold?" })
-node1:addChildKeyword({ "yes" }, StdModule.learnSpell, { npcHandler = npcHandler, premium = true, spellName = "summon paladin familiar", vocation = { 3, 7 }, price = 50000, level = 200 })
+local node1 = keywordHandler:addKeyword({ "paladin familiar" }, StdModule.say, { npcHandler = npcHandler, onlyFocus = true, text = "Would you like to learn Summon {Paladin Familiar} magic spell for 50000 gold?" })
+node1:addChildKeyword({ "yes" }, StdModule.learnSpell, { npcHandler = npcHandler, premium = true, spellName = "paladin familiar", vocation = { 3, 7 }, price = 50000, level = 200 })
 
 local node2 = keywordHandler:addKeyword({ "strong ethereal spear" }, StdModule.say, { npcHandler = npcHandler, onlyFocus = true, text = "Would you like to learn {strong ethereal spear} magic spell for 10000 gold?" })
 node2:addChildKeyword({ "yes" }, StdModule.learnSpell, { npcHandler = npcHandler, premium = true, spellName = "strong ethereal spear", vocation = { 3, 7 }, price = 10000, level = 90 })
@@ -157,7 +157,7 @@ keywordHandler:addKeyword({ "spells" }, StdModule.say, {
 keywordHandler:addKeyword({ "attack" }, StdModule.say, {
 	npcHandler = npcHandler,
 	onlyFocus = true,
-	text = "My attack spells are: {Arrow Call}, {Divine Caldera}, {Divine Missile}, {Ethereal Spear}, {Holy Flash}, {Strong Ethereal Spear} and {Summon Paladin Familiar}.",
+	text = "My attack spells are: {Arrow Call}, {Divine Caldera}, {Divine Missile}, {Ethereal Spear}, {Holy Flash}, {Strong Ethereal Spear} and Summon {Paladin Familiar}.",
 })
 
 keywordHandler:addKeyword({ "healing" }, StdModule.say, {
@@ -184,7 +184,7 @@ local nodeLevels = keywordHandler:addKeyword({ "level" }, StdModule.say, {
 	text = "I have spells for level {1}, {8}, {9}, {10}, {12}, {13}, {14}, {17}, {20}, {21}, {23}, {25}, {26}, {27}, {35}, {40}, {45}, {50}, {55}, {60}, {70}, {80}, {90}, {100} and {200}.",
 })
 
-nodeLevels:addChildKeyword({ "200" }, StdModule.say, { npcHandler = npcHandler, onlyFocus = true, text = "For level 200 I have {Summon Paladin Familiar} for 50000 gold." })
+nodeLevels:addChildKeyword({ "200" }, StdModule.say, { npcHandler = npcHandler, onlyFocus = true, text = "For level 200 I have Summon {Paladin Familiar} for 50000 gold." })
 nodeLevels:addChildKeyword({ "100" }, StdModule.say, { npcHandler = npcHandler, onlyFocus = true, text = "For level 100 I have {Intense Recovery} for 10000 gold." })
 nodeLevels:addChildKeyword({ "90" }, StdModule.say, { npcHandler = npcHandler, onlyFocus = true, text = "For level 90 I have {Strong Ethereal Spear} for 10000 gold." })
 nodeLevels:addChildKeyword({ "80" }, StdModule.say, { npcHandler = npcHandler, onlyFocus = true, text = "For level 80 I have {Cure Curse} for 6000 gold." })

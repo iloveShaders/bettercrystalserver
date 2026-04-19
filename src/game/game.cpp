@@ -7102,7 +7102,7 @@ bool Game::combatBlockHit(CombatDamage &damage, const std::shared_ptr<Creature> 
 					}
 					damageReflected.extension = true;
 					damageReflected.exString += " (damage reflection)";
-					damageReflectedParams.combatType = damage.primary.type;
+					damageReflectedParams.combatType = damage.secondary.type;
 					damageReflectedParams.aggressive = true;
 					canReflect = true;
 				}
@@ -7159,7 +7159,7 @@ bool Game::combatBlockHit(CombatDamage &damage, const std::shared_ptr<Creature> 
 					int32_t reflectPercent = std::ceil(damage.secondary.value * secondaryReflectPercent / 100.);
 					int32_t reflectLimit = std::ceil(attacker->getMaxHealth() * 0.01);
 					damageReflected.secondary.type = damage.secondary.type;
-					damageReflected.secondary.value = std::max(-reflectLimit, reflectFlat + reflectPercent);
+					damageReflected.secondary.value = std::max(-static_cast<int32_t>(std::ceil(attacker->getMaxHealth() * 0.01)), -static_cast<int32_t>(secondaryReflectFlat) + static_cast<int32_t>(std::ceil(damage.secondary.value * secondaryReflectPercent / 100.)));
 				}
 			}
 		}

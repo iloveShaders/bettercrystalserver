@@ -135,11 +135,11 @@ node27:addChildKeyword({ "yes" }, StdModule.learnSpell, { npcHandler = npcHandle
 local node28 = keywordHandler:addKeyword({ "magic patch" }, StdModule.say, { npcHandler = npcHandler, onlyFocus = true, text = "Would you like to learn {magic patch} magic spell for free?" })
 node28:addChildKeyword({ "yes" }, StdModule.learnSpell, { npcHandler = npcHandler, premium = false, spellName = "magic patch", vocation = { 1, 2, 5, 6 }, price = 0, level = 1 })
 
-local node29 = keywordHandler:addKeyword({ "summon druid familiar" }, StdModule.say, { npcHandler = npcHandler, onlyFocus = true, text = "Would you like to learn {summon druid familiar} magic spell for 50000 gold?" })
-node29:addChildKeyword({ "yes" }, StdModule.learnSpell, { npcHandler = npcHandler, premium = false, spellName = "summon druid familiar", vocation = { 2, 6 }, price = 50000, level = 200 })
+local node29 = keywordHandler:addKeyword({ "druid familiar" }, StdModule.say, { npcHandler = npcHandler, onlyFocus = true, text = "Would you like to learn Summon {Druid Familiar} magic spell for 50000 gold?" })
+node29:addChildKeyword({ "yes" }, StdModule.learnSpell, { npcHandler = npcHandler, premium = false, spellName = "druid familiar", vocation = { 2, 6 }, price = 50000, level = 200 })
 
-local node30 = keywordHandler:addKeyword({ "summon sorcerer familiar" }, StdModule.say, { npcHandler = npcHandler, onlyFocus = true, text = "Would you like to learn {summon sorcerer familiar} magic spell for 50000 gold?" })
-node30:addChildKeyword({ "yes" }, StdModule.learnSpell, { npcHandler = npcHandler, premium = false, spellName = "summon sorcerer familiar", vocation = { 1, 5 }, price = 50000, level = 200 })
+local node30 = keywordHandler:addKeyword({ "sorcerer familiar" }, StdModule.say, { npcHandler = npcHandler, onlyFocus = true, text = "Would you like to learn Summon {Sorcerer Familiar} magic spell for 50000 gold?" })
+node30:addChildKeyword({ "yes" }, StdModule.learnSpell, { npcHandler = npcHandler, premium = false, spellName = "sorcerer familiar", vocation = { 1, 5 }, price = 50000, level = 200 })
 
 local node31 = keywordHandler:addKeyword({ "summon creature" }, StdModule.say, { npcHandler = npcHandler, onlyFocus = true, text = "Would you like to learn {summon creature} magic spell for 2000 gold?" })
 node31:addChildKeyword({ "yes" }, StdModule.learnSpell, { npcHandler = npcHandler, premium = false, spellName = "summon creature", vocation = { 1, 2, 5, 6 }, price = 2000, level = 25 })
@@ -337,7 +337,7 @@ keywordHandler:addKeyword({ "healing" }, StdModule.say, {
 keywordHandler:addKeyword({ "support" }, StdModule.say, {
 	npcHandler = npcHandler,
 	onlyFocus = true,
-	text = "My support spells are: {Animate Dead}, {Cancel Magic Shield}, {Chameleon} Rune, {Convince Creature}, {Creature Illusion}, {Find Fiend}, {Find Person}, {Food}, {Great Light}, {Haste}, {Invisibility}, {Levitate}, {Light}, {Magic Rope}, {Magic Shield}, {Strong Haste}, {Summon Creature}, {Summon Druid Familiar}, {Summon Sorcerer Familiar} and {Ultimate Light}.",
+	text = "My support spells are: {Animate Dead}, {Cancel Magic Shield}, {Chameleon} Rune, {Convince Creature}, {Creature Illusion}, {Find Fiend}, {Find Person}, {Food}, {Great Light}, {Haste}, {Invisibility}, {Levitate}, {Light}, {Magic Rope}, {Magic Shield}, {Strong Haste}, {Summon Creature}, Summon {Druid Familiar}, Summon {Sorcerer Familiar} and {Ultimate Light}.",
 })
 
 -- ATTACK SPELLS
@@ -363,7 +363,7 @@ local nodeLevels = keywordHandler:addKeyword({ "level" }, StdModule.say, {
 
 nodeLevels:addChildKeyword({ "300" }, StdModule.say, { npcHandler = npcHandler, onlyFocus = true, text = "For level 300 I have {Nature's Embrace} for 500000 gold and {Restoration} for 500000 gold." })
 nodeLevels:addChildKeyword({ "275" }, StdModule.say, { npcHandler = npcHandler, onlyFocus = true, text = "For level 275 I have {Expose Weakness} for 400000 gold." })
-nodeLevels:addChildKeyword({ "200" }, StdModule.say, { npcHandler = npcHandler, onlyFocus = true, text = "For level 200 I can teach you {Summon Druid Familiar} for 50000 gold and {Summon Sorcerer Familiar} for 50000 gold." })
+nodeLevels:addChildKeyword({ "200" }, StdModule.say, { npcHandler = npcHandler, onlyFocus = true, text = "For level 200 I can teach you Summon {Druid Familiar} for 50000 gold and Summon {Sorcerer Familiar} for 50000 gold." })
 nodeLevels:addChildKeyword({ "175" }, StdModule.say, { npcHandler = npcHandler, onlyFocus = true, text = "For level 175 I have {Sap Strength} for 200000 gold." })
 nodeLevels:addChildKeyword({ "80" }, StdModule.say, { npcHandler = npcHandler, onlyFocus = true, text = "For level 80 I can teach you {Strong Energy Strike} for 7500 gold and {Strong Ice Strike} for 6000 gold." })
 nodeLevels:addChildKeyword({ "75" }, StdModule.say, { npcHandler = npcHandler, onlyFocus = true, text = "For level 75 I have {Curse} for 6000 gold." })

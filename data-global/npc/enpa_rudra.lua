@@ -94,8 +94,8 @@ node10:addChildKeyword({ "yes" }, StdModule.learnSpell, { npcHandler = npcHandle
 local node11 = keywordHandler:addKeyword({ "balanced brawl" }, StdModule.say, { npcHandler = npcHandler, onlyFocus = true, text = "Would you like to learn {balanced brawl} magic spell for 250000 gold?" })
 node11:addChildKeyword({ "yes" }, StdModule.learnSpell, { npcHandler = npcHandler, premium = false, spellName = "balanced brawl", vocation = { 9, 10 }, price = 250000, level = 175 })
 
-local node12 = keywordHandler:addKeyword({ "summon monk familiar" }, StdModule.say, { npcHandler = npcHandler, onlyFocus = true, text = "Would you like to learn {summon monk familiar} magic spell for 50000 gold?" })
-node12:addChildKeyword({ "yes" }, StdModule.learnSpell, { npcHandler = npcHandler, premium = false, spellName = "summon monk familiar", vocation = { 9, 10 }, price = 50000, level = 200 })
+local node12 = keywordHandler:addKeyword({ "monk familiar" }, StdModule.say, { npcHandler = npcHandler, onlyFocus = true, text = "Would you like to learn Summon {Monk Familiar} magic spell for 50000 gold?" })
+node12:addChildKeyword({ "yes" }, StdModule.learnSpell, { npcHandler = npcHandler, premium = false, spellName = "monk familiar", vocation = { 9, 10 }, price = 50000, level = 200 })
 
 local node13 = keywordHandler:addKeyword({ "restore balance" }, StdModule.say, { npcHandler = npcHandler, onlyFocus = true, text = "Would you like to learn {restore balance} magic spell for 800 gold?" })
 node13:addChildKeyword({ "yes" }, StdModule.learnSpell, { npcHandler = npcHandler, premium = false, spellName = "restore balance", vocation = { 9, 10 }, price = 800, level = 18 })
@@ -177,7 +177,7 @@ keywordHandler:addKeyword({ "healing" }, StdModule.say, {
 keywordHandler:addKeyword({ "support" }, StdModule.say, {
 	npcHandler = npcHandler,
 	onlyFocus = true,
-	text = "My support spells are: {Balanced Brawl}, {Enlighten Party}, {Find Fiend}, {Find Person}, {Focus Serenity}, {Great Light}, {Haste}, {Levitate}, {Light}, {Magic Rope}, {Mentor Other}, {Strong Haste} and {Summon Monk Familiar}, {Virtue of Harmony}, {Virtue of Justice} and {Virtue of Sustain}.",
+	text = "My support spells are: {Balanced Brawl}, {Enlighten Party}, {Find Fiend}, {Find Person}, {Focus Serenity}, {Great Light}, {Haste}, {Levitate}, {Light}, {Magic Rope}, {Mentor Other}, {Strong Haste} and Summon {Monk Familiar}, {Virtue of Harmony}, {Virtue of Justice} and {Virtue of Sustain}.",
 })
 
 local nodeLevels = keywordHandler:addKeyword({ "level" }, StdModule.say, {
@@ -186,7 +186,7 @@ local nodeLevels = keywordHandler:addKeyword({ "level" }, StdModule.say, {
 	text = "I have spells for level {1}, {8}, {9}, {10}, {12}, {13}, {14}, {18}, {20}, {25}, {32}, {35}, {60}, {70}, {80}, {90}, {125}, {150}, {175} and {200}.",
 })
 
-nodeLevels:addChildKeyword({ "200" }, StdModule.say, { npcHandler = npcHandler, onlyFocus = true, text = "For level 200 I have {Summon Monk Familiar} for 50000 gold." })
+nodeLevels:addChildKeyword({ "200" }, StdModule.say, { npcHandler = npcHandler, onlyFocus = true, text = "For level 200 I have Summon {Monk Familiar} for 50000 gold." })
 nodeLevels:addChildKeyword({ "175" }, StdModule.say, { npcHandler = npcHandler, onlyFocus = true, text = "For level 175 I have {Balanced Brawl} for 250000 gold." })
 nodeLevels:addChildKeyword({ "150" }, StdModule.say, { npcHandler = npcHandler, onlyFocus = true, text = "For level 150 I have {Focus Serenity} for 125000 gold, {Mass Spirit Mend} for 20000 gold and {Mentor Other} for 175000 gold." })
 nodeLevels:addChildKeyword({ "125" }, StdModule.say, { npcHandler = npcHandler, onlyFocus = true, text = "For level 125 I have {Devastating Knockout} for 20000 gold." })

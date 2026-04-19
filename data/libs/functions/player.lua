@@ -349,6 +349,10 @@ function Player:CreateFamiliarSpell(spellId)
 
 	local createdSuccessfully = self:createFamiliar(familiarName, summonDuration)
 	if createdSuccessfully then
+		local summons = self:getSummons()
+		for _, summon in ipairs(summons) do
+			summon:registerEvent("PartyProtection")
+		end
 		condition:setTicks(1000 * cooldown / configManager.getFloat(configKeys.RATE_SPELL_COOLDOWN))
 		self:addCondition(condition)
 		return true
