@@ -30,6 +30,9 @@
 #include "creatures/players/proficiencies/proficiencies_definitions.hpp"
 #include "creatures/players/attached_effects/player_attached_effects.hpp"
 
+#include "io/iobountytasks.hpp"
+#include "io/ioweeklytasks.hpp"
+
 class AnimusMastery;
 class House;
 class NetworkMessage;
@@ -584,7 +587,7 @@ public:
 	void setLevel(uint32_t newLevel) {
 		level = newLevel;
 	}
-	uint8_t getLevelPercent() const {
+	double_t getLevelPercent() const {
 		return levelPercent;
 	}
 	uint32_t getMagicLevel() const;
@@ -963,9 +966,15 @@ public:
 	// Quickloot
 	void sendLootContainers() const;
 
+	void sendSpellCooldowns();
+
 	void sendSingleSoundEffect(const Position &pos, SoundEffect_t id, SourceEffect_t source) const;
 
 	void sendDoubleSoundEffect(const Position &pos, SoundEffect_t mainSoundId, SourceEffect_t mainSource, SoundEffect_t secondarySoundId, SourceEffect_t secondarySource) const;
+
+	void sendAmbientSoundEffect(const SoundAmbientEffect_t id) const;
+
+	void sendMusicSoundEffect(const SoundMusicEffect_t id) const;
 
 	SoundEffect_t getAttackSoundEffect() const;
 	SoundEffect_t getHitSoundEffect() const;
@@ -1013,7 +1022,7 @@ public:
 	void sendPartyCreatureShowStatus(const std::shared_ptr<Creature> &creature, bool showStatus) const;
 	void sendPartyPlayerVocation(const std::shared_ptr<Player> &player) const;
 	void sendPlayerVocation(const std::shared_ptr<Player> &player) const;
-	void sendDistanceShoot(const Position &from, const Position &to, uint16_t type) const;
+	void sendDistanceShoot(const Position &from, const Position &to, uint16_t type, SourceEffect_t source = SourceEffect_t::GLOBAL) const;
 	void sendHouseWindow(const std::shared_ptr<House> &house, uint32_t listId) const;
 	void sendCreatePrivateChannel(uint16_t channelId, const std::string &channelName) const;
 	void sendClosePrivate(uint16_t channelId);
@@ -1023,7 +1032,7 @@ public:
 	void removeBakragoreIcon(const IconBakragore icon);
 	void sendClientCheck() const;
 	void sendGameNews() const;
-	void sendMagicEffect(const Position &pos, uint16_t type) const;
+	void sendMagicEffect(const Position &pos, uint16_t type, SourceEffect_t source = SourceEffect_t::GLOBAL) const;
 	void removeMagicEffect(const Position &pos, uint16_t type) const;
 	void sendPing();
 	void sendPingBack() const;
@@ -1121,7 +1130,15 @@ public:
 
 	void sendOpenStash(bool isNpc = false) const;
 
-	void sendTakeScreenshot(Screenshot_t screenshotType) const;
+	void sendBannerType(Banner_t bannerType) const;
+	void sendScreenshotAndBannerUnlockedAchievement(const uint16_t achievementId) const;
+	void sendScreenshotAndBannerUnlockedTitle(const uint8_t titleId) const;
+	void sendScreenshotAndBannerUnlockedCosmetic(const std::string &skinName, uint16_t lookType, uint8_t skinType) const;
+	void sendScreenshotAndBannerUpLevel(const uint16_t levelUp) const;
+	void sendScreenshotAndBannerUpSkill(skills_t skill, const uint16_t skillLevel) const;
+	void sendScreenshotAndBannerProgressRace(uint16_t raceId, uint8_t progressLevel, bool isBoss) const;
+	void sendScreenshotAndBannerProgressQuest(const std::string &questName, bool isCompleted) const;
+	void sendScreenshotAndBannerProficiencyProgress(uint16_t itemId, const std::string &message) const;
 
 	void onThink(uint32_t interval) override;
 
@@ -1309,6 +1326,40 @@ public:
 	bool useTaskHuntingPoints(uint64_t amount);
 
 	uint64_t getTaskHuntingPoints() const;
+
+	/*******************************************************************************
+	 * Bounty Tasks / Weekly Tasks (Winter Update 2025 — Task Board)
+	 ******************************************************************************/
+	BountyTaskData &getBountyTaskData();
+	const BountyTaskData &getBountyTaskData() const;
+
+	void sendBountyTaskData() const;
+	void refreshTaskIcons();
+	void sendWeeklyTaskData();
+	void sendHuntingTaskShopData() const;
+
+	void addBountyPoints(uint32_t amount);
+	void removeBountyPoints(uint32_t amount);
+	uint32_t getBountyPoints() const;
+
+	void addRerollTasks(uint32_t amount);
+	void removeRerollTasks(uint32_t amount);
+	uint32_t getRerollTasks() const;
+
+	void setBountyTalismanEquipped(bool equipped);
+	bool isBountyTalismanEquipped() const;
+
+	void sendTaskBoardResourceBalance() const;
+
+	uint32_t getSoulsealsPoints() const;
+	void addSoulsealsPoints(uint32_t amount);
+	void removeSoulsealsPoints(uint32_t amount);
+
+	WeeklyTaskData &getWeeklyTaskData();
+	const WeeklyTaskData &getWeeklyTaskData() const;
+
+	bool hasWeeklyTaskExpansion() const;
+	void setWeeklyTaskExpansion(bool onOff);
 
 	uint32_t getTaskHuntingRerollPrice() const;
 
@@ -1592,7 +1643,6 @@ private:
 	void setNextPotionActionTask(const std::shared_ptr<Task> &task);
 
 	void death(const std::shared_ptr<Creature> &lastHitCreature) override;
-	void sendToRook();
 	bool spawn();
 	void despawn();
 	bool dropCorpse(const std::shared_ptr<Creature> &lastHitCreature, const std::shared_ptr<Creature> &mostDamageCreature, bool lastHitUnjustified, bool mostDamageUnjustified) override;
@@ -1657,6 +1707,11 @@ private:
 	std::vector<std::unique_ptr<PreySlot>> preys;
 	std::vector<std::unique_ptr<TaskHuntingSlot>> taskHunting;
 
+	BountyTaskData bountyTaskData;
+	WeeklyTaskData weeklyTaskData;
+	bool bountyTalismanEquipped = false;
+	bool weeklyTaskExpansion = false;
+
 	GuildWarVector guildWarVector;
 
 	std::vector<std::shared_ptr<Party>> invitePartyList;
@@ -1690,6 +1745,7 @@ private:
 	uint64_t lastQuestlogUpdate = 0;
 	uint64_t preyCards = 0;
 	uint64_t taskHuntingPoints = 0;
+	uint32_t soulsealsPoints = 0;
 	uint32_t bossPoints = 0;
 	uint32_t bossIdSlotOne = 0;
 	uint32_t bossIdSlotTwo = 0;
@@ -1812,7 +1868,7 @@ private:
 	std::pair<ConditionType_t, uint64_t> m_rootCondition = { CONDITION_NONE, 0 };
 
 	uint8_t soul = 0;
-	uint8_t levelPercent = 0;
+	double_t levelPercent = 0;
 	uint16_t loyaltyBonusPercent = 0;
 	double_t magLevelPercent = 0;
 
@@ -1914,6 +1970,8 @@ private:
 	friend class PlayerWheel;
 	friend class IOLoginDataLoad;
 	friend class IOLoginDataSave;
+	friend class IOWeeklyTasks;
+	friend class IOBountyTasks;
 	friend class PlayerAchievement;
 	friend class PlayerBadge;
 	friend class PlayerCyclopedia;

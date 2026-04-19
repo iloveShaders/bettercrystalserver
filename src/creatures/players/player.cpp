@@ -19,6 +19,8 @@
 
 #include "account/account.hpp"
 #include "config/configmanager.hpp"
+#include "io/iobountytasks.hpp"
+#include "io/ioweeklytasks.hpp"
 #include "core.hpp"
 #include "creatures/appearance/mounts/mounts.hpp"
 #include "creatures/appearance/attached_effects/attached_effects.hpp"
@@ -78,6 +80,7 @@
 #include "creatures/players/wheel/wheel_definitions.hpp"
 #include "creatures/players/proficiencies/proficiencies.hpp"
 #include "creatures/players/proficiencies/proficiencies_definitions.hpp"
+#include "creatures/combat/spells.hpp"
 #include "utils/tools.hpp"
 
 MuteCountMap Player::muteCountMap;
@@ -1117,9 +1120,9 @@ void Player::addSkillAdvance(skills_t skill, uint64_t count) {
 		ss << "You advanced to " << getSkillName(skill) << " level " << skills[skill].level << '.';
 		sendTextMessage(MESSAGE_EVENT_ADVANCE, ss.str());
 		if (skill == SKILL_LEVEL) {
-			sendTakeScreenshot(SCREENSHOT_TYPE_LEVELUP);
+			sendScreenshotAndBannerUpLevel(skills[skill].level);
 		} else {
-			sendTakeScreenshot(SCREENSHOT_TYPE_SKILLUP);
+			sendScreenshotAndBannerUpSkill(skill, skills[skill].level);
 		}
 
 		g_creatureEvents().playerAdvance(static_self_cast<Player>(), skill, (skills[skill].level - 1), skills[skill].level);
@@ -2136,9 +2139,9 @@ void Player::sendPlayerVocation(const std::shared_ptr<Player> &player) const {
 	}
 }
 
-void Player::sendDistanceShoot(const Position &from, const Position &to, uint16_t type) const {
+void Player::sendDistanceShoot(const Position &from, const Position &to, uint16_t type, SourceEffect_t source) const {
 	if (client) {
-		client->sendDistanceShoot(from, to, type);
+		client->sendDistanceShoot(from, to, type, source);
 	}
 }
 
@@ -2231,9 +2234,9 @@ void Player::sendGameNews() const {
 	}
 }
 
-void Player::sendMagicEffect(const Position &pos, uint16_t type) const {
+void Player::sendMagicEffect(const Position &pos, uint16_t type, SourceEffect_t source) const {
 	if (client) {
-		client->sendMagicEffect(pos, type);
+		client->sendMagicEffect(pos, type, source);
 	}
 }
 
@@ -3528,10 +3531,9 @@ void Player::addManaSpent(uint64_t amount) {
 		std::ostringstream ss;
 		ss << "You advanced to magic level " << magLevel << '.';
 		sendTextMessage(MESSAGE_EVENT_ADVANCE, ss.str());
-		sendTakeScreenshot(SCREENSHOT_TYPE_SKILLUP);
 
 		g_creatureEvents().playerAdvance(static_self_cast<Player>(), SKILL_MAGLEVEL, magLevel - 1, magLevel);
-		sendTakeScreenshot(SCREENSHOT_TYPE_SKILLUP);
+		sendScreenshotAndBannerUpSkill(SKILL_MAGLEVEL, magLevel);
 
 		sendUpdateStats = true;
 		currReqMana = nextReqMana;
@@ -3638,19 +3640,11 @@ void Player::addExperience(const std::shared_ptr<Creature> &target, uint64_t exp
 	const uint32_t prevLevel = level;
 	while (experience >= nextLevelExp) {
 		++level;
-		auto currentVocation = vocation;
-		if (currentVocation->getId() != VOCATION_NONE && g_configManager().getBoolean(ROOK_SYSTEM) && level <= (uint32_t)g_configManager().getNumber(MIN_LEVEL_LEAVE_ROOK)) {
-			const auto &rookVocation = g_vocations().getVocation(VOCATION_NONE);
-			if (rookVocation) {
-				currentVocation = rookVocation;
-			}
-		}
-
-		healthMax += currentVocation->getHPGain();
-		health += currentVocation->getHPGain();
-		manaMax += currentVocation->getManaGain();
-		mana += currentVocation->getManaGain();
-		capacity += currentVocation->getCapGain();
+		healthMax += vocation->getHPGain();
+		health += vocation->getHPGain();
+		manaMax += vocation->getManaGain();
+		mana += vocation->getManaGain();
+		capacity += vocation->getCapGain();
 
 		currLevelExp = nextLevelExp;
 		nextLevelExp = getExpForLevel(level + 1);
@@ -3676,10 +3670,12 @@ void Player::addExperience(const std::shared_ptr<Creature> &target, uint64_t exp
 
 		g_creatureEvents().playerAdvance(static_self_cast<Player>(), SKILL_LEVEL, prevLevel, level);
 
+		g_ioweeklytasks().recalculateWeeklyTaskRewards(static_self_cast<Player>());
+
 		std::ostringstream ss;
 		ss << "You advanced from Level " << prevLevel << " to Level " << level << '.';
 		sendTextMessage(MESSAGE_EVENT_ADVANCE, ss.str());
-		sendTakeScreenshot(SCREENSHOT_TYPE_LEVELUP);
+		sendScreenshotAndBannerUpLevel(level);
 	}
 
 	if (nextLevelExp > currLevelExp) {
@@ -4135,17 +4131,9 @@ void Player::death(const std::shared_ptr<Creature> &lastHitCreature) {
 
 			while (level > 1 && experience < Player::getExpForLevel(level)) {
 				--level;
-				auto currentVocation = vocation;
-				if (currentVocation->getId() != VOCATION_NONE && g_configManager().getBoolean(ROOK_SYSTEM) && level < static_cast<uint32_t>(g_configManager().getNumber(MIN_LEVEL_LEAVE_ROOK))) {
-					const auto &rookVocation = g_vocations().getVocation(VOCATION_NONE);
-					if (rookVocation) {
-						currentVocation = rookVocation;
-					}
-				}
-
-				healthMax = std::max<int32_t>(0, healthMax - currentVocation->getHPGain());
-				manaMax = std::max<int32_t>(0, manaMax - currentVocation->getManaGain());
-				capacity = std::max<int32_t>(0, capacity - currentVocation->getCapGain());
+				healthMax = std::max<int32_t>(0, healthMax - vocation->getHPGain());
+				manaMax = std::max<int32_t>(0, manaMax - vocation->getManaGain());
+				capacity = std::max<int32_t>(0, capacity - vocation->getCapGain());
 			}
 
 			if (oldLevel != level) {
@@ -4214,9 +4202,6 @@ void Player::death(const std::shared_ptr<Creature> &lastHitCreature) {
 		}
 		sendTextMessage(MESSAGE_EVENT_ADVANCE, blessOutput.str());
 
-		// rook system
-		sendToRook();
-
 		sendStats();
 		sendSkills();
 		sendReLoginWindow(unfairFightReduction);
@@ -4267,154 +4252,6 @@ void Player::death(const std::shared_ptr<Creature> &lastHitCreature) {
 		onThink(EVENT_CREATURE_THINK_INTERVAL);
 		onIdleStatus();
 		sendStats();
-	}
-}
-
-void Player::sendToRook() {
-	if (vocation->getId() > VOCATION_NONE && g_configManager().getBoolean(ROOK_SYSTEM) && level <= static_cast<uint32_t>(g_configManager().getNumber(LEVEL_TO_ROOK))) {
-		const auto rookTownId = g_configManager().getNumber(ROOK_TOWN);
-		const auto &rookTown = g_game().map.towns.getTown(rookTownId);
-
-		if (rookTown) {
-			// Reset player
-			level = static_cast<uint32_t>(g_configManager().getNumber(ROOKED_LEVEL));
-			soul = 100;
-			capacity = 400;
-			staminaMinutes = 2520;
-			offlineTrainingTime = 43200;
-			health = healthMax = 150;
-			experience = levelPercent = magLevel = magLevelPercent = manaSpent = mana = manaMax = bankBalance = 0;
-
-			// default outfit (citizen)
-			defaultOutfit.lookType = (getSex() == 0) ? 136 : 128;
-			defaultOutfit.lookAddons = 0;
-			defaultOutfit.lookMount = 0;
-
-			g_game().playerChangeOutfit(getID(), defaultOutfit, 0);
-
-			// Clear player outfits
-			const auto playerOutfits = Outfits::getInstance().getOutfits(getSex());
-			for (auto it = outfitsMap.begin(); it != outfitsMap.end();) {
-				const auto &entry = *it;
-				const auto playerOutfit = std::find_if(playerOutfits.begin(), playerOutfits.end(), [&entry](const std::shared_ptr<Outfit> &outfit) {
-					return outfit->lookType == entry.lookType;
-				});
-
-				if (playerOutfit != playerOutfits.end()) {
-					const std::string from = (*playerOutfit)->from;
-					if (from == "store" || entry.lookType == 329 || entry.lookType == 328 || entry.lookType == 745 || entry.lookType == 746) {
-						++it;
-					} else {
-						removeOutfitAddon(entry.lookType, 3);
-						it = outfitsMap.erase(it);
-					}
-				} else {
-					++it;
-				}
-			}
-
-			// Clear mounts
-			std::vector<uint8_t> storeMounts;
-			const auto playerMounts = g_game().mounts->getMounts();
-			for (const auto &mount : playerMounts) {
-				if (mount->type == "store" && hasMount(mount)) {
-					storeMounts.push_back(mount->id);
-					continue;
-				}
-
-				if (hasMount(mount)) {
-					untameMount(mount->id);
-				}
-			}
-
-			// Clear storages
-			storageMap.clear();
-
-			// Add player store mounts again
-			for (const auto &storeMountId : storeMounts) {
-				tameMount(storeMountId);
-			}
-
-			if (level > 1) {
-				experience = Player::getExpForLevel(level);
-			}
-
-			loginPosition = rookTown->getTemplePosition();
-			setTown(rookTown);
-
-			const auto &rookVocation = g_vocations().getVocation(VOCATION_NONE);
-			if (rookVocation) {
-				setVocation(rookVocation->getId());
-			}
-
-			if (m_party) {
-				m_party->leaveParty(getPlayer(), true);
-			}
-
-			// Reset player skills
-			for (uint32_t i = SKILL_FIRST; i <= SKILL_LAST; ++i) {
-				skills[i].level = 10;
-				skills[i].tries = 0;
-				skills[i].percent = Player::getPercentLevel(0, rookVocation->getReqSkillTries(i, 10));
-			}
-
-			// Remove items from inventory
-			for (uint32_t slotId = CONST_SLOT_FIRST; slotId < CONST_SLOT_LAST; ++slotId) {
-				const auto &item = inventory[slotId];
-				if (item) {
-					g_game().internalRemoveItem(item);
-				}
-			}
-
-			// Add items to rooked player
-			if (g_configManager().getBoolean(TOGGLE_ADD_ROOK_ITEMS)) {
-				const uint32_t backpackId = g_configManager().getNumber(ROOK_SLOT_BACKPACK);
-				if (backpackId != 0) {
-					internalAddThing(CONST_SLOT_BACKPACK, Item::CreateItem(backpackId));
-				}
-
-				const uint32_t headId = g_configManager().getNumber(ROOK_SLOT_HEAD);
-				if (headId != 0) {
-					internalAddThing(CONST_SLOT_HEAD, Item::CreateItem(headId));
-				}
-
-				const uint32_t armorId = g_configManager().getNumber(ROOK_SLOT_ARMOR);
-				if (armorId != 0) {
-					internalAddThing(CONST_SLOT_ARMOR, Item::CreateItem(armorId));
-				}
-
-				const uint32_t legsId = g_configManager().getNumber(ROOK_SLOT_LEGS);
-				if (legsId != 0) {
-					internalAddThing(CONST_SLOT_LEGS, Item::CreateItem(legsId));
-				}
-
-				const uint32_t feetId = g_configManager().getNumber(ROOK_SLOT_FEET);
-				if (feetId != 0) {
-					internalAddThing(CONST_SLOT_FEET, Item::CreateItem(feetId));
-				}
-
-				const uint32_t rightId = g_configManager().getNumber(ROOK_SLOT_RIGHT);
-				if (rightId != 0) {
-					internalAddThing(CONST_SLOT_RIGHT, Item::CreateItem(rightId));
-				}
-
-				const uint32_t leftId = g_configManager().getNumber(ROOK_SLOT_LEFT);
-				if (leftId != 0) {
-					internalAddThing(CONST_SLOT_LEFT, Item::CreateItem(leftId));
-				}
-
-				const uint32_t ammoId = g_configManager().getNumber(ROOK_SLOT_AMMO);
-				if (ammoId != 0) {
-					internalAddThing(CONST_SLOT_AMMO, Item::CreateItem(ammoId));
-				}
-			}
-
-			updateBaseSpeed();
-			sendSkills();
-			sendStats();
-			g_saveManager().savePlayer(getPlayer());
-			g_logger().info("{} has been rooked", getName());
-		}
 	}
 }
 
@@ -6609,6 +6446,12 @@ void Player::addBestiaryKill(const std::shared_ptr<MonsterType> &mType) {
 	if (isConcoctionActive(Concoction_t::BestiaryBetterment)) {
 		kills *= 2;
 	}
+
+	uint16_t bountyBestiaryBonus = g_iobountytasks().getBountyTalismanBonus(getPlayer(), mType->info.raceid, BOUNTY_TALISMAN_BESTIARY);
+	if (bountyBestiaryBonus > 0 && uniform_random(1, 10000) <= bountyBestiaryBonus) {
+		kills *= 2;
+	}
+
 	g_iobestiary().addBestiaryKill(getPlayer(), mType, kills);
 }
 
@@ -6643,6 +6486,9 @@ bool Player::onKilledMonster(const std::shared_ptr<Monster> &monster) {
 		addBestiaryKill(mType);
 		addBosstiaryKill(mType);
 		addWeaponProficiencyExperience(mType, monster->getMonsterForgeClassification(), false);
+
+		g_iobountytasks().onCreatureKill(getPlayer(), mType->info.raceid);
+		g_ioweeklytasks().onCreatureKill(getPlayer(), mType->info.raceid);
 	} else if (monster->getForgeStack() == 40) {
 		addWeaponProficiencyExperience(mType, monster->getMonsterForgeClassification(), true);
 	}
@@ -8122,7 +7968,7 @@ bool Player::addOfflineTrainingTries(skills_t skill, uint64_t tries) {
 			std::ostringstream ss;
 			ss << "You advanced to magic level " << magLevel << '.';
 			sendTextMessage(MESSAGE_EVENT_ADVANCE, ss.str());
-			sendTakeScreenshot(SCREENSHOT_TYPE_SKILLUP);
+			sendScreenshotAndBannerUpSkill(SKILL_MAGLEVEL, magLevel);
 		}
 
 		uint8_t newPercent;
@@ -8180,9 +8026,9 @@ bool Player::addOfflineTrainingTries(skills_t skill, uint64_t tries) {
 			ss << "You advanced to " << getSkillName(skill) << " level " << skills[skill].level << '.';
 			sendTextMessage(MESSAGE_EVENT_ADVANCE, ss.str());
 			if (skill == SKILL_LEVEL) {
-				sendTakeScreenshot(SCREENSHOT_TYPE_LEVELUP);
+				sendScreenshotAndBannerUpLevel(skills[skill].level);
 			} else {
-				sendTakeScreenshot(SCREENSHOT_TYPE_SKILLUP);
+				sendScreenshotAndBannerUpSkill(skill, skills[skill].level);
 			}
 		}
 
@@ -8494,9 +8340,57 @@ void Player::sendOpenStash(bool isNpc) const {
 	}
 }
 
-void Player::sendTakeScreenshot(Screenshot_t screenshotType) const {
+void Player::sendBannerType(Banner_t bannerType) const {
 	if (client) {
-		client->sendTakeScreenshot(screenshotType);
+		client->sendBannerType(bannerType);
+	}
+}
+
+void Player::sendScreenshotAndBannerUnlockedAchievement(const uint16_t achievementId) const {
+	if (client) {
+		client->sendScreenshotAndBannerUnlockedAchievement(achievementId);
+	}
+}
+
+void Player::sendScreenshotAndBannerUnlockedTitle(const uint8_t titleId) const {
+	if (client) {
+		client->sendScreenshotAndBannerUnlockedTitle(titleId);
+	}
+}
+
+void Player::sendScreenshotAndBannerUnlockedCosmetic(const std::string &skinName, uint16_t lookType, uint8_t skinType) const {
+	if (client) {
+		client->sendScreenshotAndBannerUnlockedCosmetic(skinName, lookType, skinType);
+	}
+}
+
+void Player::sendScreenshotAndBannerUpLevel(const uint16_t levelUp) const {
+	if (client) {
+		client->sendScreenshotAndBannerUpLevel(levelUp);
+	}
+}
+
+void Player::sendScreenshotAndBannerUpSkill(skills_t skill, const uint16_t skillLevel) const {
+	if (client) {
+		client->sendScreenshotAndBannerUpSkill(skill, skillLevel);
+	}
+}
+
+void Player::sendScreenshotAndBannerProgressRace(uint16_t raceId, uint8_t progressLevel, bool isBoss) const {
+	if (client) {
+		client->sendScreenshotAndBannerProgressRace(raceId, progressLevel, isBoss);
+	}
+}
+
+void Player::sendScreenshotAndBannerProgressQuest(const std::string &questName, bool isCompleted) const {
+	if (client) {
+		client->sendScreenshotAndBannerProgressQuest(questName, isCompleted);
+	}
+}
+
+void Player::sendScreenshotAndBannerProficiencyProgress(uint16_t itemId, const std::string &message) const {
+	if (client) {
+		client->sendScreenshotAndBannerProficiencyProgress(itemId, message);
 	}
 }
 
@@ -9517,7 +9411,7 @@ void Player::sendPreyTimeLeft(const std::unique_ptr<PreySlot> &slot) const {
 void Player::reloadPreySlot(PreySlot_t slotid) {
 	if (g_configManager().getBoolean(PREY_ENABLED) && client) {
 		client->sendPreyData(getPreySlotById(slotid));
-		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints());
+		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints(), getSoulsealsPoints());
 	}
 }
 
@@ -9548,7 +9442,7 @@ bool Player::usePreyCards(uint16_t amount) {
 
 	preyCards -= amount;
 	if (client) {
-		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints());
+		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints(), getSoulsealsPoints());
 	}
 	return true;
 }
@@ -9556,7 +9450,7 @@ bool Player::usePreyCards(uint16_t amount) {
 void Player::addPreyCards(uint64_t amount) {
 	preyCards += amount;
 	if (client) {
-		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints());
+		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints(), getSoulsealsPoints());
 	}
 }
 
@@ -9693,7 +9587,7 @@ uint32_t Player::getIP() const {
 void Player::reloadTaskSlot(PreySlot_t slotid) {
 	if (g_configManager().getBoolean(TASK_HUNTING_ENABLED) && client) {
 		client->sendTaskHuntingData(getTaskHuntingSlotById(slotid));
-		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints());
+		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints(), getSoulsealsPoints());
 	}
 }
 
@@ -9726,7 +9620,7 @@ std::vector<uint16_t> Player::getTaskHuntingBlackList() const {
 
 void Player::sendTaskHuntingData() const {
 	if (client) {
-		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints());
+		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints(), getSoulsealsPoints());
 		for (const std::unique_ptr<TaskHuntingSlot> &slot : taskHunting) {
 			if (slot) {
 				client->sendTaskHuntingData(slot);
@@ -9738,7 +9632,7 @@ void Player::sendTaskHuntingData() const {
 void Player::addTaskHuntingPoints(uint64_t amount) {
 	taskHuntingPoints += amount;
 	if (client) {
-		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints());
+		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints(), getSoulsealsPoints());
 	}
 }
 
@@ -9749,13 +9643,147 @@ bool Player::useTaskHuntingPoints(uint64_t amount) {
 
 	taskHuntingPoints -= amount;
 	if (client) {
-		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints());
+		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints(), getSoulsealsPoints());
 	}
 	return true;
 }
 
 uint64_t Player::getTaskHuntingPoints() const {
 	return taskHuntingPoints;
+}
+
+void Player::sendTaskBoardResourceBalance() const {
+	if (client) {
+		client->sendResourceBalance(RESOURCE_BOUNTY_POINTS, getBountyPoints());
+		client->sendResourceBalance(RESOURCE_TASK_HUNTING, getTaskHuntingPoints());
+		client->sendResourceBalance(RESOURCE_SOULSEALS_POINTS, getSoulsealsPoints());
+	}
+}
+
+BountyTaskData &Player::getBountyTaskData() {
+	return bountyTaskData;
+}
+
+const BountyTaskData &Player::getBountyTaskData() const {
+	return bountyTaskData;
+}
+
+void Player::setBountyTalismanEquipped(bool equipped) {
+	bountyTalismanEquipped = equipped;
+}
+
+bool Player::isBountyTalismanEquipped() const {
+	return bountyTalismanEquipped;
+}
+
+void Player::sendBountyTaskData() const {
+	if (client) {
+		client->sendBountyTaskData(bountyTaskData);
+	}
+}
+
+void Player::refreshTaskIcons() {
+	if (!client) {
+		return;
+	}
+	for (const auto &spectator : Spectators().find<Monster>(getPosition(), true)) {
+		client->sendCreatureIcon(spectator);
+	}
+}
+
+void Player::addBountyPoints(uint32_t amount) {
+	bountyTaskData.bountyPoints += amount;
+	sendBountyTaskData();
+	sendTaskBoardResourceBalance();
+}
+
+void Player::removeBountyPoints(uint32_t amount) {
+	if (bountyTaskData.bountyPoints >= amount) {
+		bountyTaskData.bountyPoints -= amount;
+	} else {
+		bountyTaskData.bountyPoints = 0;
+	}
+	sendBountyTaskData();
+	sendTaskBoardResourceBalance();
+}
+
+uint32_t Player::getBountyPoints() const {
+	return bountyTaskData.bountyPoints;
+}
+
+void Player::addRerollTasks(uint32_t amount) {
+	bountyTaskData.rerollTasks = static_cast<uint8_t>(bountyTaskData.rerollTasks + amount);
+	sendBountyTaskData();
+	sendTaskBoardResourceBalance();
+}
+
+void Player::removeRerollTasks(uint32_t amount) {
+	if (bountyTaskData.rerollTasks >= amount) {
+		bountyTaskData.rerollTasks -= static_cast<uint8_t>(amount);
+	} else {
+		bountyTaskData.rerollTasks = 0;
+	}
+	sendBountyTaskData();
+	sendTaskBoardResourceBalance();
+}
+
+uint32_t Player::getRerollTasks() const {
+	return bountyTaskData.rerollTasks;
+}
+
+void Player::sendWeeklyTaskData() {
+	if (!client) {
+		return;
+	}
+
+	g_ioweeklytasks().ensureWeeklyTaskCount(getPlayer());
+
+	client->sendWeeklyTaskData(weeklyTaskData);
+}
+
+void Player::sendHuntingTaskShopData() const {
+	if (client) {
+		client->sendHuntingTaskShopData();
+	}
+}
+
+WeeklyTaskData &Player::getWeeklyTaskData() {
+	return weeklyTaskData;
+}
+
+const WeeklyTaskData &Player::getWeeklyTaskData() const {
+	return weeklyTaskData;
+}
+
+bool Player::hasWeeklyTaskExpansion() const {
+	return weeklyTaskExpansion;
+}
+
+void Player::setWeeklyTaskExpansion(bool onOff) {
+	weeklyTaskExpansion = onOff;
+}
+
+uint32_t Player::getSoulsealsPoints() const {
+	return soulsealsPoints;
+}
+
+void Player::addSoulsealsPoints(uint32_t amount) {
+	soulsealsPoints += amount;
+	if (client) {
+		const auto &[sliverCount, coreCount] = getForgeSliversAndCores();
+		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints(), getSoulsealsPoints(), getForgeDusts(), sliverCount, coreCount);
+	}
+}
+
+void Player::removeSoulsealsPoints(uint32_t amount) {
+	if (soulsealsPoints < amount) {
+		return;
+	}
+	soulsealsPoints -= amount;
+	if (client) {
+		const auto &[sliverCount, coreCount] = getForgeSliversAndCores();
+		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints(), getSoulsealsPoints(), getForgeDusts(), sliverCount, coreCount);
+	}
 }
 
 uint32_t Player::getTaskHuntingRerollPrice() const {
@@ -10791,21 +10819,21 @@ void Player::closeForgeWindow() const {
 void Player::setForgeDusts(uint64_t amount) {
 	forgeDusts = amount;
 	if (client) {
-		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints(), getForgeDusts());
+		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints(), getSoulsealsPoints(), getForgeDusts());
 	}
 }
 
 void Player::addForgeDusts(uint64_t amount) {
 	forgeDusts += amount;
 	if (client) {
-		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints(), getForgeDusts());
+		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints(), getSoulsealsPoints(), getForgeDusts());
 	}
 }
 
 void Player::removeForgeDusts(uint64_t amount) {
 	forgeDusts = std::max<uint64_t>(0, forgeDusts - amount);
 	if (client) {
-		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints(), getForgeDusts());
+		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints(), getSoulsealsPoints(), getForgeDusts());
 	}
 }
 
@@ -10816,14 +10844,14 @@ uint64_t Player::getForgeDusts() const {
 void Player::addForgeDustLevel(uint64_t amount) {
 	forgeDustLevel += amount;
 	if (client) {
-		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints(), getForgeDusts());
+		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints(), getSoulsealsPoints(), getForgeDusts());
 	}
 }
 
 void Player::removeForgeDustLevel(uint64_t amount) {
 	forgeDustLevel = std::max<uint64_t>(0, forgeDustLevel - amount);
 	if (client) {
-		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints(), getForgeDusts());
+		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints(), getSoulsealsPoints(), getForgeDusts());
 	}
 }
 
@@ -11060,6 +11088,40 @@ void Player::sendLootContainers() const {
 	}
 }
 
+void Player::sendSpellCooldowns() {
+	constexpr auto maxu16 = std::numeric_limits<uint16_t>::max();
+
+	for (const auto &condItem : conditions) {
+		if (!condItem) {
+			continue;
+		}
+
+		const ConditionType_t type = condItem->getType();
+		const uint32_t subId = condItem->getSubId();
+
+		if (type != CONDITION_SPELLCOOLDOWN && type != CONDITION_SPELLGROUPCOOLDOWN) {
+			continue;
+		}
+
+		uint16_t spellId = subId > maxu16 ? 0u : static_cast<uint16_t>(subId);
+		const auto &spell = g_spells().getInstantSpellById(spellId);
+		if (!spell) {
+			continue;
+		}
+
+		const uint32_t ticks = std::max<int32_t>(0, condItem->getTicks());
+		if (ticks == 0) {
+			continue;
+		}
+
+		if (type == CONDITION_SPELLGROUPCOOLDOWN) {
+			sendSpellGroupCooldown(static_cast<SpellGroup_t>(spellId), ticks);
+		} else {
+			sendSpellCooldown(spellId, ticks);
+		}
+	}
+}
+
 void Player::sendPlayerTyping(const std::shared_ptr<Creature> &creature, uint8_t typing) const {
 	if (!client) {
 		return;
@@ -11077,6 +11139,18 @@ void Player::sendSingleSoundEffect(const Position &pos, SoundEffect_t id, Source
 void Player::sendDoubleSoundEffect(const Position &pos, SoundEffect_t mainSoundId, SourceEffect_t mainSource, SoundEffect_t secondarySoundId, SourceEffect_t secondarySource) const {
 	if (client) {
 		client->sendDoubleSoundEffect(pos, mainSoundId, mainSource, secondarySoundId, secondarySource);
+	}
+}
+
+void Player::sendAmbientSoundEffect(const SoundAmbientEffect_t id) const {
+	if (client) {
+		client->sendAmbientSoundEffect(id);
+	}
+}
+
+void Player::sendMusicSoundEffect(const SoundMusicEffect_t id) const {
+	if (client) {
+		client->sendMusicSoundEffect(id);
 	}
 }
 

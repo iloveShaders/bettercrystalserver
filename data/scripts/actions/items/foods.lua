@@ -142,13 +142,29 @@ function food.onUse(player, item, fromPosition, target, toPosition, isHotkey)
 		return false
 	end
 
-	local condition = player:getCondition(CONDITION_REGENERATION, CONDITIONID_DEFAULT)
-	if condition and math.floor(condition:getTicks() / 1000 + (itemFood[1] * 12)) >= 1200 then
+	local existingCondition = player:getCondition(CONDITION_REGENERATION, CONDITIONID_DEFAULT)
+	if not existingCondition then
+		player:sendTextMessage(MESSAGE_FAILURE, "Regeneration condition not found.")
+		return true
+	end
+
+	local foodTime = itemFood[1] * 12000
+
+	local currentFoodTicks = existingCondition:getFoodTicks()
+	if currentFoodTicks + foodTime > 1200000 then
 		player:sendTextMessage(MESSAGE_FAILURE, "You are full.")
 		return true
 	end
 
-	player:feed(itemFood[1] * 12)
+	local condition = Condition(CONDITION_REGENERATION, CONDITIONID_DEFAULT, 0, true)
+	local vocation = player:getVocation()
+	condition:setParameter(CONDITION_PARAM_HEALTHGAIN, vocation:getHealthGainAmount())
+	condition:setParameter(CONDITION_PARAM_MANAGAIN, vocation:getManaGainAmount())
+	condition:setParameter(CONDITION_PARAM_TICKS, -1)
+	condition:setParameter(CONDITION_PARAM_FOODTICKS, foodTime)
+
+	player:addCondition(condition)
+
 	player:say(itemFood[2], TALKTYPE_MONSTER_SAY)
 	player:updateSupplyTracker(item)
 	player:getPosition():sendSingleSoundEffect(SOUND_EFFECT_TYPE_ACTION_EAT, player:isInGhostMode() and nil or player)

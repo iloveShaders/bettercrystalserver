@@ -51,6 +51,8 @@
 #include "io/functions/iologindata_save_player.hpp"
 #include "io/iomarket.hpp"
 #include "io/ioprey.hpp"
+#include "io/iobountytasks.hpp"
+#include "io/ioweeklytasks.hpp"
 #include "items/bed.hpp"
 #include "items/containers/inbox/inbox.hpp"
 #include "items/containers/rewards/reward.hpp"
@@ -90,11 +92,11 @@ std::vector<std::weak_ptr<Creature>> checkCreatureLists[EVENT_CREATURECOUNT];
 namespace InternalGame {
 	void sendBlockEffect(BlockType_t blockType, CombatType_t combatType, const Position &targetPos, const std::shared_ptr<Creature> &source) {
 		if (blockType == BLOCK_DEFENSE) {
-			g_game().addMagicEffect(targetPos, CONST_ME_POFF);
+			g_game().addMagicEffect(targetPos, CONST_ME_POFF, source);
 		} else if (blockType == BLOCK_ARMOR) {
-			g_game().addMagicEffect(targetPos, CONST_ME_BLOCKHIT);
+			g_game().addMagicEffect(targetPos, CONST_ME_BLOCKHIT, source);
 		} else if (blockType == BLOCK_DODGE) {
-			g_game().addMagicEffect(targetPos, CONST_ME_DODGE);
+			g_game().addMagicEffect(targetPos, CONST_ME_DODGE, source);
 		} else if (blockType == BLOCK_IMMUNITY) {
 			uint8_t hitEffect = 0;
 			switch (combatType) {
@@ -122,7 +124,7 @@ namespace InternalGame {
 					break;
 				}
 			}
-			g_game().addMagicEffect(targetPos, hitEffect);
+			g_game().addMagicEffect(targetPos, hitEffect, source);
 		}
 
 		if (blockType != BLOCK_NONE) {
@@ -1322,6 +1324,45 @@ bool Game::removeCreature(const std::shared_ptr<Creature> &creature, bool isLogo
 	}
 
 	return true;
+}
+
+void Game::playerChangeVocation(uint32_t playerId, const uint8_t newVocationCipId) {
+	const auto &player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+
+	const auto &vocationPtr = player->getVocation();
+	if (!vocationPtr) {
+		return;
+	}
+
+	const uint8_t cipTibiaId = vocationPtr->getClientId();
+	if (cipTibiaId != Vocation_t::VOCATION_NONE) {
+		return;
+	}
+
+	uint8_t newVocationId = VOCATION_NONE;
+	if (newVocationCipId == VOCATION_KNIGHT_CIP) {
+		newVocationId = VOCATION_KNIGHT;
+	} else if (newVocationCipId == VOCATION_PALADIN_CIP) {
+		newVocationId = VOCATION_PALADIN;
+	} else if (newVocationCipId == VOCATION_SORCERER_CIP) {
+		newVocationId = VOCATION_SORCERER;
+	} else if (newVocationCipId == VOCATION_DRUID_CIP) {
+		newVocationId = VOCATION_DRUID;
+	} else if (newVocationCipId == VOCATION_MONK_CIP) {
+		newVocationId = VOCATION_MONK;
+	}
+
+	if (newVocationId != Vocation_t::VOCATION_NONE) {
+		player->setVocation(newVocationId);
+		player->sendSkills();
+		player->sendStats();
+		player->sendBasicData();
+		player->wheel()->sendGiftOfLifeCooldown();
+		g_game().reloadCreature(player);
+	}
 }
 
 void Game::playerTeleport(uint32_t playerId, const Position &newPosition) {
@@ -4705,7 +4746,7 @@ void Game::playerWrapableItem(uint32_t playerId, const Position &pos, uint8_t st
 	} else if (item->getID() == ITEM_DECORATION_KIT && unWrapId != 0) {
 		unwrapItem(item, unWrapId, houseTile->getHouse(), player);
 	}
-	addMagicEffect(pos, CONST_ME_POFF);
+	addMagicEffect(pos, CONST_ME_POFF, player);
 }
 
 std::shared_ptr<Item> Game::wrapItem(const std::shared_ptr<Item> &item, const std::shared_ptr<House> &house) {
@@ -7342,7 +7383,7 @@ void Game::notifySpectators(const CreatureVector &spectators, const Position &ta
 				tmpPlayer->sendTextMessage(MESSAGE_DAMAGE_OTHERS, ss.str());
 			}
 		}
-		addMagicEffect(targetPos, CONST_ME_DODGE);
+		addMagicEffect(targetPos, CONST_ME_DODGE, attackerPlayer);
 	}
 }
 
@@ -7612,7 +7653,7 @@ bool Game::combatChangeHealth(const std::shared_ptr<Creature> &attacker, const s
 	} else {
 		if (!target->isAttackable()) {
 			if (!target->isInGhostMode()) {
-				addMagicEffect(targetPos, CONST_ME_POFF);
+				addMagicEffect(targetPos, CONST_ME_POFF, attacker);
 			}
 			return true;
 		}
@@ -7721,9 +7762,9 @@ bool Game::combatChangeHealth(const std::shared_ptr<Creature> &attacker, const s
 		}
 
 		if (damage.fatal) {
-			addMagicEffect(spectators.data(), targetPos, CONST_ME_FATAL);
+			addMagicEffect(spectators.data(), targetPos, CONST_ME_FATAL, attacker);
 		} else if (damage.critical) {
-			addMagicEffect(spectators.data(), targetPos, CONST_ME_CRITICAL_DAMAGE);
+			addMagicEffect(spectators.data(), targetPos, CONST_ME_CRITICAL_DAMAGE, attacker);
 		}
 
 		if (!damage.extension && attackerMonster && targetPlayer) {
@@ -7786,7 +7827,7 @@ bool Game::combatChangeHealth(const std::shared_ptr<Creature> &attacker, const s
 					target->removeCondition(CONDITION_MANASHIELD);
 				}
 
-				addMagicEffect(spectators.data(), targetPos, CONST_ME_LOSEENERGY);
+				addMagicEffect(spectators.data(), targetPos, CONST_ME_LOSEENERGY, attacker);
 
 				std::string damageString = std::to_string(manaDamage);
 
@@ -7960,7 +8001,7 @@ void Game::sendDamageMessageAndEffects(
 	message.primary.value = damage.primary.value;
 	message.secondary.value = damage.secondary.value;
 
-	sendEffects(target, damage, targetPos, message, spectators);
+	sendEffects(attacker, target, damage, targetPos, message, spectators);
 
 	if (shouldSendMessage(message)) {
 		sendMessages(attacker, target, damage, targetPos, attackerPlayer, targetPlayer, message, spectators, realDamage);
@@ -8118,21 +8159,21 @@ void Game::buildMessageAsAttacker(
 }
 
 void Game::sendEffects(
-	const std::shared_ptr<Creature> &target, const CombatDamage &damage, const Position &targetPos, TextMessage &message,
+	const std::shared_ptr<Creature> &attacker, const std::shared_ptr<Creature> &target, const CombatDamage &damage, const Position &targetPos, TextMessage &message,
 	const CreatureVector &spectators
 ) {
 	uint16_t hitEffect;
 	if (message.primary.value) {
 		combatGetTypeInfo(damage.primary.type, target, message.primary.color, hitEffect);
 		if (hitEffect != CONST_ME_NONE) {
-			addMagicEffect(spectators, targetPos, hitEffect);
+			addMagicEffect(spectators, targetPos, hitEffect, attacker);
 		}
 	}
 
 	if (message.secondary.value) {
 		combatGetTypeInfo(damage.secondary.type, target, message.secondary.color, hitEffect);
 		if (hitEffect != CONST_ME_NONE) {
-			addMagicEffect(spectators, targetPos, hitEffect);
+			addMagicEffect(spectators, targetPos, hitEffect, attacker);
 		}
 	}
 }
@@ -8328,7 +8369,7 @@ bool Game::combatChangeMana(const std::shared_ptr<Creature> &attacker, const std
 	} else {
 		if (!target->isAttackable()) {
 			if (!target->isInGhostMode()) {
-				addMagicEffect(targetPos, CONST_ME_POFF);
+				addMagicEffect(targetPos, CONST_ME_POFF, attacker);
 			}
 			return false;
 		}
@@ -8340,7 +8381,7 @@ bool Game::combatChangeMana(const std::shared_ptr<Creature> &attacker, const std
 		auto manaLoss = std::min<int32_t>(target->getMana(), -manaChange);
 		BlockType_t blockType = target->blockHit(attacker, COMBAT_MANADRAIN, manaLoss);
 		if (blockType != BLOCK_NONE) {
-			addMagicEffect(targetPos, CONST_ME_POFF);
+			addMagicEffect(targetPos, CONST_ME_POFF, attacker);
 			return false;
 		}
 
@@ -8518,6 +8559,28 @@ void Game::addMagicEffect(const CreatureVector &spectators, const Position &pos,
 	}
 }
 
+void Game::addMagicEffect(const Position &pos, uint16_t effect, const std::shared_ptr<Creature> &actor) {
+	auto spectators = Spectators().find<Player>(pos, true);
+	addMagicEffect(spectators.data(), pos, effect, actor);
+}
+
+void Game::addMagicEffect(const CreatureVector &spectators, const Position &pos, uint16_t effect, const std::shared_ptr<Creature> &actor) {
+	using enum SourceEffect_t;
+	for (const auto &spectator : spectators) {
+		if (const auto &tmpPlayer = spectator->getPlayer()) {
+			SourceEffect_t source = CREATURES;
+			if (!actor || actor->getNpc()) {
+				source = GLOBAL;
+			} else if (actor == spectator) {
+				source = OWN;
+			} else if (actor->getPlayer()) {
+				source = OTHERS;
+			}
+			tmpPlayer->sendMagicEffect(pos, effect, source);
+		}
+	}
+}
+
 void Game::removeMagicEffect(const Position &pos, uint16_t effect) {
 	auto spectators = Spectators().find<Player>(pos, true);
 	removeMagicEffect(spectators.data(), pos, effect);
@@ -8540,6 +8603,28 @@ void Game::addDistanceEffect(const CreatureVector &spectators, const Position &f
 	for (const auto &spectator : spectators) {
 		if (const auto &tmpPlayer = spectator->getPlayer()) {
 			tmpPlayer->sendDistanceShoot(fromPos, toPos, effect);
+		}
+	}
+}
+
+void Game::addDistanceEffect(const Position &fromPos, const Position &toPos, uint16_t effect, const std::shared_ptr<Creature> &actor) {
+	auto spectators = Spectators().find<Player>(fromPos).find<Player>(toPos);
+	addDistanceEffect(spectators.data(), fromPos, toPos, effect, actor);
+}
+
+void Game::addDistanceEffect(const CreatureVector &spectators, const Position &fromPos, const Position &toPos, uint16_t effect, const std::shared_ptr<Creature> &actor) {
+	using enum SourceEffect_t;
+	for (const auto &spectator : spectators) {
+		if (const auto &tmpPlayer = spectator->getPlayer()) {
+			SourceEffect_t source = CREATURES;
+			if (!actor || actor->getNpc()) {
+				source = GLOBAL;
+			} else if (actor == spectator) {
+				source = OWN;
+			} else if (actor->getPlayer()) {
+				source = OTHERS;
+			}
+			tmpPlayer->sendDistanceShoot(fromPos, toPos, effect, source);
 		}
 	}
 }
@@ -9379,6 +9464,223 @@ void Game::playerPreyAction(uint32_t playerId, uint8_t slot, uint8_t action, uin
 
 	g_ioprey().parsePreyAction(player, static_cast<PreySlot_t>(slot), static_cast<PreyAction_t>(action), static_cast<PreyOption_t>(option), index, raceId);
 }
+
+void Game::playerSoulSealsFight(uint32_t playerId, uint16_t raceId) {
+	const auto &player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+
+	// Verify player is next to the soulpit obelisk
+	const auto &playerPos = player->getPosition();
+	const bool nearObelisk = [&]() {
+		for (int32_t dx = -1; dx <= 1; dx++) {
+			for (int32_t dy = -1; dy <= 1; dy++) {
+				const auto &tile = map.getTile(static_cast<uint16_t>(playerPos.x + dx), static_cast<uint16_t>(playerPos.y + dy), playerPos.z);
+				if (tile && (tile->getItemTypeCount(47367) > 0 || tile->getItemTypeCount(47379) > 0)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}();
+
+	if (!nearObelisk) {
+		return;
+	}
+
+	const auto &mtype = g_monsters().getMonsterTypeByRaceId(raceId);
+	if (!mtype) {
+		player->sendTextMessage(MESSAGE_EVENT_ADVANCE, "Invalid creature.");
+		return;
+	}
+
+	uint8_t stars = mtype->info.bestiaryStars;
+	uint32_t cost = (static_cast<uint32_t>(stars) + 1) * 10;
+
+	if (player->getSoulsealsPoints() < cost) {
+		player->sendTextMessage(MESSAGE_EVENT_ADVANCE, "You don't have enough soul seal points.");
+		return;
+	}
+
+	if (!g_callbacks().checkCallback(EventCallback_t::playerOnSoulSealsFight, &EventCallback::playerOnSoulSealsFight, player, mtype->name)) {
+		return;
+	}
+
+	player->removeSoulsealsPoints(cost);
+}
+
+/*******************************************************************************
+ * Winter Update 2025 - Task Board
+ ******************************************************************************/
+
+void Game::playerOpenBountyTask(uint32_t playerId) {
+	const auto &player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+
+	if (player->getPlayerVocationEnum() == Vocation_t::VOCATION_NONE) {
+		player->sendMessageDialog("Bounty Tasks are not available in Rookgaard.");
+		return;
+	}
+
+	auto &bountyData = player->getBountyTaskData();
+	if (bountyData.state == BOUNTY_STATE_NONE) {
+		g_iobountytasks().generateCreatureList(player, bountyData.selectedDifficulty);
+	} else {
+		if (bountyData.state == BOUNTY_STATE_SELECTION && bountyData.currentCreaturesList.size() < BOUNTY_MAX_CREATURES) {
+			g_iobountytasks().fillMissingCreatures(player);
+		}
+		player->sendBountyTaskData();
+	}
+}
+
+void Game::playerOpenWeeklyTask(uint32_t playerId) {
+	const auto &player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+
+	g_ioweeklytasks().initializeWeeklyTasks(player);
+	player->sendWeeklyTaskData();
+}
+
+void Game::playerOpenHuntingTaskShop(uint32_t playerId) {
+	const auto &player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+
+	player->sendHuntingTaskShopData();
+}
+
+void Game::playerWeeklyTasksRegenerate(uint32_t playerId, uint8_t difficulty) {
+	const auto &player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+
+	if (difficulty > 3) {
+		return;
+	}
+
+	uint32_t minLevel = IOWeeklyTasks::getMinLevelForDifficulty(difficulty);
+	if (player->getLevel() < minLevel) {
+		player->sendTextMessage(MESSAGE_STATUS,
+			fmt::format("You need at least level {} to select this difficulty.", minLevel));
+		return;
+	}
+
+	g_ioweeklytasks().generateWeeklyTasks(player, difficulty);
+	player->sendWeeklyTaskData();
+	player->refreshTaskIcons();
+}
+
+void Game::playerWeeklyTaskDeliver(uint32_t playerId, uint8_t taskIndex) {
+	const auto &player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+
+	g_ioweeklytasks().deliverWeeklyTask(player, taskIndex);
+}
+
+void Game::playerBountyTaskChangeDifficulty(uint32_t playerId, uint8_t difficulty) {
+	const auto &player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+
+	if (difficulty > BOUNTY_DIFFICULTY_LAST) {
+		return;
+	}
+
+	g_iobountytasks().changeDifficulty(player, static_cast<BountyTaskDifficulty_t>(difficulty));
+}
+
+void Game::playerBountyTaskClaimReroll(uint32_t playerId) {
+	const auto &player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+
+	g_iobountytasks().claimDailyReroll(player);
+}
+
+void Game::playerBountyTaskReroll(uint32_t playerId) {
+	const auto &player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+
+	g_iobountytasks().rerollCreatureList(player);
+}
+
+void Game::playerBountyTaskSelectTask(uint32_t playerId, uint8_t taskIndex) {
+	const auto &player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+
+	g_iobountytasks().selectTask(player, taskIndex);
+}
+
+void Game::playerBountyTaskSetPreferred(uint32_t playerId, uint8_t listType, uint8_t slot, uint16_t raceId) {
+	const auto &player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+
+	g_iobountytasks().setPreferredMonster(player, listType, slot, raceId);
+}
+
+void Game::playerBountyTaskSetUnwanted(uint32_t playerId, uint8_t listType, uint8_t slot, uint16_t raceId) {
+	const auto &player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+
+	g_iobountytasks().setUnwantedMonster(player, listType, slot, raceId);
+}
+
+void Game::playerBountyTaskClaimReward(uint32_t playerId) {
+	const auto &player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+
+	g_iobountytasks().claimTaskReward(player);
+}
+
+void Game::playerBountyTaskUpgradeTalisman(uint32_t playerId, uint8_t pathIndex) {
+	const auto &player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+
+	g_iobountytasks().upgradeTalisman(player, pathIndex);
+}
+
+void Game::playerBountyTaskBuyShopOffer(uint32_t playerId, uint8_t offerIndex) {
+	const auto &player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+
+	g_ioweeklytasks().buyShopOffer(player, offerIndex);
+}
+
+void Game::playerBountyTaskUnlockListSlot(uint32_t playerId, uint8_t slot) {
+	const auto &player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+
+	g_iobountytasks().unlockListSlot(player, slot);
+}
+
+/*******************************************************************************/
 
 void Game::playerTaskHuntingAction(uint32_t playerId, uint8_t slot, uint8_t action, bool upgrade, uint16_t raceId) {
 	const auto &player = getPlayerByID(playerId);

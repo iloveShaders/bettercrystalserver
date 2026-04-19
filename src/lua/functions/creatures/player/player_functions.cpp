@@ -89,6 +89,9 @@ void PlayerFunctions::init(lua_State* L) {
 	Lua::registerMethod(L, "Player", "removeTaskHuntingPoints", PlayerFunctions::luaPlayerRemoveTaskHuntingPoints);
 	Lua::registerMethod(L, "Player", "getTaskHuntingPoints", PlayerFunctions::luaPlayerGetTaskHuntingPoints);
 	Lua::registerMethod(L, "Player", "addTaskHuntingPoints", PlayerFunctions::luaPlayerAddTaskHuntingPoints);
+	Lua::registerMethod(L, "Player", "getSoulsealsPoints", PlayerFunctions::luaPlayerGetSoulsealsPoints);
+	Lua::registerMethod(L, "Player", "addSoulsealsPoints", PlayerFunctions::luaPlayerAddSoulsealsPoints);
+	Lua::registerMethod(L, "Player", "removeSoulsealsPoints", PlayerFunctions::luaPlayerRemoveSoulsealsPoints);
 
 	Lua::registerMethod(L, "Player", "getCapacity", PlayerFunctions::luaPlayerGetCapacity);
 	Lua::registerMethod(L, "Player", "setCapacity", PlayerFunctions::luaPlayerSetCapacity);
@@ -379,6 +382,8 @@ void PlayerFunctions::init(lua_State* L) {
 
 	Lua::registerMethod(L, "Player", "sendSingleSoundEffect", PlayerFunctions::luaPlayerSendSingleSoundEffect);
 	Lua::registerMethod(L, "Player", "sendDoubleSoundEffect", PlayerFunctions::luaPlayerSendDoubleSoundEffect);
+	Lua::registerMethod(L, "Player", "sendAmbientSoundEffect", PlayerFunctions::luaPlayerSendAmbientSoundEffect);
+	Lua::registerMethod(L, "Player", "sendMusicSoundEffect", PlayerFunctions::luaPlayerSendMusicSoundEffect);
 
 	Lua::registerMethod(L, "Player", "getName", PlayerFunctions::luaPlayerGetName);
 	Lua::registerMethod(L, "Player", "changeName", PlayerFunctions::luaPlayerChangeName);
@@ -428,7 +433,9 @@ void PlayerFunctions::init(lua_State* L) {
 	// Store Summary
 	Lua::registerMethod(L, "Player", "createTransactionSummary", PlayerFunctions::luaPlayerCreateTransactionSummary);
 
-	Lua::registerMethod(L, "Player", "takeScreenshot", PlayerFunctions::luaPlayerTakeScreenshot);
+	Lua::registerMethod(L, "Player", "sendBannerType", PlayerFunctions::luaPlayersendBannerType);
+	Lua::registerMethod(L, "Player", "sendQuestProgress", PlayerFunctions::luaPlayerSendQuestStatusUpdate);
+
 	Lua::registerMethod(L, "Player", "sendIconBakragore", PlayerFunctions::luaPlayerSendIconBakragore);
 	Lua::registerMethod(L, "Player", "removeIconBakragore", PlayerFunctions::luaPlayerRemoveIconBakragore);
 	Lua::registerMethod(L, "Player", "sendCreatureAppear", PlayerFunctions::luaPlayerSendCreatureAppear);
@@ -1005,6 +1012,46 @@ int PlayerFunctions::luaPlayerAddTaskHuntingPoints(lua_State* L) {
 		const auto points = Lua::getNumber<uint64_t>(L, 2);
 		player->addTaskHuntingPoints(Lua::getNumber<uint64_t>(L, 2));
 		lua_pushnumber(L, static_cast<lua_Number>(points));
+	} else {
+		lua_pushnil(L);
+	}
+	return 1;
+}
+
+int PlayerFunctions::luaPlayerGetSoulsealsPoints(lua_State* L) {
+	// player:getSoulsealsPoints()
+	const auto &player = Lua::getUserdataShared<Player>(L, 1);
+	if (player == nullptr) {
+		Lua::reportErrorFunc(Lua::getErrorDesc(LUA_ERROR_PLAYER_NOT_FOUND));
+		Lua::pushBoolean(L, false);
+		return 1;
+	}
+
+	lua_pushnumber(L, static_cast<lua_Number>(player->getSoulsealsPoints()));
+	return 1;
+}
+
+int PlayerFunctions::luaPlayerAddSoulsealsPoints(lua_State* L) {
+	// player:addSoulsealsPoints(amount)
+	if (const auto &player = Lua::getUserdataShared<Player>(L, 1)) {
+		player->addSoulsealsPoints(Lua::getNumber<uint32_t>(L, 2));
+		lua_pushnumber(L, static_cast<lua_Number>(player->getSoulsealsPoints()));
+	} else {
+		lua_pushnil(L);
+	}
+	return 1;
+}
+
+int PlayerFunctions::luaPlayerRemoveSoulsealsPoints(lua_State* L) {
+	// player:removeSoulsealsPoints(amount)
+	if (const auto &player = Lua::getUserdataShared<Player>(L, 1)) {
+		const auto amount = Lua::getNumber<uint32_t>(L, 2);
+		if (player->getSoulsealsPoints() < amount) {
+			Lua::pushBoolean(L, false);
+		} else {
+			player->removeSoulsealsPoints(amount);
+			Lua::pushBoolean(L, true);
+		}
 	} else {
 		lua_pushnil(L);
 	}
@@ -4397,6 +4444,36 @@ int PlayerFunctions::luaPlayerSendDoubleSoundEffect(lua_State* L) {
 	return 1;
 }
 
+int PlayerFunctions::luaPlayerSendAmbientSoundEffect(lua_State* L) {
+	// player:sendAmbientSoundEffect(id)
+	const auto &player = Lua::getUserdataShared<Player>(L, 1);
+	if (!player) {
+		Lua::reportErrorFunc(Lua::getErrorDesc(LUA_ERROR_PLAYER_NOT_FOUND));
+		Lua::pushBoolean(L, false);
+		return 0;
+	}
+
+	const SoundAmbientEffect_t id = Lua::getNumber<SoundAmbientEffect_t>(L, 2);
+	player->sendAmbientSoundEffect(id);
+	Lua::pushBoolean(L, true);
+	return 1;
+}
+
+int PlayerFunctions::luaPlayerSendMusicSoundEffect(lua_State* L) {
+	// player:sendMusicSoundEffect(id)
+	const auto &player = Lua::getUserdataShared<Player>(L, 1);
+	if (!player) {
+		Lua::reportErrorFunc(Lua::getErrorDesc(LUA_ERROR_PLAYER_NOT_FOUND));
+		Lua::pushBoolean(L, false);
+		return 0;
+	}
+
+	const SoundMusicEffect_t id = Lua::getNumber<SoundMusicEffect_t>(L, 2);
+	player->sendMusicSoundEffect(id);
+	Lua::pushBoolean(L, true);
+	return 1;
+}
+
 int PlayerFunctions::luaPlayerGetName(lua_State* L) {
 	// player:getName()
 	const auto &player = Lua::getUserdataShared<Player>(L, 1);
@@ -4919,7 +4996,7 @@ int PlayerFunctions::luaPlayerAddAchievement(lua_State* L) {
 
 	const bool success = player->achiev()->add(achievementId, Lua::getBoolean(L, 3, true));
 	if (success) {
-		player->sendTakeScreenshot(SCREENSHOT_TYPE_ACHIEVEMENT);
+		player->sendScreenshotAndBannerUnlockedAchievement(achievementId);
 	}
 
 	Lua::pushBoolean(L, success);
@@ -5078,18 +5155,31 @@ int PlayerFunctions::luaPlayerCreateTransactionSummary(lua_State* L) {
 	return 1;
 }
 
-int PlayerFunctions::luaPlayerTakeScreenshot(lua_State* L) {
-	// player:takeScreenshot(screenshotType)
+int PlayerFunctions::luaPlayersendBannerType(lua_State* L) {
+	// player:sendBannerType(bannerType)
 	const auto &player = Lua::getUserdataShared<Player>(L, 1);
 	if (!player) {
 		lua_pushnil(L);
 		return 1;
 	}
 
-	const auto screenshotType = Lua::getNumber<Screenshot_t>(L, 2);
-	player->sendTakeScreenshot(screenshotType);
+	const auto bannerType = Lua::getNumber<Banner_t>(L, 2);
+	player->sendBannerType(bannerType);
 	Lua::pushBoolean(L, true);
 	return 1;
+}
+
+int PlayerFunctions::luaPlayerSendQuestStatusUpdate(lua_State* L) {
+	// player:sendQuestProgress(questName, isCompleted)
+	const auto &player = Lua::getUserdataShared<Player>(L, 1);
+	if (!player) {
+		lua_pushnil(L);
+		return 1;
+	}
+
+	player->sendScreenshotAndBannerProgressQuest(Lua::getString(L, 2), Lua::getBoolean(L, 3, false));
+	Lua::pushBoolean(L, true);
+	return 0;
 }
 
 int PlayerFunctions::luaPlayerSendIconBakragore(lua_State* L) {

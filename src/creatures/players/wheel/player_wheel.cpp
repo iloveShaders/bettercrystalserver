@@ -1910,7 +1910,38 @@ uint16_t PlayerWheel::getExtraPoints() const {
 		totalBonus += 10;
 	}
 
+	totalBonus += getExtraPointsFromHuntingTaskShop();
+
 	return totalBonus;
+}
+
+uint16_t PlayerWheel::getExtraPointsFromHuntingTaskShop() const {
+	static constexpr const char* kKey = "extraPointsFromHuntingTaskShop";
+	static constexpr uint16_t kMaxPurchased = 50;
+
+	const auto shopKv = m_player.kv()->scoped("wheel-of-destiny")->scoped("hunting-task-shop");
+	const auto stored = shopKv->get(kKey);
+	if (!stored.has_value()) {
+		return 0;
+	}
+	const int n = stored->get<IntType>();
+	if (n <= 0) {
+		return 0;
+	}
+	return static_cast<uint16_t>(std::min<int>(kMaxPurchased, n));
+}
+
+void PlayerWheel::addExtraPointsFromHuntingTaskShop(uint16_t amount) {
+	if (amount == 0) {
+		return;
+	}
+
+	static constexpr const char* kKey = "extraPointsFromHuntingTaskShop";
+	static constexpr uint16_t kMaxPurchased = 50;
+
+	const auto shopKv = m_player.kv()->scoped("wheel-of-destiny")->scoped("hunting-task-shop");
+	const uint32_t next = std::min<uint32_t>(kMaxPurchased, static_cast<uint32_t>(getExtraPointsFromHuntingTaskShop()) + amount);
+	shopKv->set(kKey, ValueWrapper(static_cast<int>(next)));
 }
 
 uint16_t PlayerWheel::getWheelPoints(bool includeExtraPoints /* = true*/) const {

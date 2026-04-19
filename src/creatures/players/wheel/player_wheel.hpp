@@ -163,6 +163,11 @@ public:
 	 */
 	uint16_t getWheelPoints(bool includeExtraPoints = true) const;
 	uint16_t getExtraPoints() const;
+
+	/** Extra wheel points bought from the Hunting Task Shop (Bonus Promotion), 0–50. Stored in player KV. */
+	uint16_t getExtraPointsFromHuntingTaskShop() const;
+	void addExtraPointsFromHuntingTaskShop(uint16_t amount);
+
 	uint8_t getMaxPointsPerSlot(WheelSlots_t slot) const;
 	uint16_t getUnusedPoints() const;
 

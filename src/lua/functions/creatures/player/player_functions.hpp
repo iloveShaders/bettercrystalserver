@@ -65,6 +65,9 @@ class PlayerFunctions {
 	static int luaPlayerRemoveTaskHuntingPoints(lua_State* L);
 	static int luaPlayerGetTaskHuntingPoints(lua_State* L);
 	static int luaPlayerAddTaskHuntingPoints(lua_State* L);
+	static int luaPlayerGetSoulsealsPoints(lua_State* L);
+	static int luaPlayerAddSoulsealsPoints(lua_State* L);
+	static int luaPlayerRemoveSoulsealsPoints(lua_State* L);
 
 	static int luaPlayerGetCapacity(lua_State* L);
 	static int luaPlayerSetCapacity(lua_State* L);
@@ -354,6 +357,8 @@ class PlayerFunctions {
 
 	static int luaPlayerSendSingleSoundEffect(lua_State* L);
 	static int luaPlayerSendDoubleSoundEffect(lua_State* L);
+	static int luaPlayerSendAmbientSoundEffect(lua_State* L);
+	static int luaPlayerSendMusicSoundEffect(lua_State* L);
 
 	static int luaPlayerGetName(lua_State* L);
 	static int luaPlayerChangeName(lua_State* L);
@@ -403,7 +408,9 @@ class PlayerFunctions {
 
 	static int luaPlayerCreateTransactionSummary(lua_State* L);
 
-	static int luaPlayerTakeScreenshot(lua_State* L);
+	static int luaPlayersendBannerType(lua_State* L);
+	static int luaPlayerSendQuestStatusUpdate(lua_State* L);
+
 	static int luaPlayerSendIconBakragore(lua_State* L);
 	static int luaPlayerRemoveIconBakragore(lua_State* L);
 
