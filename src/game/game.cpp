@@ -1936,7 +1936,7 @@ void Game::playerMoveItem(const std::shared_ptr<Player> &player, const Position 
 		}
 	}
 
-	if (item->isWrapable() || item->isStoreItem() || (item->hasOwner() && !item->isOwner(player))) {
+	if ((item->isWrapable() || item->isStoreItem() || (item->hasOwner() && !item->isOwner(player))) && item->getID() != ITEM_DECORATION_KIT) {
 		const auto toHouseTile = map.getTile(mapToPos)->dynamic_self_cast<HouseTile>();
 		const auto fromHouseTile = map.getTile(mapFromPos)->dynamic_self_cast<HouseTile>();
 		if (fromHouseTile && (!toHouseTile || toHouseTile->getHouse()->getId() != fromHouseTile->getHouse()->getId())) {
@@ -2021,7 +2021,8 @@ ReturnValue Game::checkMoveItemToCylinder(const std::shared_ptr<Player> &player,
 			bool isValidMoveItem = false;
 			auto fromHouseTile = fromCylinder->getTile();
 			auto house = fromHouseTile ? fromHouseTile->getHouse() : nullptr;
-			if (house && house->getHouseAccessLevel(player) < HOUSE_OWNER) {
+			const auto minRequired = (item->getID() == ITEM_DECORATION_KIT) ? HOUSE_SUBOWNER : HOUSE_OWNER;
+			if (house && house->getHouseAccessLevel(player) < minRequired) {
 				return RETURNVALUE_NOTPOSSIBLE;
 			}
 
@@ -2041,7 +2042,7 @@ ReturnValue Game::checkMoveItemToCylinder(const std::shared_ptr<Player> &player,
 				return RETURNVALUE_ITEMCANNOTBEMOVEDTHERE;
 			}
 
-			if (item->hasOwner() && !item->isOwner(player)) {
+			if (item->hasOwner() && !item->isOwner(player) && item->getID() != ITEM_DECORATION_KIT) {
 				return RETURNVALUE_ITEMISNOTYOURS;
 			}
 		}
