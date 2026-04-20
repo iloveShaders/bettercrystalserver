@@ -290,6 +290,14 @@ void Weapon::internalUseWeapon(const std::shared_ptr<Player> &player, const std:
 		}
 	}
 
+	// Native client weapon swing (15.x): effect on attacker tile, not on target
+	if (cleavePercent == 0) {
+		const uint16_t attackEffect = getWeaponAttackEffect(item, player);
+		if (attackEffect != CONST_ME_NONE) {
+			g_game().addMagicEffect(player->getPosition(), attackEffect, player);
+		}
+	}
+
 	if (isLoadedScriptId()) {
 		if (cleavePercent != 0) {
 			return;
@@ -342,11 +350,6 @@ void Weapon::internalUseWeapon(const std::shared_ptr<Player> &player, const std:
 			damage.exString += "cleave damage";
 			damage.primary.value = (damage.primary.value * damagePercent) / 100;
 			damage.secondary.value = (damage.secondary.value * damagePercent) / 100;
-		}
-
-		const uint16_t attackEffect = getWeaponAttackEffect(item, player);
-		if (attackEffect != CONST_ME_NONE && cleavePercent == 0) {
-			g_game().addMagicEffect(target->getPosition(), attackEffect, player);
 		}
 
 		// Handle chain system
