@@ -1098,10 +1098,8 @@ void IOLoginDataLoad::loadPlayerBountyTasks(const std::shared_ptr<Player> &playe
 			for (size_t i = 0; i < slotCount; ++i) {
 				BountyListSlot slot;
 				slot.activedList = static_cast<uint8_t>(listSlotsData[i * 5]);
-				slot.preferredRaceId = static_cast<uint16_t>(static_cast<uint8_t>(listSlotsData[i * 5 + 1])) |
-					(static_cast<uint16_t>(static_cast<uint8_t>(listSlotsData[i * 5 + 2])) << 8);
-				slot.unwantedRaceId = static_cast<uint16_t>(static_cast<uint8_t>(listSlotsData[i * 5 + 3])) |
-					(static_cast<uint16_t>(static_cast<uint8_t>(listSlotsData[i * 5 + 4])) << 8);
+				slot.preferredRaceId = static_cast<uint16_t>(static_cast<uint8_t>(listSlotsData[i * 5 + 1])) | (static_cast<uint16_t>(static_cast<uint8_t>(listSlotsData[i * 5 + 2])) << 8);
+				slot.unwantedRaceId = static_cast<uint16_t>(static_cast<uint8_t>(listSlotsData[i * 5 + 3])) | (static_cast<uint16_t>(static_cast<uint8_t>(listSlotsData[i * 5 + 4])) << 8);
 				bountyData.preferredLists.push_back(slot);
 			}
 		}
@@ -1121,17 +1119,11 @@ void IOLoginDataLoad::loadPlayerBountyTasks(const std::shared_ptr<Player> &playe
 			for (size_t i = 0; i < creatureCount; ++i) {
 				BountyCreatureEntry creature;
 				size_t base = i * 14;
-				creature.raceId = static_cast<uint16_t>(static_cast<uint8_t>(creaturesData[base])) |
-					(static_cast<uint16_t>(static_cast<uint8_t>(creaturesData[base + 1])) << 8);
-				creature.requiredKills = static_cast<uint16_t>(static_cast<uint8_t>(creaturesData[base + 2])) |
-					(static_cast<uint16_t>(static_cast<uint8_t>(creaturesData[base + 3])) << 8);
-				creature.rewardExp = static_cast<uint32_t>(static_cast<uint8_t>(creaturesData[base + 4])) |
-					(static_cast<uint32_t>(static_cast<uint8_t>(creaturesData[base + 5])) << 8) |
-					(static_cast<uint32_t>(static_cast<uint8_t>(creaturesData[base + 6])) << 16) |
-					(static_cast<uint32_t>(static_cast<uint8_t>(creaturesData[base + 7])) << 24);
+				creature.raceId = static_cast<uint16_t>(static_cast<uint8_t>(creaturesData[base])) | (static_cast<uint16_t>(static_cast<uint8_t>(creaturesData[base + 1])) << 8);
+				creature.requiredKills = static_cast<uint16_t>(static_cast<uint8_t>(creaturesData[base + 2])) | (static_cast<uint16_t>(static_cast<uint8_t>(creaturesData[base + 3])) << 8);
+				creature.rewardExp = static_cast<uint32_t>(static_cast<uint8_t>(creaturesData[base + 4])) | (static_cast<uint32_t>(static_cast<uint8_t>(creaturesData[base + 5])) << 8) | (static_cast<uint32_t>(static_cast<uint8_t>(creaturesData[base + 6])) << 16) | (static_cast<uint32_t>(static_cast<uint8_t>(creaturesData[base + 7])) << 24);
 				creature.rewardBountyPoints = static_cast<uint8_t>(creaturesData[base + 8]);
-				creature.currentKills = static_cast<uint16_t>(static_cast<uint8_t>(creaturesData[base + 9])) |
-					(static_cast<uint16_t>(static_cast<uint8_t>(creaturesData[base + 10])) << 8);
+				creature.currentKills = static_cast<uint16_t>(static_cast<uint8_t>(creaturesData[base + 9])) | (static_cast<uint16_t>(static_cast<uint8_t>(creaturesData[base + 10])) << 8);
 				creature.claimRewardType = static_cast<BountyClaimRewardType_t>(creaturesData[base + 11]);
 				creature.taskGrade = static_cast<BountyTaskGrade_t>(creaturesData[base + 12]);
 				creature.taskIndex = static_cast<uint8_t>(creaturesData[base + 13]);

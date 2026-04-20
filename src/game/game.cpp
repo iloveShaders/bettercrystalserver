@@ -9601,8 +9601,7 @@ void Game::playerWeeklyTasksRegenerate(uint32_t playerId, uint8_t difficulty) {
 
 	uint32_t minLevel = IOWeeklyTasks::getMinLevelForDifficulty(difficulty);
 	if (player->getLevel() < minLevel) {
-		player->sendTextMessage(MESSAGE_STATUS,
-			fmt::format("You need at least level {} to select this difficulty.", minLevel));
+		player->sendTextMessage(MESSAGE_STATUS, fmt::format("You need at least level {} to select this difficulty.", minLevel));
 		return;
 	}
 

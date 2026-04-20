@@ -995,23 +995,22 @@ void Npc::closeAllShopWindows() {
 	}
 }
 
-
 void Npc::sendDialogOptions(const std::shared_ptr<Player> &player, uint8_t conversationId) const {
 	if (!player) {
 		return;
 	}
 
 	/*
-		0 = "trade"
-		1 = "trade potions" // ??
-		2 = "trade equips" // ??
-		3 = "passage"
-		4 = "deposit all"
-		5 = "withdraw"
-		6 = "balance"
-		7 = "yes"
-		8 = "no"
-		9 = "bye"
+	    0 = "trade"
+	    1 = "trade potions" // ??
+	    2 = "trade equips" // ??
+	    3 = "passage"
+	    4 = "deposit all"
+	    5 = "withdraw"
+	    6 = "balance"
+	    7 = "yes"
+	    8 = "no"
+	    9 = "bye"
 	*/
 
 	NpcDialogOptions dialogOptions;
@@ -1056,8 +1055,7 @@ void Npc::sendDialogOptions(const std::shared_ptr<Player> &player, uint8_t conve
 
 	size_t extraOptions = !hasYes + !hasNo + !hasBye;
 
-	const bool needsTrade = !hasTrade && !hasBankOptions &&
-		(npcType->info.speechBubble == SPEECHBUBBLE_TRADE || npcType->info.speechBubble == SPEECHBUBBLE_QUESTTRADER);
+	const bool needsTrade = !hasTrade && !hasBankOptions && (npcType->info.speechBubble == SPEECHBUBBLE_TRADE || npcType->info.speechBubble == SPEECHBUBBLE_QUESTTRADER);
 	if (needsTrade) {
 		extraOptions++;
 	}

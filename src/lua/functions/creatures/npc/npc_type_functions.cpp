@@ -303,19 +303,19 @@ int NpcTypeFunctions::luaNpcTypeAddDialogOptions(lua_State* L) {
 
 	static const std::unordered_map<std::string, uint8_t> optionIdMap = {
 		// Trade option
-		{"trade", 0},
+		{ "trade", 0 },
 		//{"trade", 1},
 		//{"trade", 2},
 		// Travel option
-		{"passage", 3},
+		{ "passage", 3 },
 		// Bank options
-		{"deposit all", 4},
-		{"withdraw", 5},
-		{"balance", 6},
+		{ "deposit all", 4 },
+		{ "withdraw", 5 },
+		{ "balance", 6 },
 		// Standard options
-		{"yes", 7},
-		{"no", 8},
-		{"bye", 9},
+		{ "yes", 7 },
+		{ "no", 8 },
+		{ "bye", 9 },
 	};
 
 	const int args = lua_gettop(L) - 1;

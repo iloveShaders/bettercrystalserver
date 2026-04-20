@@ -318,7 +318,7 @@ void Weapon::internalUseWeapon(const std::shared_ptr<Player> &player, const std:
 		if (extraProficiencyAttack > 0) {
 			physicalAttack += extraProficiencyAttack;
 		}
-	
+
 		const int32_t elementalAttack = getElementDamageValue();
 		const int32_t combinedAttack = physicalAttack + elementalAttack;
 		if (elementalAttack > 0) {

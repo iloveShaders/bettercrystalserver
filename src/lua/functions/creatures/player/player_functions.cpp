@@ -940,7 +940,8 @@ int PlayerFunctions::luaPlayergetCharmMonsterType(lua_State* L) {
 	} else {
 		lua_pushnil(L);
 	}
-	return 1;;
+	return 1;
+	;
 }
 
 int PlayerFunctions::luaPlayerRemovePreyStamina(lua_State* L) {
