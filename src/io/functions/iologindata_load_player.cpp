@@ -1025,6 +1025,7 @@ void IOLoginDataLoad::loadPlayerInitializeSystem(const std::shared_ptr<Player> &
 	player->wheel()->loadActiveGems();
 	player->wheel()->loadKVModGrades();
 	player->wheel()->loadKVScrolls();
+	player->wheel()->loadKVHuntingTaskShopExtraPoints();
 	player->wheel()->initializePlayerData();
 
 	player->achiev()->loadUnlockedAchievements();

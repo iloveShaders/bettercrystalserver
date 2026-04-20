@@ -293,6 +293,7 @@ bool IOLoginData::savePlayerGuard(const std::shared_ptr<Player> &player) {
 	player->wheel()->saveActiveGems();
 	player->wheel()->saveKVModGrades();
 	player->wheel()->saveKVScrolls();
+	player->wheel()->saveKVHuntingTaskShopExtraPoints();
 
 	if (!IOLoginDataSave::savePlayerStorage(player)) {
 		throw DatabaseException("[IOLoginDataSave::savePlayerStorage] - Failed to save player storage: " + player->getName());
