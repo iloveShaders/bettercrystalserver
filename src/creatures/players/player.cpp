@@ -82,7 +82,7 @@
 #include "io/iobountytasks.hpp"
 #include "io/ioweeklytasks.hpp"
 
-	MuteCountMap Player::muteCountMap;
+MuteCountMap Player::muteCountMap;
 
 Player::Player(std::shared_ptr<ProtocolGame> p) :
 	lastPing(OTSYS_TIME()),
@@ -12936,4 +12936,3 @@ bool Player::removeSoulsealsPoints(uint32_t amount) {
 	}
 	return true;
 }
-
