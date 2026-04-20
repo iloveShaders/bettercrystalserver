@@ -156,6 +156,17 @@ taskHuntingSelectListPrice = 5
 taskHuntingBonusRerollPrice = 1
 taskHuntingFreeRerollTime = 20 * 60 * 60
 
+-- Bounty Tasks system
+bountyTasksEnabled = true
+bountyTasksExpMultiplier = 1
+bountyTasksFreeRerollTime = 72000
+bountyTasksPointsMultiplier = 1
+bountyTasksRerollMultiplier = 1
+
+-- Wweekly Tasks system
+weeklyTasksEnabled = true
+weeklyTasksResetDay = "monday"
+
 -- Forge system
 -- NOTE: forgeAmountMultiplier, amount dusts multiplies of influenced monsters, default 3
 -- NOTE: forgeMinSlivers, min slivers from influenced monsters
