@@ -99,57 +99,63 @@ function taskBoard.onSay(player, words, param)
 	-- HELP
 	-- ====================================================================
 	if command == "" or command == "help" then
-		player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-			"[TaskBoard] Commands:\n" ..
-			"  /taskboard reset\n" ..
-			"  /taskboard resetweekly,<player>\n" ..
-			"  /taskboard resetbounty,<player>\n" ..
-			"  /taskboard addbountypoints,<player>,<amount>\n" ..
-			"  /taskboard addhuntingtaskpoints,<player>,<amount>\n" ..
-			"  /taskboard addsoulsealspoints,<player>,<amount>\n" ..
-			"  /taskboard addrerolltasks,<player>,<amount>\n" ..
-			"  /taskboard points[,<player>]\n" ..
-			"  /taskboard bounty,<player>,<subcommand>,...\n" ..
-			"  /taskboard weekly,<player>,<subcommand>,...\n" ..
-			"  /taskboard shop,<player>,send\n" ..
-			"Type /taskboard bountyhelp or /taskboard weeklyhelp for details.")
+		player:sendTextMessage(
+			MESSAGE_EVENT_ADVANCE,
+			"[TaskBoard] Commands:\n"
+				.. "  /taskboard reset\n"
+				.. "  /taskboard resetweekly,<player>\n"
+				.. "  /taskboard resetbounty,<player>\n"
+				.. "  /taskboard addbountypoints,<player>,<amount>\n"
+				.. "  /taskboard addhuntingtaskpoints,<player>,<amount>\n"
+				.. "  /taskboard addsoulsealspoints,<player>,<amount>\n"
+				.. "  /taskboard addrerolltasks,<player>,<amount>\n"
+				.. "  /taskboard points[,<player>]\n"
+				.. "  /taskboard bounty,<player>,<subcommand>,...\n"
+				.. "  /taskboard weekly,<player>,<subcommand>,...\n"
+				.. "  /taskboard shop,<player>,send\n"
+				.. "Type /taskboard bountyhelp or /taskboard weeklyhelp for details."
+		)
 		return true
 	end
 
 	if command == "bountyhelp" then
-		player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-			"[TaskBoard] Bounty Commands:\n" ..
-			"  bounty,<player>,state,<0-3>\n" ..
-			"  bounty,<player>,difficulty,<0-3>\n" ..
-			"  bounty,<player>,generate[,<difficulty>]\n" ..
-			"  bounty,<player>,talisman,<path 0-3>,<level>\n" ..
-			"  bounty,<player>,talismans,<level>\n" ..
-			"  bounty,<player>,rerolltokens,<amount>\n" ..
-			"  bounty,<player>,rerolltimestamp,<seconds>\n" ..
-			"  bounty,<player>,active,<raceId>,<kills>,<curKills>,<exp>,<bp>,<grade>,<diff>\n" ..
-			"  bounty,<player>,creature,<raceId>,<kills>,<curKills>,<exp>,<bp>,<claim>,<grade>\n" ..
-			"  bounty,<player>,clearcreatures\n" ..
-			"  bounty,<player>,info\n" ..
-			"  bounty,<player>,send")
+		player:sendTextMessage(
+			MESSAGE_EVENT_ADVANCE,
+			"[TaskBoard] Bounty Commands:\n"
+				.. "  bounty,<player>,state,<0-3>\n"
+				.. "  bounty,<player>,difficulty,<0-3>\n"
+				.. "  bounty,<player>,generate[,<difficulty>]\n"
+				.. "  bounty,<player>,talisman,<path 0-3>,<level>\n"
+				.. "  bounty,<player>,talismans,<level>\n"
+				.. "  bounty,<player>,rerolltokens,<amount>\n"
+				.. "  bounty,<player>,rerolltimestamp,<seconds>\n"
+				.. "  bounty,<player>,active,<raceId>,<kills>,<curKills>,<exp>,<bp>,<grade>,<diff>\n"
+				.. "  bounty,<player>,creature,<raceId>,<kills>,<curKills>,<exp>,<bp>,<claim>,<grade>\n"
+				.. "  bounty,<player>,clearcreatures\n"
+				.. "  bounty,<player>,info\n"
+				.. "  bounty,<player>,send"
+		)
 		return true
 	end
 
 	if command == "weeklyhelp" then
-		player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-			"[TaskBoard] Weekly Commands:\n" ..
-			"  weekly,<player>,generate,<difficulty 0-3>\n" ..
-			"  weekly,<player>,difficulty,<0-3>\n" ..
-			"  weekly,<player>,diffmultiplier,<0-3>   - Set protocol difficulty multiplier\n" ..
-			"  weekly,<player>,killprogress,<taskIndex>,<kills>\n" ..
-			"  weekly,<player>,deliveryprogress,<taskIndex>,<items>,<delivered>\n" ..
-			"  weekly,<player>,deliveryunknowns,<taskIndex>,<u1>,<u2> - Set delivery unknown bytes\n" ..
-			"  weekly,<player>,anycreature,<kills>\n" ..
-			"  weekly,<player>,completed,<killCount>,<deliveryCount>\n" ..
-			"  weekly,<player>,finished,<0-1>          - Set weeklyProgressFinished\n" ..
-			"  weekly,<player>,rewards,<htp>,<soulseals> - Set reward display values\n" ..
-			"  weekly,<player>,rewardexp,<killExp>,<deliveryExp> - Set reward XP\n" ..
-			"  weekly,<player>,info\n" ..
-			"  weekly,<player>,send")
+		player:sendTextMessage(
+			MESSAGE_EVENT_ADVANCE,
+			"[TaskBoard] Weekly Commands:\n"
+				.. "  weekly,<player>,generate,<difficulty 0-3>\n"
+				.. "  weekly,<player>,difficulty,<0-3>\n"
+				.. "  weekly,<player>,diffmultiplier,<0-3>   - Set protocol difficulty multiplier\n"
+				.. "  weekly,<player>,killprogress,<taskIndex>,<kills>\n"
+				.. "  weekly,<player>,deliveryprogress,<taskIndex>,<items>,<delivered>\n"
+				.. "  weekly,<player>,deliveryunknowns,<taskIndex>,<u1>,<u2> - Set delivery unknown bytes\n"
+				.. "  weekly,<player>,anycreature,<kills>\n"
+				.. "  weekly,<player>,completed,<killCount>,<deliveryCount>\n"
+				.. "  weekly,<player>,finished,<0-1>          - Set weeklyProgressFinished\n"
+				.. "  weekly,<player>,rewards,<htp>,<soulseals> - Set reward display values\n"
+				.. "  weekly,<player>,rewardexp,<killExp>,<deliveryExp> - Set reward XP\n"
+				.. "  weekly,<player>,info\n"
+				.. "  weekly,<player>,send"
+		)
 		return true
 	end
 
@@ -161,11 +167,7 @@ function taskBoard.onSay(player, words, param)
 		local r2 = db.query("DELETE FROM `player_weekly_tasks`")
 		local s1 = r1 and "OK" or "FAILED"
 		local s2 = r2 and "OK" or "FAILED"
-		player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-			"[TaskBoard] Database reset:\n" ..
-			"  player_bounty_tasks: " .. s1 .. "\n" ..
-			"  player_weekly_tasks: " .. s2 .. "\n" ..
-			"Players must relog to get fresh data.")
+		player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Database reset:\n" .. "  player_bounty_tasks: " .. s1 .. "\n" .. "  player_weekly_tasks: " .. s2 .. "\n" .. "Players must relog to get fresh data.")
 		return true
 	end
 
@@ -179,8 +181,7 @@ function taskBoard.onSay(player, words, param)
 			return true
 		end
 		target:resetWeeklyTasks()
-		player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-			string.format("[TaskBoard] Weekly tasks reset for %s. Finished screen will appear.", target:getName()))
+		player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[TaskBoard] Weekly tasks reset for %s. Finished screen will appear.", target:getName()))
 		return true
 	end
 
@@ -200,8 +201,7 @@ function taskBoard.onSay(player, words, param)
 		target:setBountyRerollTokens(0)
 		target:setBountyRerollTimestamp(0)
 		target:sendBountyTaskData()
-		player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-			string.format("[TaskBoard] Bounty tasks reset for %s.", target:getName()))
+		player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[TaskBoard] Bounty tasks reset for %s.", target:getName()))
 		return true
 	end
 
@@ -225,8 +225,7 @@ function taskBoard.onSay(player, words, param)
 		end
 		local before = target:getBountyPoints()
 		target:addBountyPoints(amount)
-		player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-			string.format("[TaskBoard] Bounty Points for %s: %d -> %d (+%d)", target:getName(), before, target:getBountyPoints(), amount))
+		player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[TaskBoard] Bounty Points for %s: %d -> %d (+%d)", target:getName(), before, target:getBountyPoints(), amount))
 		return true
 	end
 
@@ -250,8 +249,7 @@ function taskBoard.onSay(player, words, param)
 		end
 		local before = target:getTaskHuntingPoints()
 		target:addTaskHuntingPoints(amount)
-		player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-			string.format("[TaskBoard] Task Hunting Points for %s: %d -> %d (+%d)", target:getName(), before, target:getTaskHuntingPoints(), amount))
+		player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[TaskBoard] Task Hunting Points for %s: %d -> %d (+%d)", target:getName(), before, target:getTaskHuntingPoints(), amount))
 		return true
 	end
 
@@ -275,8 +273,7 @@ function taskBoard.onSay(player, words, param)
 		end
 		local before = target:getSoulsealsPoints()
 		target:addSoulsealsPoints(amount)
-		player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-			string.format("[TaskBoard] Soulseals Points for %s: %d -> %d (+%d)", target:getName(), before, target:getSoulsealsPoints(), amount))
+		player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[TaskBoard] Soulseals Points for %s: %d -> %d (+%d)", target:getName(), before, target:getSoulsealsPoints(), amount))
 		return true
 	end
 
@@ -300,8 +297,7 @@ function taskBoard.onSay(player, words, param)
 		end
 		local before = target:getRerollTasks()
 		target:addRerollTasks(amount)
-		player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-			string.format("[TaskBoard] Reroll Tasks for %s: %d -> %d (+%d)", target:getName(), before, target:getRerollTasks(), amount))
+		player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[TaskBoard] Reroll Tasks for %s: %d -> %d (+%d)", target:getName(), before, target:getRerollTasks(), amount))
 		return true
 	end
 
@@ -330,15 +326,7 @@ function taskBoard.onSay(player, words, param)
 			talismans = talismans .. string.format("\n  Talisman %s: Level %d", TALISMAN_NAMES[i], target:getBountyTalismanLevel(i))
 		end
 
-		player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-			string.format("[TaskBoard] Points for %s:\n  Bounty Points: %d\n  Task Hunting Points: %d\n  Soulseals Points: %d\n  Reroll Tokens: %d\n  Weekly Task Expansion: %s%s",
-				target:getName(),
-				target:getBountyPoints(),
-				target:getTaskHuntingPoints(),
-				soulseals,
-				target:getRerollTasks(),
-				expansion,
-				talismans))
+		player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[TaskBoard] Points for %s:\n  Bounty Points: %d\n  Task Hunting Points: %d\n  Soulseals Points: %d\n  Reroll Tokens: %d\n  Weekly Task Expansion: %s%s", target:getName(), target:getBountyPoints(), target:getTaskHuntingPoints(), soulseals, target:getRerollTasks(), expansion, talismans))
 		return true
 	end
 
@@ -363,8 +351,7 @@ function taskBoard.onSay(player, words, param)
 			end
 			target:setBountyTaskState(state)
 			target:sendBountyTaskData()
-			player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-				string.format("[TaskBoard] Bounty state for %s set to %d (%s)", target:getName(), state, BOUNTY_STATE_NAMES[state] or "?"))
+			player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[TaskBoard] Bounty state for %s set to %d (%s)", target:getName(), state, BOUNTY_STATE_NAMES[state] or "?"))
 			return true
 		end
 
@@ -377,8 +364,7 @@ function taskBoard.onSay(player, words, param)
 			end
 			target:setBountyTaskDifficulty(diff)
 			target:sendBountyTaskData()
-			player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-				string.format("[TaskBoard] Bounty difficulty for %s set to %d (%s)", target:getName(), diff, DIFFICULTY_NAMES[diff] or "?"))
+			player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[TaskBoard] Bounty difficulty for %s set to %d (%s)", target:getName(), diff, DIFFICULTY_NAMES[diff] or "?"))
 			return true
 		end
 
@@ -386,8 +372,7 @@ function taskBoard.onSay(player, words, param)
 		if sub == "generate" then
 			local diff = getOptionalNumber(split, 4, 0)
 			target:generateBountyCreatureList(diff)
-			player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-				string.format("[TaskBoard] Generated bounty creature list for %s (difficulty: %s)", target:getName(), DIFFICULTY_NAMES[diff] or "?"))
+			player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[TaskBoard] Generated bounty creature list for %s (difficulty: %s)", target:getName(), DIFFICULTY_NAMES[diff] or "?"))
 			return true
 		end
 
@@ -406,9 +391,7 @@ function taskBoard.onSay(player, words, param)
 			local before = target:getBountyTalismanLevel(pathIndex)
 			target:setBountyTalismanLevel(pathIndex, level)
 			target:sendBountyTaskData()
-			player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-				string.format("[TaskBoard] Talisman %s for %s: Level %d -> %d",
-					TALISMAN_NAMES[pathIndex] or "?", target:getName(), before, level))
+			player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[TaskBoard] Talisman %s for %s: Level %d -> %d", TALISMAN_NAMES[pathIndex] or "?", target:getName(), before, level))
 			return true
 		end
 
@@ -423,8 +406,7 @@ function taskBoard.onSay(player, words, param)
 				target:setBountyTalismanLevel(i, level)
 			end
 			target:sendBountyTaskData()
-			player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-				string.format("[TaskBoard] All talismans for %s set to level %d", target:getName(), level))
+			player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[TaskBoard] All talismans for %s set to level %d", target:getName(), level))
 			return true
 		end
 
@@ -437,8 +419,7 @@ function taskBoard.onSay(player, words, param)
 			end
 			target:setBountyRerollTokens(amount)
 			target:sendBountyTaskData()
-			player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-				string.format("[TaskBoard] Reroll tokens for %s set to %d", target:getName(), amount))
+			player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[TaskBoard] Reroll tokens for %s set to %d", target:getName(), amount))
 			return true
 		end
 
@@ -452,17 +433,22 @@ function taskBoard.onSay(player, words, param)
 			-- Convert seconds to OTSYS_TIME (milliseconds since epoch)
 			target:setBountyRerollTimestamp((os.time() * 1000) + (seconds * 1000))
 			target:sendBountyTaskData()
-			player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-				string.format("[TaskBoard] Reroll timestamp for %s set to %d seconds from now", target:getName(), seconds))
+			player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[TaskBoard] Reroll timestamp for %s set to %d seconds from now", target:getName(), seconds))
 			return true
 		end
 
 		-- bounty,<player>,active,<raceId>,<kills>,<curKills>,<exp>,<bp>,<grade>,<diff>
 		if sub == "active" then
 			local raceId, err2 = getRequiredNumber(split, 4, "raceId")
-			if not raceId then player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Error: " .. err2) return true end
+			if not raceId then
+				player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Error: " .. err2)
+				return true
+			end
 			local kills, err3 = getRequiredNumber(split, 5, "requiredKills")
-			if not kills then player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Error: " .. err3) return true end
+			if not kills then
+				player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Error: " .. err3)
+				return true
+			end
 			local curKills = getOptionalNumber(split, 6, 0)
 			local exp = getOptionalNumber(split, 7, 0)
 			local bp = getOptionalNumber(split, 8, 0)
@@ -471,18 +457,22 @@ function taskBoard.onSay(player, words, param)
 			target:setBountyActiveTask(raceId, kills, curKills, exp, bp, grade, diff)
 			target:setBountyTaskState(2) -- ACTIVE
 			target:sendBountyTaskData()
-			player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-				string.format("[TaskBoard] Active bounty task for %s: raceId=%d, kills=%d/%d, exp=%d, bp=%d, grade=%s, diff=%s",
-					target:getName(), raceId, curKills, kills, exp, bp, GRADE_NAMES[grade] or "?", DIFFICULTY_NAMES[diff] or "?"))
+			player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[TaskBoard] Active bounty task for %s: raceId=%d, kills=%d/%d, exp=%d, bp=%d, grade=%s, diff=%s", target:getName(), raceId, curKills, kills, exp, bp, GRADE_NAMES[grade] or "?", DIFFICULTY_NAMES[diff] or "?"))
 			return true
 		end
 
 		-- bounty,<player>,creature,<raceId>,<kills>,<curKills>,<exp>,<bp>,<claim>,<grade>
 		if sub == "creature" then
 			local raceId, err2 = getRequiredNumber(split, 4, "raceId")
-			if not raceId then player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Error: " .. err2) return true end
+			if not raceId then
+				player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Error: " .. err2)
+				return true
+			end
 			local kills, err3 = getRequiredNumber(split, 5, "requiredKills")
-			if not kills then player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Error: " .. err3) return true end
+			if not kills then
+				player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Error: " .. err3)
+				return true
+			end
 			local curKills = getOptionalNumber(split, 6, 0)
 			local exp = getOptionalNumber(split, 7, 0)
 			local bp = getOptionalNumber(split, 8, 0)
@@ -490,9 +480,7 @@ function taskBoard.onSay(player, words, param)
 			local grade = getOptionalNumber(split, 10, 0)
 			target:addBountyCreature(raceId, kills, curKills, exp, bp, claim, grade)
 			target:sendBountyTaskData()
-			player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-				string.format("[TaskBoard] Added bounty creature for %s: raceId=%d, kills=%d/%d, exp=%d, bp=%d, claim=%s, grade=%s",
-					target:getName(), raceId, curKills, kills, exp, bp, CLAIM_NAMES[claim] or "?", GRADE_NAMES[grade] or "?"))
+			player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[TaskBoard] Added bounty creature for %s: raceId=%d, kills=%d/%d, exp=%d, bp=%d, claim=%s, grade=%s", target:getName(), raceId, curKills, kills, exp, bp, CLAIM_NAMES[claim] or "?", GRADE_NAMES[grade] or "?"))
 			return true
 		end
 
@@ -500,15 +488,13 @@ function taskBoard.onSay(player, words, param)
 		if sub == "clearcreatures" then
 			target:clearBountyCreatureList()
 			target:sendBountyTaskData()
-			player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-				string.format("[TaskBoard] Bounty creature list cleared for %s", target:getName()))
+			player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[TaskBoard] Bounty creature list cleared for %s", target:getName()))
 			return true
 		end
 
 		-- bounty,<player>,info
 		if sub == "info" then
-			local msg = string.format("[TaskBoard] Bounty Info for %s:\n  Bounty Points: %d\n  Reroll Tokens: %d",
-				target:getName(), target:getBountyPoints(), target:getRerollTasks())
+			local msg = string.format("[TaskBoard] Bounty Info for %s:\n  Bounty Points: %d\n  Reroll Tokens: %d", target:getName(), target:getBountyPoints(), target:getRerollTasks())
 			for i = 0, 3 do
 				msg = msg .. string.format("\n  Talisman %s: Level %d", TALISMAN_NAMES[i], target:getBountyTalismanLevel(i))
 			end
@@ -520,8 +506,7 @@ function taskBoard.onSay(player, words, param)
 		if sub == "send" then
 			target:sendBountyTaskData()
 			target:sendTaskBoardResourceBalance()
-			player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-				string.format("[TaskBoard] Bounty task packet sent to %s", target:getName()))
+			player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[TaskBoard] Bounty task packet sent to %s", target:getName()))
 			return true
 		end
 
@@ -550,8 +535,7 @@ function taskBoard.onSay(player, words, param)
 			end
 			target:generateWeeklyTasks(diff)
 			target:sendWeeklyTaskData()
-			player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-				string.format("[TaskBoard] Generated weekly tasks for %s (difficulty: %s)", target:getName(), DIFFICULTY_NAMES[diff] or "?"))
+			player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[TaskBoard] Generated weekly tasks for %s (difficulty: %s)", target:getName(), DIFFICULTY_NAMES[diff] or "?"))
 			return true
 		end
 
@@ -564,87 +548,106 @@ function taskBoard.onSay(player, words, param)
 			end
 			target:setWeeklyDifficulty(diff)
 			target:sendWeeklyTaskData()
-			player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-				string.format("[TaskBoard] Weekly difficulty for %s set to %d (%s)", target:getName(), diff, DIFFICULTY_NAMES[diff] or "?"))
+			player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[TaskBoard] Weekly difficulty for %s set to %d (%s)", target:getName(), diff, DIFFICULTY_NAMES[diff] or "?"))
 			return true
 		end
 
 		-- weekly,<player>,killprogress,<taskIndex>,<kills>
 		if sub == "killprogress" then
 			local taskIndex, err2 = getRequiredNumber(split, 4, "taskIndex")
-			if not taskIndex then player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Error: " .. err2) return true end
+			if not taskIndex then
+				player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Error: " .. err2)
+				return true
+			end
 			local kills, err3 = getRequiredNumber(split, 5, "kills")
-			if not kills then player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Error: " .. err3) return true end
+			if not kills then
+				player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Error: " .. err3)
+				return true
+			end
 			target:setWeeklyKillTaskProgress(taskIndex, kills)
 			target:sendWeeklyTaskData()
-			player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-				string.format("[TaskBoard] Weekly kill task %d for %s set to %d kills", taskIndex, target:getName(), kills))
+			player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[TaskBoard] Weekly kill task %d for %s set to %d kills", taskIndex, target:getName(), kills))
 			return true
 		end
 
 		-- weekly,<player>,deliveryprogress,<taskIndex>,<items>,<delivered>
 		if sub == "deliveryprogress" then
 			local taskIndex, err2 = getRequiredNumber(split, 4, "taskIndex")
-			if not taskIndex then player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Error: " .. err2) return true end
+			if not taskIndex then
+				player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Error: " .. err2)
+				return true
+			end
 			local items, err3 = getRequiredNumber(split, 5, "items")
-			if not items then player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Error: " .. err3) return true end
+			if not items then
+				player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Error: " .. err3)
+				return true
+			end
 			local delivered = getOptionalNumber(split, 6, 0)
 			target:setWeeklyDeliveryTaskProgress(taskIndex, items, delivered)
 			target:sendWeeklyTaskData()
-			player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-				string.format("[TaskBoard] Weekly delivery task %d for %s: items=%d, delivered=%d", taskIndex, target:getName(), items, delivered))
+			player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[TaskBoard] Weekly delivery task %d for %s: items=%d, delivered=%d", taskIndex, target:getName(), items, delivered))
 			return true
 		end
 
 		-- weekly,<player>,anycreature,<kills>
 		if sub == "anycreature" then
 			local kills, err2 = getRequiredNumber(split, 4, "kills")
-			if not kills then player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Error: " .. err2) return true end
+			if not kills then
+				player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Error: " .. err2)
+				return true
+			end
 			target:setWeeklyAnyCreatureProgress(kills)
 			target:sendWeeklyTaskData()
-			player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-				string.format("[TaskBoard] Weekly 'any creature' kills for %s set to %d", target:getName(), kills))
+			player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[TaskBoard] Weekly 'any creature' kills for %s set to %d", target:getName(), kills))
 			return true
 		end
 
 		-- weekly,<player>,completed,<killCount>,<deliveryCount>
 		if sub == "completed" then
 			local killCount, err2 = getRequiredNumber(split, 4, "killCount")
-			if not killCount then player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Error: " .. err2) return true end
+			if not killCount then
+				player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Error: " .. err2)
+				return true
+			end
 			local deliveryCount = getOptionalNumber(split, 5, 0)
 			target:setWeeklyCompletedTasks(killCount, deliveryCount)
 			target:sendWeeklyTaskData()
-			player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-				string.format("[TaskBoard] Weekly completed tasks for %s: kill=%d, delivery=%d", target:getName(), killCount, deliveryCount))
+			player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[TaskBoard] Weekly completed tasks for %s: kill=%d, delivery=%d", target:getName(), killCount, deliveryCount))
 			return true
 		end
 
 		-- weekly,<player>,diffmultiplier,<value>
 		if sub == "diffmultiplier" then
 			local val, err2 = getRequiredNumber(split, 4, "difficultyMultiplier (0-3)")
-			if not val then player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Error: " .. err2) return true end
+			if not val then
+				player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Error: " .. err2)
+				return true
+			end
 			target:setWeeklyDifficultyMultiplier(val)
 			target:sendWeeklyTaskData()
-			player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-				string.format("[TaskBoard] Weekly difficultyMultiplier for %s set to %d", target:getName(), val))
+			player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[TaskBoard] Weekly difficultyMultiplier for %s set to %d", target:getName(), val))
 			return true
 		end
 
 		-- weekly,<player>,deliveryunknowns,<taskIndex>,<unknown1>,<unknown2>
 		if sub == "deliveryunknowns" then
 			local taskIndex, err2 = getRequiredNumber(split, 4, "taskIndex")
-			if not taskIndex then player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Error: " .. err2) return true end
+			if not taskIndex then
+				player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Error: " .. err2)
+				return true
+			end
 			local u1, err3 = getRequiredNumber(split, 5, "unknown1")
-			if not u1 then player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Error: " .. err3) return true end
+			if not u1 then
+				player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Error: " .. err3)
+				return true
+			end
 			local u2 = getOptionalNumber(split, 6, 0)
 			local ok = target:setWeeklyDeliveryUnknowns(taskIndex, u1, u2)
 			target:sendWeeklyTaskData()
 			if ok then
-				player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-					string.format("[TaskBoard] Delivery task %d for %s: unknown1=%d, unknown2=%d", taskIndex, target:getName(), u1, u2))
+				player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[TaskBoard] Delivery task %d for %s: unknown1=%d, unknown2=%d", taskIndex, target:getName(), u1, u2))
 			else
-				player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-					string.format("[TaskBoard] Error: Delivery task index %d out of range for %s", taskIndex, target:getName()))
+				player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[TaskBoard] Error: Delivery task index %d out of range for %s", taskIndex, target:getName()))
 			end
 			return true
 		end
@@ -652,42 +655,47 @@ function taskBoard.onSay(player, words, param)
 		-- weekly,<player>,finished,<value>
 		if sub == "finished" then
 			local val, err2 = getRequiredNumber(split, 4, "weeklyProgressFinished (0-1)")
-			if not val then player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Error: " .. err2) return true end
+			if not val then
+				player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Error: " .. err2)
+				return true
+			end
 			target:setWeeklyProgressFinished(val)
 			target:sendWeeklyTaskData()
-			player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-				string.format("[TaskBoard] Weekly progressFinished for %s set to %d", target:getName(), val))
+			player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[TaskBoard] Weekly progressFinished for %s set to %d", target:getName(), val))
 			return true
 		end
 
 		-- weekly,<player>,rewards,<huntingTaskPoints>,<soulseals>
 		if sub == "rewards" then
 			local htp, err2 = getRequiredNumber(split, 4, "huntingTaskPoints")
-			if not htp then player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Error: " .. err2) return true end
+			if not htp then
+				player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Error: " .. err2)
+				return true
+			end
 			local soulseals = getOptionalNumber(split, 5, 0)
 			target:setWeeklyRewards(htp, soulseals)
 			target:sendWeeklyTaskData()
-			player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-				string.format("[TaskBoard] Weekly rewards for %s: HTP=%d, Soulseals=%d", target:getName(), htp, soulseals))
+			player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[TaskBoard] Weekly rewards for %s: HTP=%d, Soulseals=%d", target:getName(), htp, soulseals))
 			return true
 		end
 
 		-- weekly,<player>,rewardexp,<killTaskExp>,<deliveryTaskExp>
 		if sub == "rewardexp" then
 			local killExp, err2 = getRequiredNumber(split, 4, "killTaskRewardExp")
-			if not killExp then player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Error: " .. err2) return true end
+			if not killExp then
+				player:sendTextMessage(MESSAGE_EVENT_ADVANCE, "[TaskBoard] Error: " .. err2)
+				return true
+			end
 			local deliveryExp = getOptionalNumber(split, 5, killExp)
 			target:setWeeklyRewardExp(killExp, deliveryExp)
 			target:sendWeeklyTaskData()
-			player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-				string.format("[TaskBoard] Weekly reward XP for %s: kill=%d, delivery=%d", target:getName(), killExp, deliveryExp))
+			player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[TaskBoard] Weekly reward XP for %s: kill=%d, delivery=%d", target:getName(), killExp, deliveryExp))
 			return true
 		end
 
 		-- weekly,<player>,info
 		if sub == "info" then
-			local msg = string.format("[TaskBoard] Weekly Info for %s:\n  Task Hunting Points: %d\n  Soulseals: %d",
-				target:getName(), target:getTaskHuntingPoints(), target:getSoulsealsPoints())
+			local msg = string.format("[TaskBoard] Weekly Info for %s:\n  Task Hunting Points: %d\n  Soulseals: %d", target:getName(), target:getTaskHuntingPoints(), target:getSoulsealsPoints())
 			player:sendTextMessage(MESSAGE_EVENT_ADVANCE, msg)
 			return true
 		end
@@ -696,8 +704,7 @@ function taskBoard.onSay(player, words, param)
 		if sub == "send" then
 			target:sendWeeklyTaskData()
 			target:sendTaskBoardResourceBalance()
-			player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-				string.format("[TaskBoard] Weekly task packet sent to %s", target:getName()))
+			player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[TaskBoard] Weekly task packet sent to %s", target:getName()))
 			return true
 		end
 
@@ -721,8 +728,7 @@ function taskBoard.onSay(player, words, param)
 		if sub == "send" then
 			target:sendHuntingTaskShopData()
 			target:sendTaskBoardResourceBalance()
-			player:sendTextMessage(MESSAGE_EVENT_ADVANCE,
-				string.format("[TaskBoard] Hunting task shop packet sent to %s", target:getName()))
+			player:sendTextMessage(MESSAGE_EVENT_ADVANCE, string.format("[TaskBoard] Hunting task shop packet sent to %s", target:getName()))
 			return true
 		end
 
