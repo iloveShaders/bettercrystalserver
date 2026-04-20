@@ -22,8 +22,10 @@
 #include "database/database.hpp"
 #include "creatures/monsters/monsters.hpp"
 #include "creatures/players/player.hpp"
+#include "creatures/players/wheel/player_wheel.hpp"
 #include "game/game.hpp"
 #include "items/containers/depot/depotchest.hpp"
+#include "items/containers/inbox/inbox.hpp"
 #include "items/item.hpp"
 #include "lib/di/container.hpp"
 #include "lua/scripts/lua_environment.hpp"
@@ -637,7 +639,8 @@ void IOWeeklyTasks::buyShopOffer(const std::shared_ptr<Player> &player, uint8_t 
 				player->sendMessageDialog("Your inbox is not available. Please relog and try again.");
 				break;
 			}
-			auto ret = g_game().internalAddItem(inbox, item, INDEX_WHEREEVER, FLAG_NOLIMIT);
+			uint32_t remainderCount = 0;
+			auto ret = g_game().internalAddItem(std::static_pointer_cast<Cylinder>(inbox), item, INDEX_WHEREEVER, FLAG_NOLIMIT, false, remainderCount);
 			if (ret != RETURNVALUE_NOERROR) {
 				g_logger().warn("[IOWeeklyTasks::buyShopOffer] - Failed to add item {} to inbox of {}: {}", offer.looktypeOrItemId, player->getName(), static_cast<int>(ret));
 				player->sendMessageDialog("Failed to deliver item to your inbox.");
@@ -661,7 +664,8 @@ void IOWeeklyTasks::buyShopOffer(const std::shared_ptr<Player> &player, uint8_t 
 				player->sendMessageDialog("Failed to create item. Please contact an administrator.");
 				break;
 			}
-			auto ret = g_game().internalAddItem(inbox, item, INDEX_WHEREEVER, FLAG_NOLIMIT);
+			uint32_t remainderCount = 0;
+			auto ret = g_game().internalAddItem(std::static_pointer_cast<Cylinder>(inbox), item, INDEX_WHEREEVER, FLAG_NOLIMIT, false, remainderCount);
 			if (ret != RETURNVALUE_NOERROR) {
 				g_logger().warn("[IOWeeklyTasks::buyShopOffer] - Failed to add item {} to inbox of {}: {}", offer.looktypeOrItemId, player->getName(), static_cast<int>(ret));
 				player->sendMessageDialog("Failed to deliver item to your inbox.");
