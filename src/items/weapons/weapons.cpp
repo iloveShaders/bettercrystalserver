@@ -230,6 +230,7 @@ bool Weapon::useFist(const std::shared_ptr<Player> &player, const std::shared_pt
 	params.blockedByArmor = true;
 	params.blockedByShield = true;
 	params.soundImpactEffect = SoundEffect_t::HUMAN_CLOSE_ATK_FIST;
+	params.impactEffect = CONST_ME_FIST_ATTACK; // 15.12+ weapon attack effect
 
 	CombatDamage damage;
 	damage.origin = ORIGIN_MELEE;
@@ -242,6 +243,42 @@ bool Weapon::useFist(const std::shared_ptr<Player> &player, const std::shared_pt
 	}
 
 	return true;
+}
+
+uint16_t Weapon::getWeaponAttackEffect(const std::shared_ptr<Item> &item, const std::shared_ptr<Player> &player) const {
+	if (!item) {
+		return CONST_ME_FIST_ATTACK; // Fist attack when no weapon
+	}
+
+	const WeaponType_t weaponType = item->getWeaponType();
+	const int32_t slotPosition = item->getSlotPosition();
+	const bool isTwoHanded = (slotPosition & SLOTP_TWO_HAND) != 0;
+
+	// Determine attack effect based on weapon type
+	switch (weaponType) {
+		case WEAPON_SWORD:
+			return CONST_ME_SWORD_ATTACK;
+
+		case WEAPON_CLUB:
+			// Two-handed clubs can be monk staves
+			if (isTwoHanded) {
+				return CONST_ME_MONK_STAFF_ATTACK;
+			}
+			return CONST_ME_CLUB_ATTACK;
+
+		case WEAPON_AXE:
+			// One-handed axes can be monk daggers/kamas
+			if (!isTwoHanded) {
+				return CONST_ME_MONK_DAGGERS_ATTACK;
+			}
+			return CONST_ME_AXE_ATTACK;
+
+		case WEAPON_FIST:
+			return CONST_ME_FIST_ATTACK;
+
+		default:
+			return CONST_ME_NONE;
+	}
 }
 
 void Weapon::internalUseWeapon(const std::shared_ptr<Player> &player, const std::shared_ptr<Item> &item, const std::shared_ptr<Creature> &target, int32_t damageModifier, int32_t cleavePercent) const {
@@ -276,7 +313,12 @@ void Weapon::internalUseWeapon(const std::shared_ptr<Player> &player, const std:
 		damage.secondary.type = getElementType();
 
 		const int32_t totalDamage = (getWeaponDamage(player, target, item) * damageModifier) / 100;
-		const int32_t physicalAttack = item->getAttack();
+		int32_t physicalAttack = item->getAttack();
+		const uint8_t extraProficiencyAttack = player->getEquippedWeaponProficiency().attack;
+		if (extraProficiencyAttack > 0) {
+			physicalAttack += extraProficiencyAttack;
+		}
+
 		const int32_t elementalAttack = getElementDamageValue();
 		const int32_t combinedAttack = physicalAttack + elementalAttack;
 		if (elementalAttack > 0) {
@@ -300,6 +342,11 @@ void Weapon::internalUseWeapon(const std::shared_ptr<Player> &player, const std:
 			damage.exString += "cleave damage";
 			damage.primary.value = (damage.primary.value * damagePercent) / 100;
 			damage.secondary.value = (damage.secondary.value * damagePercent) / 100;
+		}
+
+		const uint16_t attackEffect = getWeaponAttackEffect(item, player);
+		if (attackEffect != CONST_ME_NONE && cleavePercent == 0) {
+			g_game().addMagicEffect(target->getPosition(), attackEffect, player);
 		}
 
 		// Handle chain system
@@ -648,7 +695,12 @@ int16_t WeaponMelee::getElementDamageValue() const {
 
 int32_t WeaponMelee::getWeaponDamage(const std::shared_ptr<Player> &player, const std::shared_ptr<Creature> &, const std::shared_ptr<Item> &item, bool maxDamage /*= false*/) const {
 	const int32_t attackSkill = player->getWeaponSkill(item);
-	const int32_t physicalAttack = std::max<int32_t>(0, item->getAttack());
+	int32_t physicalAttack = std::max<int32_t>(0, item->getAttack());
+	const uint8_t extraProficiencyAttack = player->getEquippedWeaponProficiency().attack;
+	if (extraProficiencyAttack > 0) {
+		physicalAttack += extraProficiencyAttack;
+	}
+
 	const int32_t elementalAttack = getElementDamageValue();
 	const int32_t combinedAttack = physicalAttack + elementalAttack;
 
@@ -834,6 +886,10 @@ bool WeaponDistance::useWeapon(const std::shared_ptr<Player> &player, const std:
 		}
 	}
 
+	if (player->getLevel() < 20) {
+		chance += 50;
+	}
+
 	// Proficiency Perk: rangedHitChance
 	const float rangedHitChance = player->getEquippedWeaponProficiency().rangedHitChance;
 	if (rangedHitChance > 0) {
@@ -919,6 +975,11 @@ int32_t WeaponDistance::getWeaponDamage(const std::shared_ptr<Player> &player, c
 
 			attackValue += weapon->getAttack();
 		}
+	}
+
+	const uint8_t extraProficiencyAttack = player->getEquippedWeaponProficiency().attack;
+	if (extraProficiencyAttack > 0) {
+		attackValue += extraProficiencyAttack;
 	}
 
 	const int32_t attackSkill = player->getSkillLevel(SKILL_DISTANCE);
