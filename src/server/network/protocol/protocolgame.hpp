@@ -599,17 +599,17 @@ private:
 
 	// milestones
 	void sendClientEvent(ClientEvent_t eventType);
-	void sendUnlockedAchievement(const std::string& achievement);
-	void sendUnlockedTitle(const std::string& title);
-	void sendUnlockedSkin(const std::string& skinName, uint16_t lookType, uint8_t skinType);
+	void sendUnlockedAchievement(const std::string &achievement);
+	void sendUnlockedTitle(const std::string &title);
+	void sendUnlockedSkin(const std::string &skinName, uint16_t lookType, uint8_t skinType);
 	void sendSkillAdvance(skills_t skill, uint16_t newLevel);
 	void sendProgressRace(uint16_t raceId, uint8_t progressLevel, bool isBoss);
-	void sendProgressQuest(const std::string& questName, bool isCompleted);
-	void sendProficiencyProgress(uint16_t itemId, const std::string& message);
+	void sendProgressQuest(const std::string &questName, bool isCompleted);
+	void sendProficiencyProgress(uint16_t itemId, const std::string &message);
 
 	void sendDisableLoginMusic();
 
-	static void addNPCButtonIfExists(std::vector<KeywordButtonIcon>& buttons, KeywordButtonIcon icon, uint16_t flags) {
+	static void addNPCButtonIfExists(std::vector<KeywordButtonIcon> &buttons, KeywordButtonIcon icon, uint16_t flags) {
 		if ((flags & (1 << icon)) != 0) {
 			buttons.push_back(icon);
 		}

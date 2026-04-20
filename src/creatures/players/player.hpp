@@ -1121,13 +1121,13 @@ public:
 	void sendOpenStash(bool isNpc = false) const;
 
 	void sendClientEvent(ClientEvent_t EventType) const;
-	void sendUnlockedAchievement(const std::string& achievement) const;
-	void sendUnlockedTitle(const std::string& title) const;
-	void sendUnlockedSkin(const std::string& skinName, uint16_t lookType, uint8_t skinType) const;
+	void sendUnlockedAchievement(const std::string &achievement) const;
+	void sendUnlockedTitle(const std::string &title) const;
+	void sendUnlockedSkin(const std::string &skinName, uint16_t lookType, uint8_t skinType) const;
 	void sendSkillAdvance(skills_t skill, uint16_t newLevel) const;
 	void sendProgressRace(uint16_t raceId, uint8_t progressLevel, bool isBoss = false) const;
-	void sendProgressQuest(const std::string& questName, bool isCompleted = false) const;
-	void sendProficiencyProgress(uint16_t itemId, const std::string& message) const;
+	void sendProgressQuest(const std::string &questName, bool isCompleted = false) const;
+	void sendProficiencyProgress(uint16_t itemId, const std::string &message) const;
 
 	void onThink(uint32_t interval) override;
 

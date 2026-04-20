@@ -3545,12 +3545,12 @@ void Game::playerEquipItem(uint32_t playerId, uint16_t itemId, bool hasTier /* =
 
 	if (slot == CONST_SLOT_NECKLACE) {
 		if (!player->canEquipNecklace()) {
-		return;
-	}
+			return;
+		}
 	} else if (slot == CONST_SLOT_RING) {
 		if (!player->canEquipRing()) {
-		return;
-	}
+			return;
+		}
 	} else if (!player->canDoAction()) {
 		uint32_t delay = player->getNextActionTime();
 		if (delay > 0) {
@@ -3612,10 +3612,10 @@ void Game::playerEquipItem(uint32_t playerId, uint16_t itemId, bool hasTier /* =
 
 			// Check if trying to equip a shield while a two-handed weapon is equipped in the left slot
 			if (slot == CONST_SLOT_RIGHT && !it.isQuiver() && leftItem && leftItem->getSlotPosition() & SLOTP_TWO_HAND) {
-					ret = internalMoveItem(leftItem->getParent(), player, INDEX_WHEREEVER, leftItem, leftItem->getItemCount(), nullptr);
+				ret = internalMoveItem(leftItem->getParent(), player, INDEX_WHEREEVER, leftItem, leftItem->getItemCount(), nullptr);
 				if (ret != RETURNVALUE_NOERROR) {
-						player->sendCancelMessage(ret);
-						return;
+					player->sendCancelMessage(ret);
+					return;
 				}
 			}
 
@@ -4164,7 +4164,7 @@ void Game::playerUseWithCreature(uint32_t playerId, const Position &fromPos, uin
 		return;
 	} else if (!canUseHouseItem) {
 		player->sendCancelMessage(RETURNVALUE_ITEMCANNOTBEMOVEDTHERE);
-				return;
+		return;
 	}
 
 	const ItemType &it = Item::items[item->getID()];
@@ -6407,10 +6407,9 @@ void Game::playerChangeOutfit(uint32_t playerId, Outfit_t outfit, bool isMounted
 		player->dismount();
 	}
 
-		if (!player->changeOutfit(outfit, true)) {
+	if (!player->changeOutfit(outfit, true)) {
 		return;
 	}
-
 
 	if (player->canWearOutfit(outfit.lookType, outfit.lookAddons)) {
 		player->defaultOutfit = outfit;

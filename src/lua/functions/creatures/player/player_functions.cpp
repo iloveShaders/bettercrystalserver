@@ -2991,9 +2991,9 @@ int PlayerFunctions::luaPlayerAddMount(lua_State* L) {
 	}
 
 	if (!mount || mount->id == 0) {
-			lua_pushnil(L);
-			return 1;
-		}
+		lua_pushnil(L);
+		return 1;
+	}
 
 	player->sendUnlockedSkin(mount->name, mount->clientId, 3);
 	Lua::pushBoolean(L, player->tameMount(mount->id));

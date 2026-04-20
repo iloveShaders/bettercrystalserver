@@ -6757,7 +6757,7 @@ bool Player::changeOutfit(Outfit_t outfit, bool checkList) {
 	requestedOutfit = false;
 	if (outfitAttributes) {
 		auto oldId = Outfits::getInstance().getOutfitId(getSex(), defaultOutfit.lookType);
-	outfitAttributes = !Outfits::getInstance().removeAttributes(getID(), oldId, getSex(), defaultOutfit.lookAddons);
+		outfitAttributes = !Outfits::getInstance().removeAttributes(getID(), oldId, getSex(), defaultOutfit.lookAddons);
 	}
 
 	defaultOutfit = outfit;
@@ -8532,10 +8532,10 @@ void Player::sendProgressRace(uint16_t raceId, uint8_t progressLevel, bool isBos
 
 void Player::sendProgressQuest(const std::string &questName, bool isCompleted) const {
 	if (client) {
-			client->sendProgressQuest(questName, isCompleted);
+		client->sendProgressQuest(questName, isCompleted);
 	}
 }
-	
+
 void Player::sendProficiencyProgress(uint16_t itemId, const std::string &message) const {
 	if (client) {
 		client->sendProficiencyProgress(itemId, message);
@@ -11263,7 +11263,7 @@ void Player::onCreatureAppear(const std::shared_ptr<Creature> &creature, bool is
 
 		const auto &outfit = Outfits::getInstance().getOutfitByLookType(getSex(), defaultOutfit.lookType);
 		if (outfit) {
-		outfitAttributes = Outfits::getInstance().addAttributes(getID(), defaultOutfit.lookType, getSex(), defaultOutfit.lookAddons);
+			outfitAttributes = Outfits::getInstance().addAttributes(getID(), defaultOutfit.lookType, getSex(), defaultOutfit.lookAddons);
 		}
 
 		if (g_configManager().getBoolean(ALWAYS_MOUNT_LOGIN) && getCurrentMount() != 0) {
