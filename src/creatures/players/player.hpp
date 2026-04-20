@@ -1703,14 +1703,11 @@ private:
 	std::vector<std::unique_ptr<PreySlot>> preys;
 	std::vector<std::unique_ptr<TaskHuntingSlot>> taskHunting;
 
-<<<<<<< Updated upstream
-=======
 	// Winter Update 2025 - Task Board
 	BountyTaskData bountyTaskData;
 	WeeklyTaskData weeklyTaskData;
 	bool bountyTalismanEquipped = false;
 
->>>>>>> Stashed changes
 	GuildWarVector guildWarVector;
 
 	std::vector<std::shared_ptr<Party>> invitePartyList;

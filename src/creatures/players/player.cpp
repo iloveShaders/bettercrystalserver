@@ -79,11 +79,8 @@
 #include "creatures/players/proficiencies/proficiencies.hpp"
 #include "creatures/players/proficiencies/proficiencies_definitions.hpp"
 #include "utils/tools.hpp"
-<<<<<<< Updated upstream
-=======
 #include "io/iobountytasks.hpp"
 #include "io/ioweeklytasks.hpp"
-	>>>>>>> Stashed changes
 
 	MuteCountMap Player::muteCountMap;
 
@@ -12808,8 +12805,6 @@ Player::ExivaRestrictions &Player::getExivaRestrictions() {
 const Player::ExivaRestrictions &Player::getExivaRestrictions() const {
 	return exivaRestrictions;
 }
-<<<<<<< Updated upstream
-=======
 
 void Player::sendTaskBoardResourceBalance() const {
 	if (client) {
@@ -12942,4 +12937,3 @@ bool Player::removeSoulsealsPoints(uint32_t amount) {
 	return true;
 }
 
->>>>>>> Stashed changes
