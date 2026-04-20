@@ -22,6 +22,8 @@ target_sources(${PROJECT_NAME}_lib PRIVATE
     players/management/ban.cpp
     players/management/waitlist.cpp
     players/storages/storages.cpp
+    players/player_forge_history.cpp
+    players/player_storage.cpp
     players/player.cpp
     players/achievement/player_achievement.cpp
     players/attached_effects/player_attached_effects.cpp

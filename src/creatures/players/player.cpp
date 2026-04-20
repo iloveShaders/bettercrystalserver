@@ -79,6 +79,11 @@
 #include "creatures/players/proficiencies/proficiencies.hpp"
 #include "creatures/players/proficiencies/proficiencies_definitions.hpp"
 #include "utils/tools.hpp"
+<<<<<<< Updated upstream
+=======
+#include "io/iobountytasks.hpp"
+#include "io/ioweeklytasks.hpp"
+>>>>>>> Stashed changes
 
 MuteCountMap Player::muteCountMap;
 
@@ -1805,6 +1810,14 @@ bool Player::hasCharmExpansion() const {
 
 void Player::setCharmExpansion(bool onOff) {
 	charmExpansion = onOff;
+}
+
+bool Player::hasWeeklyTaskExpansion() const {
+	return weeklyTaskExpansion;
+}
+
+void Player::setWeeklyTaskExpansion(bool onOff) {
+	weeklyTaskExpansion = onOff;
 }
 
 void Player::setUsedRunesBit(int32_t bit) {
@@ -12467,9 +12480,13 @@ void Player::applyEquippedWeaponProficiency(const uint16_t itemId) {
 				continue;
 			}
 
-			int32_t damageTypeIndex = 0;
+			int32_t damageTypeIndex = -1;
 			if (perk.damageType > 0) {
 				switch (perk.damageType) {
+					case PROFICIENCY_DAMAGETYPE_PHYSICAL: {
+						damageTypeIndex = static_cast<int32_t>(COMBAT_PHYSICALDAMAGE);
+						break;
+					}
 					case PROFICIENCY_DAMAGETYPE_FIRE: {
 						damageTypeIndex = static_cast<int32_t>(COMBAT_FIREDAMAGE);
 						break;
@@ -12683,6 +12700,24 @@ void Player::applyEquippedWeaponProficiency(const uint16_t itemId) {
 					}
 					break;
 				}
+				case PROFICIENCY_PERK_ALPHA_STRIKE_EXTRA_DAMAGE: {
+					equippedWeaponProficiency.alphaStrikeExtraDamage += perk.perkValue;
+					break;
+				}
+				case PROFICIENCY_PERK_OMEGA_STRIKE_EXTRA_DAMAGE: {
+					equippedWeaponProficiency.omegaStrikeExtraDamage += perk.perkValue;
+					break;
+				}
+				case PROFICIENCY_PERK_ARMOR_PENETRATION: {
+					equippedWeaponProficiency.armorPenetration += perk.perkValue;
+					break;
+				}
+				case PROFICIENCY_PERK_ELEMENTAL_PIERCE: {
+					if (damageTypeIndex >= 0 && damageTypeIndex < COMBAT_COUNT) {
+						equippedWeaponProficiency.elementalPierce[damageTypeIndex] += perk.perkValue;
+					}
+					break;
+				}
 			}
 		}
 	}
@@ -12773,3 +12808,138 @@ Player::ExivaRestrictions &Player::getExivaRestrictions() {
 const Player::ExivaRestrictions &Player::getExivaRestrictions() const {
 	return exivaRestrictions;
 }
+<<<<<<< Updated upstream
+=======
+
+void Player::sendTaskBoardResourceBalance() const {
+	if (client) {
+		client->sendResourceBalance(RESOURCE_BOUNTY_POINTS, bountyTaskData.bountyPoints);
+		client->sendResourceBalance(RESOURCE_TASK_HUNTING, getTaskHuntingPoints());
+		client->sendResourceBalance(RESOURCE_SOULSEALS_POINTS, getSoulsealsPoints());
+	}
+}
+
+/*******************************************************************************
+ * Bounty Tasks (Winter Update 2025)
+ ******************************************************************************/
+
+BountyTaskData &Player::getBountyTaskData() {
+	return bountyTaskData;
+}
+
+const BountyTaskData &Player::getBountyTaskData() const {
+	return bountyTaskData;
+}
+
+void Player::setBountyTalismanEquipped(bool equipped) {
+	bountyTalismanEquipped = equipped;
+}
+
+bool Player::isBountyTalismanEquipped() const {
+	return bountyTalismanEquipped;
+}
+
+void Player::sendBountyTaskData() const {
+	if (client) {
+		client->sendBountyTaskData(bountyTaskData);
+	}
+}
+
+void Player::refreshTaskIcons() {
+	if (!client) {
+		return;
+	}
+	for (const auto &spectator : Spectators().find<Monster>(getPosition(), true)) {
+		client->sendCreatureIcon(spectator->getCreature());
+	}
+}
+
+void Player::addBountyPoints(uint32_t amount) {
+	bountyTaskData.bountyPoints += amount;
+	sendBountyTaskData();
+	sendTaskBoardResourceBalance();
+}
+
+void Player::removeBountyPoints(uint32_t amount) {
+	if (bountyTaskData.bountyPoints >= amount) {
+		bountyTaskData.bountyPoints -= amount;
+	} else {
+		bountyTaskData.bountyPoints = 0;
+	}
+	sendBountyTaskData();
+	sendTaskBoardResourceBalance();
+}
+
+uint32_t Player::getBountyPoints() const {
+	return bountyTaskData.bountyPoints;
+}
+
+void Player::addRerollTasks(uint32_t amount) {
+	bountyTaskData.rerollTasks = static_cast<uint8_t>(bountyTaskData.rerollTasks + amount);
+	sendBountyTaskData();
+	sendTaskBoardResourceBalance();
+}
+
+void Player::removeRerollTasks(uint32_t amount) {
+	if (bountyTaskData.rerollTasks >= amount) {
+		bountyTaskData.rerollTasks -= static_cast<uint8_t>(amount);
+	} else {
+		bountyTaskData.rerollTasks = 0;
+	}
+	sendBountyTaskData();
+	sendTaskBoardResourceBalance();
+}
+
+uint32_t Player::getRerollTasks() const {
+	return bountyTaskData.rerollTasks;
+}
+
+void Player::sendWeeklyTaskData() {
+	if (!client) {
+		return;
+	}
+	g_ioweeklytasks().ensureWeeklyTaskCount(getPlayer());
+	client->sendWeeklyTaskData(weeklyTaskData);
+}
+
+void Player::sendHuntingTaskShopData() const {
+	if (client) {
+		client->sendHuntingTaskShopData();
+	}
+}
+
+/*******************************************************************************
+ * Weekly Tasks (Winter Update 2025)
+ ******************************************************************************/
+
+WeeklyTaskData &Player::getWeeklyTaskData() {
+	return weeklyTaskData;
+}
+
+const WeeklyTaskData &Player::getWeeklyTaskData() const {
+	return weeklyTaskData;
+}
+
+uint32_t Player::getSoulsealsPoints() const {
+	return weeklyTaskData.soulsealsPoints;
+}
+
+void Player::addSoulsealsPoints(uint32_t amount) {
+	weeklyTaskData.soulsealsPoints += amount;
+	if (client) {
+		client->sendResourceBalance(RESOURCE_SOULSEALS_POINTS, getSoulsealsPoints());
+	}
+}
+
+bool Player::removeSoulsealsPoints(uint32_t amount) {
+	if (weeklyTaskData.soulsealsPoints < amount) {
+		return false;
+	}
+	weeklyTaskData.soulsealsPoints -= amount;
+	if (client) {
+		client->sendResourceBalance(RESOURCE_SOULSEALS_POINTS, getSoulsealsPoints());
+	}
+	return true;
+}
+
+>>>>>>> Stashed changes

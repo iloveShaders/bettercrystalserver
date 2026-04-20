@@ -937,6 +937,14 @@ BlockType_t Monster::blockHit(const std::shared_ptr<Creature> &attacker, const C
 			elementMod -= player->wheel()->checkElementSensitiveReduction(combatType);
 		}
 
+		// Winter Update 2025 - Proficiency Perk: Elemental Pierce
+		if (player && elementMod > 0 && combatType < COMBAT_COUNT) {
+			const float elePierce = player->getEquippedWeaponProficiency().elementalPierce[combatType];
+			if (elePierce > 0) {
+				elementMod = std::max<int32_t>(0, elementMod - static_cast<int32_t>(elementMod * elePierce));
+			}
+		}
+
 		if (elementMod != 0) {
 			damage = static_cast<int32_t>(std::round(damage * ((100 - elementMod) / 100.)));
 			if (damage <= 0) {

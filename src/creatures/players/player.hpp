@@ -29,6 +29,8 @@
 #include "creatures/players/proficiencies/proficiencies.hpp"
 #include "creatures/players/proficiencies/proficiencies_definitions.hpp"
 #include "creatures/players/attached_effects/player_attached_effects.hpp"
+#include "io/iobountytasks.hpp"
+#include "io/ioweeklytasks.hpp"
 
 class AnimusMastery;
 class House;
@@ -183,6 +185,10 @@ struct EquippedWeaponProficiencyBonuses {
 	std::map<skills_t, float> skillPercentageAsExtraDamageForAutoAttack;
 	std::map<skills_t, float> skillPercentageAsExtraDamageForSpells;
 	std::map<skills_t, float> skillPercentageAsExtraHealingForSpells;
+	float alphaStrikeExtraDamage = 0;
+	float omegaStrikeExtraDamage = 0;
+	float armorPenetration = 0;
+	float elementalPierce[COMBAT_COUNT] = { 0 };
 
 	uint8_t bestiaryId = 0;
 
@@ -215,6 +221,10 @@ struct EquippedWeaponProficiencyBonuses {
 		skillPercentageAsExtraDamageForAutoAttack.clear();
 		skillPercentageAsExtraDamageForSpells.clear();
 		skillPercentageAsExtraHealingForSpells.clear();
+		alphaStrikeExtraDamage = 0;
+		omegaStrikeExtraDamage = 0;
+		armorPenetration = 0;
+		std::fill(std::begin(elementalPierce), std::end(elementalPierce), 0.0f);
 
 		bestiaryId = 0;
 	}
@@ -1240,6 +1250,8 @@ public:
 	void setCharmTier(charmRune_t charmId, uint8_t newTier);
 	bool hasCharmExpansion() const;
 	void setCharmExpansion(bool onOff);
+	bool hasWeeklyTaskExpansion() const;
+	void setWeeklyTaskExpansion(bool onOff);
 	void setUsedRunesBit(int32_t bit);
 	int32_t getUsedRunesBit() const;
 	void setUnlockedRunesBit(int32_t bit);
@@ -1314,6 +1326,39 @@ public:
 	uint32_t getTaskHuntingRerollPrice() const;
 
 	const std::unique_ptr<TaskHuntingSlot> &getTaskHuntingWithCreature(uint16_t raceId) const;
+
+	/*******************************************************************************
+	 * Bounty Tasks (Winter Update 2025)
+	 ******************************************************************************/
+	BountyTaskData &getBountyTaskData();
+	const BountyTaskData &getBountyTaskData() const;
+
+	void sendBountyTaskData() const;
+	void refreshTaskIcons();
+	void sendWeeklyTaskData();
+	void sendHuntingTaskShopData() const;
+
+	void addBountyPoints(uint32_t amount);
+	void removeBountyPoints(uint32_t amount);
+	uint32_t getBountyPoints() const;
+
+	void addRerollTasks(uint32_t amount);
+	void removeRerollTasks(uint32_t amount);
+	uint32_t getRerollTasks() const;
+
+	void setBountyTalismanEquipped(bool equipped);
+	bool isBountyTalismanEquipped() const;
+
+	void sendTaskBoardResourceBalance() const;
+
+	/*******************************************************************************
+	 * Weekly Tasks (Winter Update 2025)
+	 ******************************************************************************/
+	uint32_t getSoulsealsPoints() const;
+	void addSoulsealsPoints(uint32_t amount);
+	bool removeSoulsealsPoints(uint32_t amount);
+	WeeklyTaskData &getWeeklyTaskData();
+	const WeeklyTaskData &getWeeklyTaskData() const;
 
 	uint32_t getLoyaltyPoints() const;
 
@@ -1658,6 +1703,14 @@ private:
 	std::vector<std::unique_ptr<PreySlot>> preys;
 	std::vector<std::unique_ptr<TaskHuntingSlot>> taskHunting;
 
+<<<<<<< Updated upstream
+=======
+	// Winter Update 2025 - Task Board
+	BountyTaskData bountyTaskData;
+	WeeklyTaskData weeklyTaskData;
+	bool bountyTalismanEquipped = false;
+
+>>>>>>> Stashed changes
 	GuildWarVector guildWarVector;
 
 	std::vector<std::shared_ptr<Party>> invitePartyList;
@@ -1691,6 +1744,8 @@ private:
 	uint64_t lastQuestlogUpdate = 0;
 	uint64_t preyCards = 0;
 	uint64_t taskHuntingPoints = 0;
+	uint32_t bountyPoints = 0;
+	uint32_t rerollTasks = 0;
 	uint32_t bossPoints = 0;
 	uint32_t bossIdSlotOne = 0;
 	uint32_t bossIdSlotTwo = 0;
@@ -1794,6 +1849,9 @@ private:
 
 	// Bestiary
 	bool charmExpansion = false;
+
+	// Weekly Tasks - Permanent Expansion (like charm expansion)
+	bool weeklyTaskExpansion = false;
 
 	// outfits and mounts
 	bool mountsModified = false;

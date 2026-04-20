@@ -2864,6 +2864,28 @@ CombatDamage Combat::applyWeaponProficiencyDamage(const std::shared_ptr<Player> 
 				damage.secondary.value += static_cast<int32_t>(std::ceil(damage.secondary.value * weaponProficiencydamageGainBossAndSinisterEmbraced));
 			}
 		}
+
+		// Winter Update 2025 - Proficiency Perk: Alpha Strike (+X% damage vs targets above 95% HP)
+		const float alphaStrike = proficiencyPerk.alphaStrikeExtraDamage;
+		if (alphaStrike > 0) {
+			const int32_t maxHp = targetMonster->getMaxHealth();
+			const int32_t currentHp = targetMonster->getHealth();
+			if (maxHp > 0 && currentHp >= static_cast<int32_t>(maxHp * 0.95)) {
+				damage.primary.value += static_cast<int32_t>(std::ceil(damage.primary.value * alphaStrike));
+				damage.secondary.value += static_cast<int32_t>(std::ceil(damage.secondary.value * alphaStrike));
+			}
+		}
+
+		// Winter Update 2025 - Proficiency Perk: Omega Strike (+Y% damage vs targets below 30% HP)
+		const float omegaStrike = proficiencyPerk.omegaStrikeExtraDamage;
+		if (omegaStrike > 0) {
+			const int32_t maxHp = targetMonster->getMaxHealth();
+			const int32_t currentHp = targetMonster->getHealth();
+			if (maxHp > 0 && currentHp <= static_cast<int32_t>(maxHp * 0.30)) {
+				damage.primary.value += static_cast<int32_t>(std::ceil(damage.primary.value * omegaStrike));
+				damage.secondary.value += static_cast<int32_t>(std::ceil(damage.secondary.value * omegaStrike));
+			}
+		}
 	}
 
 	return damage;
