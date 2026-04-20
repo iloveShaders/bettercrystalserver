@@ -307,7 +307,6 @@ public:
 	void playerWeeklyTasksRegenerate(uint32_t playerId, uint8_t difficulty);
 	void playerWeeklyTaskDeliver(uint32_t playerId, uint8_t taskIndex);
 
-	void playerTaskHuntingAction(uint32_t playerId, uint8_t slot, uint8_t action, bool upgrade, uint16_t raceId);
 	void playerNpcGreet(uint32_t playerId, uint32_t npcId);
 	void playerAnswerModalWindow(uint32_t playerId, uint32_t modalWindowId, uint8_t button, uint8_t choice);
 	void playerForgeFuseItems(

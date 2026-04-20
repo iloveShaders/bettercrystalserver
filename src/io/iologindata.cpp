@@ -270,9 +270,11 @@ bool IOLoginData::savePlayerGuard(const std::shared_ptr<Player> &player) {
 	if (!IOLoginDataSave::savePlayerTaskHuntingClass(player)) {
 		throw DatabaseException("[IOLoginDataSave::savePlayerTaskHuntingClass] - Failed to save player task hunting class: " + player->getName());
 	}
+
 	if (!IOLoginDataSave::savePlayerBountyTasks(player)) {
 		throw DatabaseException("[IOLoginDataSave::savePlayerBountyTasks] - Failed to save player bounty tasks: " + player->getName());
 	}
+
 	if (!IOLoginDataSave::savePlayerWeeklyTasks(player)) {
 		throw DatabaseException("[IOLoginDataSave::savePlayerWeeklyTasks] - Failed to save player weekly tasks: " + player->getName());
 	}

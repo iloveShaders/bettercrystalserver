@@ -1819,7 +1819,7 @@ void Game::playerMoveItem(const std::shared_ptr<Player> &player, const Position 
 		item = thing->getItem();
 	}
 
-	if (item->getID() != itemId) {
+	if (!item || item->getID() != itemId) {
 		player->sendCancelMessage(RETURNVALUE_NOTPOSSIBLE);
 		return;
 	}
@@ -8279,7 +8279,17 @@ void Game::applyLifeLeech(
 	tmpDamage.primary.type = COMBAT_HEALING;
 	tmpDamage.primary.value = calculateLeechAmount(realDamage, lifeSkill, affected);
 
-	Combat::doCombatHealth(nullptr, attackerPlayer, tmpDamage, tmpParams);
+	// Bounty Talisman life leech bonus (guaranteed, no chance roll; value in hundredths of percent)
+	if (targetMonster) {
+		uint16_t bountyLeechBonus = g_iobountytasks().getBountyTalismanBonus(attackerPlayer, targetMonster->getRaceId(), BOUNTY_TALISMAN_LIFELEECH);
+		if (bountyLeechBonus > 0) {
+			tmpDamage.primary.value += static_cast<int32_t>(std::ceil((realDamage * bountyLeechBonus) / 10000.0));
+		}
+	}
+
+	if (tmpDamage.primary.value > 0) {
+		Combat::doCombatHealth(nullptr, attackerPlayer, tmpDamage, tmpParams);
+	}
 }
 
 int32_t Game::calculateLeechAmount(const int32_t &realDamage, const uint16_t &skillAmount, int targetsAffected) const {
@@ -9705,15 +9715,6 @@ void Game::playerBountyTaskUnlockListSlot(uint32_t playerId, uint8_t slot) {
 }
 
 /*******************************************************************************/
-
-void Game::playerTaskHuntingAction(uint32_t playerId, uint8_t slot, uint8_t action, bool upgrade, uint16_t raceId) {
-	const auto &player = getPlayerByID(playerId);
-	if (!player) {
-		return;
-	}
-
-	g_ioprey().parseTaskHuntingAction(player, static_cast<PreySlot_t>(slot), static_cast<PreyTaskAction_t>(action), upgrade, raceId);
-}
 
 void Game::playerNpcGreet(uint32_t playerId, uint32_t npcId) {
 	const auto &player = getPlayerByID(playerId);

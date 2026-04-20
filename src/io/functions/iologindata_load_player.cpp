@@ -1066,6 +1066,7 @@ void IOLoginDataLoad::loadPlayerBountyTasks(const std::shared_ptr<Player> &playe
 	bountyData.rerollTasks = result->getNumber<uint8_t>("reroll_tokens");
 	bountyData.freeRerollTimeStamp = result->getNumber<int64_t>("free_reroll");
 
+	// Active task
 	bountyData.activeTask.raceId = result->getNumber<uint16_t>("active_raceid");
 	bountyData.activeTask.currentKills = result->getNumber<uint16_t>("active_kills");
 	bountyData.activeTask.requiredKills = result->getNumber<uint16_t>("active_required_kills");
@@ -1075,20 +1076,24 @@ void IOLoginDataLoad::loadPlayerBountyTasks(const std::shared_ptr<Player> &playe
 	bountyData.activeTask.taskGrade = static_cast<BountyTaskGrade_t>(result->getNumber<uint8_t>("active_task_grade"));
 	bountyData.activeTask.difficulty = static_cast<BountyTaskDifficulty_t>(result->getNumber<uint8_t>("active_task_difficulty"));
 
+	// Talisman levels
 	bountyData.talismanTiers[0].level = result->getNumber<uint8_t>("talisman_damage_level");
 	bountyData.talismanTiers[1].level = result->getNumber<uint8_t>("talisman_lifeleech_level");
 	bountyData.talismanTiers[2].level = result->getNumber<uint8_t>("talisman_loot_level");
 	bountyData.talismanTiers[3].level = result->getNumber<uint8_t>("talisman_bestiary_level");
 
+	// Recalculate talisman bonuses from levels
 	for (uint8_t i = 0; i < TALISMAN_PATH_COUNT; ++i) {
 		IOBountyTasks::recalculateTalismanBonuses(bountyData.talismanTiers[i], i);
 	}
 
+	// Load list slots from blob
 	bountyData.preferredLists.clear();
 	{
 		unsigned long listSlotsSize;
 		const char* listSlotsData = result->getStream("preferred_lists", listSlotsSize);
 		if (listSlotsData && listSlotsSize > 0) {
+			// Each slot: 1 byte activated + 2 bytes preferred + 2 bytes unwanted = 5 bytes
 			size_t slotCount = listSlotsSize / 5;
 			for (size_t i = 0; i < slotCount; ++i) {
 				BountyListSlot slot;
@@ -1102,13 +1107,16 @@ void IOLoginDataLoad::loadPlayerBountyTasks(const std::shared_ptr<Player> &playe
 		}
 	}
 
+	// Initialize default list slots if empty
 	g_iobountytasks().initializeListSlots(bountyData);
 
+	// Load current creatures list from blob
 	bountyData.currentCreaturesList.clear();
 	{
 		unsigned long creaturesSize;
 		const char* creaturesData = result->getStream("current_creatures_list", creaturesSize);
 		if (creaturesData && creaturesSize > 0) {
+			// Each creature: raceId(2) + requiredKills(2) + rewardExp(4) + rewardBountyPoints(1) + currentKills(2) + claimRewardType(1) + taskGrade(1) + taskIndex(1) = 14 bytes
 			size_t creatureCount = creaturesSize / 14;
 			for (size_t i = 0; i < creatureCount; ++i) {
 				BountyCreatureEntry creature;
@@ -1132,6 +1140,7 @@ void IOLoginDataLoad::loadPlayerBountyTasks(const std::shared_ptr<Player> &playe
 		}
 	}
 
+	// If state is SELECTION but creature list is empty, reset to NONE so they can be regenerated
 	if (bountyData.state == BOUNTY_STATE_SELECTION && bountyData.currentCreaturesList.empty()) {
 		bountyData.state = BOUNTY_STATE_NONE;
 	}
@@ -1172,6 +1181,7 @@ void IOLoginDataLoad::loadPlayerWeeklyTasks(const std::shared_ptr<Player> &playe
 	weeklyData.weeklyProgressFinished = result->getNumber<uint8_t>("weekly_progress_finished");
 	player->setWeeklyTaskExpansion(result->getNumber<bool>("has_expansion"));
 
+	// Load kill tasks blob
 	unsigned long killTasksSize;
 	const char* killTasksData = result->getStream("kill_tasks", killTasksSize);
 	if (killTasksData && killTasksSize > 0) {
@@ -1189,6 +1199,8 @@ void IOLoginDataLoad::loadPlayerWeeklyTasks(const std::shared_ptr<Player> &playe
 		}
 	}
 
+	// Load delivery tasks blob
+	// Format per task: U8 index, U16 itemId, U8 unknown1, U8 unknown2, U32 totalItems, U32 collectedItems, U8 delivered = 14 bytes
 	unsigned long deliveryTasksSize;
 	const char* deliveryTasksData = result->getStream("delivery_tasks", deliveryTasksSize);
 	if (deliveryTasksData && deliveryTasksSize > 0) {

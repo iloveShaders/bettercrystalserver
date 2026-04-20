@@ -188,6 +188,10 @@ struct EquippedWeaponProficiencyBonuses {
 	std::map<skills_t, float> skillPercentageAsExtraDamageForAutoAttack;
 	std::map<skills_t, float> skillPercentageAsExtraDamageForSpells;
 	std::map<skills_t, float> skillPercentageAsExtraHealingForSpells;
+	float alphaStrikeExtraDamage = 0; // +X% damage vs targets above 95% HP
+	float omegaStrikeExtraDamage = 0; // +Y% damage vs targets below 30% HP
+	float armorPenetration = 0; // ignores X% of target's physical armor
+	float elementalPierce[COMBAT_COUNT] = { 0 }; // ignores X% of target's elemental resistance per combat type
 
 	uint8_t bestiaryId = 0;
 
@@ -220,6 +224,10 @@ struct EquippedWeaponProficiencyBonuses {
 		skillPercentageAsExtraDamageForAutoAttack.clear();
 		skillPercentageAsExtraDamageForSpells.clear();
 		skillPercentageAsExtraHealingForSpells.clear();
+		alphaStrikeExtraDamage = 0;
+		omegaStrikeExtraDamage = 0;
+		armorPenetration = 0;
+		std::fill(std::begin(elementalPierce), std::end(elementalPierce), 0.0f);
 
 		bestiaryId = 0;
 	}
@@ -417,6 +425,8 @@ public:
 	void refreshCyclopediaMonsterTracker(const std::unordered_set<std::shared_ptr<MonsterType>> &trackerList, bool isBoss) const;
 
 	bool isBossOnBosstiaryTracker(const std::shared_ptr<MonsterType> &monsterType) const;
+
+	bool isMonsterOnBestiaryTracker(const std::shared_ptr<MonsterType> &monsterType) const;
 
 	std::shared_ptr<Vocation> getVocation() const;
 
@@ -1333,7 +1343,7 @@ public:
 	uint64_t getTaskHuntingPoints() const;
 
 	/*******************************************************************************
-	 * Bounty Tasks / Weekly Tasks (Winter Update 2025 — Task Board)
+	 * Bounty Tasks / Weekly Tasks (Task Board)
 	 ******************************************************************************/
 	BountyTaskData &getBountyTaskData();
 	const BountyTaskData &getBountyTaskData() const;
@@ -1453,6 +1463,7 @@ public:
 	void sendMonsterPodiumWindow(const std::shared_ptr<Item> &podium, const Position &position, uint16_t itemId, uint8_t stackpos) const;
 
 	void sendBosstiaryEntryChanged(uint32_t bossid) const;
+	void sendSoulSealsWindow() const;
 
 	void sendInventoryImbuements(const std::map<Slots_t, std::shared_ptr<Item>> &items) const;
 
@@ -1750,7 +1761,7 @@ private:
 	uint64_t lastQuestlogUpdate = 0;
 	uint64_t preyCards = 0;
 	uint64_t taskHuntingPoints = 0;
-	uint32_t soulsealsPoints = 0;
+	uint32_t bountyPoints = 0;
 	uint32_t bossPoints = 0;
 	uint32_t bossIdSlotOne = 0;
 	uint32_t bossIdSlotTwo = 0;
@@ -1797,7 +1808,7 @@ private:
 	std::shared_ptr<RewardChest> rewardChest = nullptr;
 
 	uint32_t inventoryWeight = 0;
-	uint32_t capacity = 40000;
+	uint32_t capacity = 60000;
 	uint32_t bonusCapacity = 0;
 
 	std::bitset<CombatType_t::COMBAT_COUNT> m_damageImmunities;

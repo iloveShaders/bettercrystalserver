@@ -921,6 +921,11 @@ int32_t WeaponDistance::getWeaponDamage(const std::shared_ptr<Player> &player, c
 		}
 	}
 
+	const uint8_t extraProficiencyAttack = player->getEquippedWeaponProficiency().attack;
+	if (extraProficiencyAttack > 0) {
+		attackValue += extraProficiencyAttack;
+	}
+
 	const int32_t attackSkill = player->getSkillLevel(SKILL_DISTANCE);
 	const float attackFactor = player->getAttackFactor();
 

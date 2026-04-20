@@ -746,6 +746,7 @@ bool IOLoginDataSave::savePlayerBountyTasks(const std::shared_ptr<Player> &playe
 	Database &db = Database::getInstance();
 	const auto &bountyData = player->getBountyTaskData();
 
+	// Serialize list slots to blob
 	PropWriteStream propStream;
 	for (const auto &slot : bountyData.preferredLists) {
 		propStream.write<uint8_t>(slot.activedList);
@@ -756,6 +757,8 @@ bool IOLoginDataSave::savePlayerBountyTasks(const std::shared_ptr<Player> &playe
 	size_t listSlotsSize;
 	const char* listSlotsBlob = propStream.getStream(listSlotsSize);
 
+	// Serialize current creatures list to blob
+	// Each creature: raceId(2) + requiredKills(2) + rewardExp(4) + rewardBountyPoints(1) + currentKills(2) + claimRewardType(1) + taskGrade(1) + taskIndex(1) = 14 bytes
 	PropWriteStream creaturesStream;
 	for (const auto &creature : bountyData.currentCreaturesList) {
 		creaturesStream.write<uint16_t>(creature.raceId);
@@ -841,6 +844,7 @@ bool IOLoginDataSave::savePlayerWeeklyTasks(const std::shared_ptr<Player> &playe
 	Database &db = Database::getInstance();
 	const auto &weeklyData = player->getWeeklyTaskData();
 
+	// Serialize kill tasks
 	PropWriteStream killTasksStream;
 	for (const auto &task : weeklyData.killTasks) {
 		killTasksStream.write<uint16_t>(task.raceId);
@@ -851,6 +855,8 @@ bool IOLoginDataSave::savePlayerWeeklyTasks(const std::shared_ptr<Player> &playe
 	size_t killTasksSize;
 	const char* killTasksBlob = killTasksStream.getStream(killTasksSize);
 
+	// Serialize delivery tasks
+	// Format per task: U8 index, U16 itemId, U8 unknown1, U8 unknown2, U32 totalItems, U32 collectedItems, U8 delivered = 14 bytes
 	PropWriteStream deliveryTasksStream;
 	for (const auto &task : weeklyData.deliveryTasks) {
 		deliveryTasksStream.write<uint8_t>(task.index);

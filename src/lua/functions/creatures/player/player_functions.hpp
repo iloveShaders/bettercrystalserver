@@ -347,6 +347,7 @@ class PlayerFunctions {
 	static int luaPlayerGetFaction(lua_State* L);
 
 	static int luaPlayerGetBosstiaryLevel(lua_State* L);
+	static int luaPlayerSendSoulSealsWindow(lua_State* L);
 	static int luaPlayerGetBosstiaryKills(lua_State* L);
 	static int luaPlayerAddBosstiaryKill(lua_State* L);
 	static int luaPlayerSetBossPoints(lua_State* L);

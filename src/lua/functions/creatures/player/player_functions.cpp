@@ -380,6 +380,7 @@ void PlayerFunctions::init(lua_State* L) {
 	Lua::registerMethod(L, "Player", "getSlotBossId", PlayerFunctions::luaPlayerGetSlotBossId);
 	Lua::registerMethod(L, "Player", "getBossBonus", PlayerFunctions::luaPlayerGetBossBonus);
 	Lua::registerMethod(L, "Player", "sendBosstiaryCooldownTimer", PlayerFunctions::luaPlayerBosstiaryCooldownTimer);
+	Lua::registerMethod(L, "Player", "sendSoulSealsWindow", PlayerFunctions::luaPlayerSendSoulSealsWindow);
 
 	Lua::registerMethod(L, "Player", "sendSingleSoundEffect", PlayerFunctions::luaPlayerSendSingleSoundEffect);
 	Lua::registerMethod(L, "Player", "sendDoubleSoundEffect", PlayerFunctions::luaPlayerSendDoubleSoundEffect);
@@ -4286,6 +4287,20 @@ int PlayerFunctions::luaPlayerBosstiaryCooldownTimer(lua_State* L) {
 	}
 
 	player->sendBosstiaryCooldownTimer();
+	Lua::pushBoolean(L, true);
+	return 1;
+}
+
+int PlayerFunctions::luaPlayerSendSoulSealsWindow(lua_State* L) {
+	// player:sendSoulSealsWindow()
+	const auto &player = Lua::getUserdataShared<Player>(L, 1);
+	if (!player) {
+		Lua::reportErrorFunc(Lua::getErrorDesc(LUA_ERROR_PLAYER_NOT_FOUND));
+		Lua::pushBoolean(L, false);
+		return 0;
+	}
+
+	player->sendSoulSealsWindow();
 	Lua::pushBoolean(L, true);
 	return 1;
 }

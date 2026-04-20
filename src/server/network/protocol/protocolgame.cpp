@@ -5716,6 +5716,28 @@ void ProtocolGame::sendResourceBalance(Resource_t resourceType, uint64_t value) 
 	writeToOutputBuffer(msg);
 }
 
+void ProtocolGame::sendSoulSealsWindow() {
+	NetworkMessage msg;
+	msg.addByte(0xBA);
+
+	const auto &masteries = player->animusMastery().getAnimusMasteries();
+
+	std::vector<uint16_t> masteredRaceIds;
+	for (const auto &monsterName : masteries) {
+		const auto monsterType = g_monsters().getMonsterType(monsterName, true);
+		if (monsterType && monsterType->info.raceid != 0) {
+			masteredRaceIds.push_back(monsterType->info.raceid);
+		}
+	}
+
+	msg.add<uint16_t>(static_cast<uint16_t>(masteredRaceIds.size()));
+	for (const auto raceId : masteredRaceIds) {
+		msg.add<uint16_t>(raceId);
+	}
+
+	writeToOutputBuffer(msg);
+}
+
 void ProtocolGame::sendBountyTaskData(const BountyTaskData &bountyData) {
 	if (!player || oldProtocol) {
 		return;

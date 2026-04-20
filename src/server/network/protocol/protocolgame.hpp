@@ -323,6 +323,7 @@ private:
 	void sendMonsterPodiumWindow(const std::shared_ptr<Item> &podium, const Position &position, uint16_t itemId, uint8_t stackPos);
 	void parseSetMonsterPodium(NetworkMessage &msg) const;
 	void sendBosstiaryCooldownTimer();
+
 	void sendBosstiaryEntryChanged(uint32_t bossid);
 
 	void sendAllowBugReport();
@@ -395,6 +396,7 @@ private:
 	void sendResourcesBalance(uint64_t money = 0, uint64_t bank = 0, uint64_t preyCards = 0, uint64_t taskHunting = 0, uint64_t soulsealsPoints = 0, uint64_t forgeDust = 0, uint64_t forgeSliver = 0, uint64_t forgeCores = 0);
 	void sendResourceBalance(Resource_t resourceType);
 	void sendResourceBalance(Resource_t resourceType, uint64_t value);
+	void sendSoulSealsWindow();
 
 	void sendBountyTaskData(const BountyTaskData &bountyData);
 	void sendWeeklyTaskData(const WeeklyTaskData &weeklyData);

@@ -863,6 +863,10 @@ bool Player::isBossOnBosstiaryTracker(const std::shared_ptr<MonsterType> &monste
 	return monsterType ? m_bosstiaryMonsterTracker.contains(monsterType) : false;
 }
 
+bool Player::isMonsterOnBestiaryTracker(const std::shared_ptr<MonsterType> &monsterType) const {
+	return monsterType ? m_bestiaryMonsterTracker.contains(monsterType) : false;
+}
+
 std::shared_ptr<Vocation> Player::getVocation() const {
 	return vocation;
 }
@@ -1765,6 +1769,10 @@ void Player::sendCreatureHelpers(uint32_t creatureId, uint16_t helpers) const {
 void Player::setItemCustomPrice(uint16_t itemId, uint64_t price) {
 	itemPriceMap[itemId] = price;
 }
+
+/*******************************************************************************
+ * Charms
+ ******************************************************************************/
 
 uint32_t Player::getCharmPoints() const {
 	return charmPoints;
@@ -3663,6 +3671,7 @@ void Player::addExperience(const std::shared_ptr<Creature> &target, uint64_t exp
 
 		g_creatureEvents().playerAdvance(static_self_cast<Player>(), SKILL_LEVEL, prevLevel, level);
 
+		// Recalculate weekly task XP rewards when player levels up
 		g_ioweeklytasks().recalculateWeeklyTaskRewards(static_self_cast<Player>());
 
 		std::ostringstream ss;
@@ -6729,6 +6738,10 @@ void Player::addOutfit(uint16_t lookType, uint8_t addons) {
 
 	setOutfitsModified(true);
 	outfitsMap.emplace_back(lookType, addons);
+
+	if (const auto &outfit = Outfits::getInstance().getOutfitByLookType(getPlayer(), lookType)) {
+		sendScreenshotAndBannerUnlockedCosmetic(outfit->name, lookType, std::clamp<uint8_t>(addons, 0, 2));
+	}
 }
 
 bool Player::removeOutfit(uint16_t lookType) {
@@ -7320,16 +7333,14 @@ uint16_t Player::getSkillLevel(skills_t skill) const {
 		skillLevel += m_wheelPlayer->getMajorStatConditional("Ballistic Mastery", WheelMajor_t::CRITICAL_DMG);
 		skillLevel += m_wheelPlayer->checkAvatarSkill(WheelAvatarSkill_t::CRITICAL_DAMAGE);
 		skillLevel += equippedWeaponProficiency.critExtraDamage; // Proficiency Perk: critExtraDamage
-	}
+	} else if (skill == SKILL_CRITICAL_HIT_CHANCE) {
+		skillLevel += 500; // Summer Update 2025 - Flag Bonus
+		skillLevel += equippedWeaponProficiency.critHitChance; // Summer Update 2025 - Proficiency Perk: critHitChance
 
-	if (skill == SKILL_CRITICAL_HIT_CHANCE) {
-		skillLevel += 500; // Flag Bonus
-		skillLevel += equippedWeaponProficiency.critHitChance; // Proficiency Perk: critHitChance
-	}
-
-	const int32_t avatarCritChance = m_wheelPlayer->checkAvatarSkill(WheelAvatarSkill_t::CRITICAL_CHANCE);
-	if (skill == SKILL_CRITICAL_HIT_CHANCE && avatarCritChance > 0) {
-		skillLevel = avatarCritChance; // 100%
+		const int32_t avatarCritChance = m_wheelPlayer->checkAvatarSkill(WheelAvatarSkill_t::CRITICAL_CHANCE);
+		if (avatarCritChance > 0) {
+			skillLevel += avatarCritChance; // 100%
+		}
 	}
 
 	if (skill == SKILL_FIST && getVirtue() == VIRTUE_JUSTICE) {
@@ -7858,6 +7869,7 @@ bool Player::tameMount(uint16_t mountId) {
 
 	setMountsModified(true);
 	mountsMap.emplace(mountId);
+	sendScreenshotAndBannerUnlockedCosmetic(mount->name, mount->clientId, 3);
 	return true;
 }
 
@@ -8462,6 +8474,21 @@ void Player::postAddNotification(const std::shared_ptr<Thing> &thing, const std:
 		if (shopOwner && !scheduledSaleUpdate && requireListUpdate) {
 			updateSaleShopList(item);
 		}
+
+		// Update weekly delivery tasks display if the moved item is a pending delivery item
+		if (requireListUpdate) {
+			auto &weeklyData = getWeeklyTaskData();
+			auto now = OTSYS_TIME();
+			if (now - weeklyData.lastItemNotifySend >= 1000) {
+				for (const auto &task : weeklyData.deliveryTasks) {
+					if (task.delivered == 0 && task.itemId == item->getID()) {
+						weeklyData.lastItemNotifySend = now;
+						sendWeeklyTaskData();
+						break;
+					}
+				}
+			}
+		}
 	} else if (const auto &creature = thing->getCreature()) {
 		if (creature == getPlayer()) {
 			// check containers
@@ -8556,6 +8583,21 @@ void Player::postRemoveNotification(const std::shared_ptr<Thing> &thing, const s
 
 		if (shopOwner && !scheduledSaleUpdate && requireListUpdate) {
 			updateSaleShopList(item);
+		}
+
+		// Update weekly delivery tasks display if the moved item is a pending delivery item
+		if (requireListUpdate) {
+			auto &weeklyData = getWeeklyTaskData();
+			auto now = OTSYS_TIME();
+			if (now - weeklyData.lastItemNotifySend >= 1000) {
+				for (const auto &task : weeklyData.deliveryTasks) {
+					if (task.delivered == 0 && task.itemId == item->getID()) {
+						weeklyData.lastItemNotifySend = now;
+						sendWeeklyTaskData();
+						break;
+					}
+				}
+			}
 		}
 	}
 }
@@ -9507,11 +9549,6 @@ void Player::initializeTaskHunting() {
 			setTaskHuntingSlotClass(slot);
 		}
 	}
-
-	if (client && g_configManager().getBoolean(TASK_HUNTING_ENABLED) && !client->oldProtocol) {
-		auto buffer = g_ioprey().getTaskHuntingBaseDate();
-		client->writeToOutputBuffer(buffer);
-	}
 }
 
 bool Player::isCreatureUnlockedOnTaskHunting(const std::shared_ptr<MonsterType> &mtype) const {
@@ -9648,11 +9685,15 @@ uint64_t Player::getTaskHuntingPoints() const {
 
 void Player::sendTaskBoardResourceBalance() const {
 	if (client) {
-		client->sendResourceBalance(RESOURCE_BOUNTY_POINTS, getBountyPoints());
+		client->sendResourceBalance(RESOURCE_BOUNTY_POINTS, bountyTaskData.bountyPoints);
 		client->sendResourceBalance(RESOURCE_TASK_HUNTING, getTaskHuntingPoints());
 		client->sendResourceBalance(RESOURCE_SOULSEALS_POINTS, getSoulsealsPoints());
 	}
 }
+
+/*******************************************************************************
+ * Bounty Tasks
+ ******************************************************************************/
 
 BountyTaskData &Player::getBountyTaskData() {
 	return bountyTaskData;
@@ -9741,6 +9782,10 @@ void Player::sendHuntingTaskShopData() const {
 	}
 }
 
+/*******************************************************************************
+ * Weekly Tasks
+ ******************************************************************************/
+
 WeeklyTaskData &Player::getWeeklyTaskData() {
 	return weeklyTaskData;
 }
@@ -9758,25 +9803,23 @@ void Player::setWeeklyTaskExpansion(bool onOff) {
 }
 
 uint32_t Player::getSoulsealsPoints() const {
-	return soulsealsPoints;
+	return weeklyTaskData.soulsealsPoints;
 }
 
 void Player::addSoulsealsPoints(uint32_t amount) {
-	soulsealsPoints += amount;
+	weeklyTaskData.soulsealsPoints += amount;
 	if (client) {
-		const auto &[sliverCount, coreCount] = getForgeSliversAndCores();
-		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints(), getSoulsealsPoints(), getForgeDusts(), sliverCount, coreCount);
+		client->sendResourceBalance(RESOURCE_SOULSEALS_POINTS, getSoulsealsPoints());
 	}
 }
 
 void Player::removeSoulsealsPoints(uint32_t amount) {
-	if (soulsealsPoints < amount) {
+	if (weeklyTaskData.soulsealsPoints < amount) {
 		return;
 	}
-	soulsealsPoints -= amount;
+	weeklyTaskData.soulsealsPoints -= amount;
 	if (client) {
-		const auto &[sliverCount, coreCount] = getForgeSliversAndCores();
-		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints(), getSoulsealsPoints(), getForgeDusts(), sliverCount, coreCount);
+		client->sendResourceBalance(RESOURCE_SOULSEALS_POINTS, getSoulsealsPoints());
 	}
 }
 
@@ -11727,6 +11770,13 @@ void Player::sendBosstiaryCooldownTimer() const {
 	}
 }
 
+void Player::sendSoulSealsWindow() const {
+	if (client) {
+		client->sendResourceBalance(RESOURCE_SOULSEALS_POINTS, getSoulsealsPoints());
+		client->sendSoulSealsWindow();
+	}
+}
+
 void Player::setSlotBossId(uint8_t slotId, uint32_t bossId) {
 	if (slotId == 1) {
 		bossIdSlotOne = bossId;
@@ -12534,9 +12584,13 @@ void Player::applyEquippedWeaponProficiency(const uint16_t itemId) {
 				continue;
 			}
 
-			int32_t damageTypeIndex = 0;
+			int32_t damageTypeIndex = -1;
 			if (perk.damageType > 0) {
 				switch (perk.damageType) {
+					case PROFICIENCY_DAMAGETYPE_PHYSICAL: {
+						damageTypeIndex = static_cast<int32_t>(COMBAT_PHYSICALDAMAGE); // 0
+						break;
+					}
 					case PROFICIENCY_DAMAGETYPE_FIRE: {
 						damageTypeIndex = static_cast<int32_t>(COMBAT_FIREDAMAGE);
 						break;
@@ -12747,6 +12801,24 @@ void Player::applyEquippedWeaponProficiency(const uint16_t itemId) {
 				case PROFICIENCY_PERK_SKILLID_PERCENTAGE_AS_EXTRA_HEALING_FOR_SPELLS: {
 					if (skillTypeIndex != SKILL_NONE) {
 						equippedWeaponProficiency.skillPercentageAsExtraHealingForSpells[skillTypeIndex] = std::max(0.0f, equippedWeaponProficiency.skillPercentageAsExtraHealingForSpells[skillTypeIndex] + perk.perkValue);
+					}
+					break;
+				}
+				case PROFICIENCY_PERK_ALPHA_STRIKE_EXTRA_DAMAGE: {
+					equippedWeaponProficiency.alphaStrikeExtraDamage += perk.perkValue;
+					break;
+				}
+				case PROFICIENCY_PERK_OMEGA_STRIKE_EXTRA_DAMAGE: {
+					equippedWeaponProficiency.omegaStrikeExtraDamage += perk.perkValue;
+					break;
+				}
+				case PROFICIENCY_PERK_ARMOR_PENETRATION: {
+					equippedWeaponProficiency.armorPenetration += perk.perkValue;
+					break;
+				}
+				case PROFICIENCY_PERK_ELEMENTAL_PIERCE: {
+					if (damageTypeIndex >= 0 && damageTypeIndex < COMBAT_COUNT) {
+						equippedWeaponProficiency.elementalPierce[damageTypeIndex] += perk.perkValue;
 					}
 					break;
 				}
