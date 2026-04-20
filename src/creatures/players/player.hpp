@@ -1199,6 +1199,7 @@ public:
 	void setGrindingXpBoost(uint16_t value);
 	uint16_t getXpBoostPercent() const;
 	uint16_t getDisplayXpBoostPercent() const;
+	uint16_t getPreyXpBonusPercent() const;
 	void setXpBoostPercent(uint16_t percent);
 	uint16_t getStaminaXpBoost() const;
 	void setStaminaXpBoost(uint16_t value);

@@ -2058,7 +2058,8 @@ ReturnValue Game::checkMoveItemToCylinder(const std::shared_ptr<Player> &player,
 		auto house = toHouseTile ? toHouseTile->getHouse() : nullptr;
 		if (fromCylinder->getContainer()) {
 			if (item->isStoreItem()) {
-				if (house && house->getHouseAccessLevel(player) < HOUSE_OWNER) {
+				const auto minRequired = (item->getID() == ITEM_DECORATION_KIT) ? HOUSE_SUBOWNER : HOUSE_OWNER;
+				if (house && house->getHouseAccessLevel(player) < minRequired) {
 					return RETURNVALUE_NOTPOSSIBLE;
 				}
 			}
@@ -3286,37 +3287,40 @@ ReturnValue Game::internalCollectManagedItems(const std::shared_ptr<Player> &pla
 		return RETURNVALUE_NOTPOSSIBLE;
 	}
 
-	// Send money to the bank
-	if (g_configManager().getBoolean(AUTOBANK)) {
-		if (item->getID() == ITEM_GOLD_COIN || item->getID() == ITEM_PLATINUM_COIN || item->getID() == ITEM_CRYSTAL_COIN) {
-			uint64_t money = 0;
-			if (item->getID() == ITEM_PLATINUM_COIN) {
-				money = item->getItemCount() * 100;
-			} else if (item->getID() == ITEM_CRYSTAL_COIN) {
-				money = item->getItemCount() * 10000;
-			} else {
-				money = item->getItemCount();
+	// These checks only apply when looting (not when obtaining items from NPCs)
+	if (isLootContainer) {
+		// Send money to the bank
+		if (g_configManager().getBoolean(AUTOBANK)) {
+			if (item->getID() == ITEM_GOLD_COIN || item->getID() == ITEM_PLATINUM_COIN || item->getID() == ITEM_CRYSTAL_COIN) {
+				uint64_t money = 0;
+				if (item->getID() == ITEM_PLATINUM_COIN) {
+					money = item->getItemCount() * 100;
+				} else if (item->getID() == ITEM_CRYSTAL_COIN) {
+					money = item->getItemCount() * 10000;
+				} else {
+					money = item->getItemCount();
+				}
+				auto parent = item->getParent();
+				if (parent) {
+					parent->removeThing(item, item->getItemCount());
+				} else {
+					g_logger().debug("Item has no parent");
+					return RETURNVALUE_NOTPOSSIBLE;
+				}
+				player->setBankBalance(player->getBankBalance() + money);
+				g_metrics().addCounter("balance_increase", money, { { "player", player->getName() }, { "context", "loot" } });
+				return RETURNVALUE_NOERROR;
 			}
-			auto parent = item->getParent();
-			if (parent) {
-				parent->removeThing(item, item->getItemCount());
-			} else {
-				g_logger().debug("Item has no parent");
+		}
+
+		if (!player->quickLootListItemIds.empty()) {
+			uint16_t itemId = item->getID();
+			bool isInList = std::ranges::find(player->quickLootListItemIds, itemId) != player->quickLootListItemIds.end();
+			if (player->quickLootFilter == QuickLootFilter_t::QUICKLOOTFILTER_ACCEPTEDLOOT && !isInList) {
+				return RETURNVALUE_NOTPOSSIBLE;
+			} else if (player->quickLootFilter == QuickLootFilter_t::QUICKLOOTFILTER_SKIPPEDLOOT && isInList) {
 				return RETURNVALUE_NOTPOSSIBLE;
 			}
-			player->setBankBalance(player->getBankBalance() + money);
-			g_metrics().addCounter("balance_increase", money, { { "player", player->getName() }, { "context", "loot" } });
-			return RETURNVALUE_NOERROR;
-		}
-	}
-
-	if (!player->quickLootListItemIds.empty()) {
-		uint16_t itemId = item->getID();
-		bool isInList = std::ranges::find(player->quickLootListItemIds, itemId) != player->quickLootListItemIds.end();
-		if (player->quickLootFilter == QuickLootFilter_t::QUICKLOOTFILTER_ACCEPTEDLOOT && !isInList) {
-			return RETURNVALUE_NOTPOSSIBLE;
-		} else if (player->quickLootFilter == QuickLootFilter_t::QUICKLOOTFILTER_SKIPPEDLOOT && isInList) {
-			return RETURNVALUE_NOTPOSSIBLE;
 		}
 	}
 
@@ -4363,11 +4367,6 @@ void Game::playerRotateItem(uint32_t playerId, const Position &pos, uint8_t stac
 		return;
 	}
 
-	if (item->hasOwner() && !item->isOwner(player)) {
-		player->sendCancelMessage(RETURNVALUE_ITEMISNOTYOURS);
-		return;
-	}
-
 	if (g_configManager().getBoolean(ONLY_INVITED_CAN_MOVE_HOUSE_ITEMS) && !InternalGame::playerCanUseItemOnHouseTile(player, item)) {
 		player->sendCancelMessage(RETURNVALUE_CANNOTUSETHISOBJECT);
 		return;
@@ -4635,18 +4634,13 @@ void Game::playerWrapableItem(uint32_t playerId, const Position &pos, uint8_t st
 		return;
 	}
 
-	if (house->getHouseAccessLevel(player) < HOUSE_OWNER) {
+	if (house->getHouseAccessLevel(player) < HOUSE_SUBOWNER) {
 		player->sendCancelMessage("You are not allowed to construct this here.");
 		return;
 	}
 
 	if (!item || item->getID() != itemId || item->hasAttribute(ItemAttribute_t::UNIQUEID) || (!item->isWrapable() && item->getID() != ITEM_DECORATION_KIT)) {
 		player->sendCancelMessage(RETURNVALUE_NOTPOSSIBLE);
-		return;
-	}
-
-	if (item->hasOwner() && !item->isOwner(player)) {
-		player->sendCancelMessage(RETURNVALUE_ITEMISNOTYOURS);
 		return;
 	}
 
@@ -4740,11 +4734,6 @@ std::shared_ptr<Item> Game::wrapItem(const std::shared_ptr<Item> &item, const st
 }
 
 void Game::unwrapItem(const std::shared_ptr<Item> &item, uint16_t unWrapId, const std::shared_ptr<House> &house, const std::shared_ptr<Player> &player) {
-	if (item->hasOwner() && !item->isOwner(player)) {
-		player->sendCancelMessage(RETURNVALUE_ITEMISNOTYOURS);
-		return;
-	}
-
 	const ItemType &newiType = Item::items.getItemType(unWrapId);
 	if (player != nullptr && house != nullptr && newiType.isBed() && house->getMaxBeds() > -1 && house->getBedCount() >= house->getMaxBeds()) {
 		player->sendCancelMessage("You reached the maximum beds in this house");
@@ -4756,11 +4745,11 @@ void Game::unwrapItem(const std::shared_ptr<Item> &item, uint16_t unWrapId, cons
 	const uint16_t amount = amountAttr ? amountAttr : 1;
 
 	std::shared_ptr<Item> newItem = transformItem(item, unWrapId, amount);
-	if (house && newiType.isBed()) {
-		house->addBed(newItem->getBed());
-	}
-
 	if (newItem) {
+		if (house && newiType.isBed()) {
+			house->addBed(newItem->getBed());
+		}
+
 		if (isCaskItem(unWrapId)) {
 			const uint16_t hiddenCharges = item->getAttribute<uint16_t>(ItemAttribute_t::DATE);
 			if (hiddenCharges > 0) {
@@ -6147,6 +6136,10 @@ void Game::playerSetFightModes(uint32_t playerId, FightMode_t fightMode, bool ch
 	player->setFightMode(fightMode);
 	player->setChaseMode(chaseMode);
 	player->setSecureMode(secureMode);
+	player->sendStats();
+	player->sendSkills();
+	player->sendCyclopediaCharacterDefenceStats();
+	player->sendCyclopediaCharacterOffenceStats();
 }
 
 void Game::playerRequestAddVip(uint32_t playerId, const std::string &name) {
@@ -7102,7 +7095,7 @@ bool Game::combatBlockHit(CombatDamage &damage, const std::shared_ptr<Creature> 
 					}
 					damageReflected.extension = true;
 					damageReflected.exString += " (damage reflection)";
-					damageReflectedParams.combatType = damage.primary.type;
+					damageReflectedParams.combatType = damage.secondary.type;
 					damageReflectedParams.aggressive = true;
 					canReflect = true;
 				}
@@ -7159,7 +7152,7 @@ bool Game::combatBlockHit(CombatDamage &damage, const std::shared_ptr<Creature> 
 					int32_t reflectPercent = std::ceil(damage.secondary.value * secondaryReflectPercent / 100.);
 					int32_t reflectLimit = std::ceil(attacker->getMaxHealth() * 0.01);
 					damageReflected.secondary.type = damage.secondary.type;
-					damageReflected.secondary.value = std::max(-reflectLimit, reflectFlat + reflectPercent);
+					damageReflected.secondary.value = std::max(-static_cast<int32_t>(std::ceil(attacker->getMaxHealth() * 0.01)), -static_cast<int32_t>(secondaryReflectFlat) + static_cast<int32_t>(std::ceil(damage.secondary.value * secondaryReflectPercent / 100.)));
 				}
 			}
 		}
@@ -8549,6 +8542,18 @@ void Game::checkImbuementsAndSereneStatus() {
 		}
 
 		mapPlayer->updateInventoryImbuement();
+
+		// Track hunt analyzer PZ time: if the party leader is in a protection zone,
+		// accumulate the elapsed second so it can be excluded from the session time.
+		if (const auto &party = mapPlayer->getParty()) {
+			if (party->getLeader() == mapPlayer) {
+				const auto &leaderTile = mapPlayer->getTile();
+				if (leaderTile && leaderTile->hasFlag(TILESTATE_PROTECTIONZONE)) {
+					party->pzElapsedSeconds++;
+				}
+			}
+		}
+
 		if (mapPlayer->getVocation()->getBaseId() != 5) {
 			continue;
 		}

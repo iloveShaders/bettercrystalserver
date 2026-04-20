@@ -108,22 +108,27 @@ std::vector<Position> Zone::getPositions() const {
 }
 
 std::vector<std::shared_ptr<Creature>> Zone::getCreatures() {
+	std::lock_guard<std::mutex> lock(cacheMutex);
 	return weak::lock(creaturesCache);
 }
 
 std::vector<std::shared_ptr<Player>> Zone::getPlayers() {
+	std::lock_guard<std::mutex> lock(cacheMutex);
 	return weak::lock(playersCache);
 }
 
 std::vector<std::shared_ptr<Monster>> Zone::getMonsters() {
+	std::lock_guard<std::mutex> lock(cacheMutex);
 	return weak::lock(monstersCache);
 }
 
 std::vector<std::shared_ptr<Npc>> Zone::getNpcs() {
+	std::lock_guard<std::mutex> lock(cacheMutex);
 	return weak::lock(npcsCache);
 }
 
 std::vector<std::shared_ptr<Item>> Zone::getItems() {
+	std::lock_guard<std::mutex> lock(cacheMutex);
 	return weak::lock(itemsCache);
 }
 
@@ -198,6 +203,7 @@ void Zone::creatureAdded(const std::shared_ptr<Creature> &creature) {
 		return;
 	}
 
+	std::lock_guard<std::mutex> lock(cacheMutex);
 	if (const auto &player = creature->getPlayer()) {
 		playersCache.insert(player);
 	} else if (const auto &monster = creature->getMonster()) {
@@ -213,6 +219,7 @@ void Zone::creatureRemoved(const std::shared_ptr<Creature> &creature) {
 	if (!creature) {
 		return;
 	}
+	std::lock_guard<std::mutex> lock(cacheMutex);
 	creaturesCache.erase(creature);
 	playersCache.erase(creature->getPlayer());
 	monstersCache.erase(creature->getMonster());
@@ -235,6 +242,7 @@ void Zone::itemAdded(const std::shared_ptr<Item> &item) {
 	if (!item) {
 		return;
 	}
+	std::lock_guard<std::mutex> lock(cacheMutex);
 	itemsCache.insert(item);
 }
 
@@ -242,16 +250,20 @@ void Zone::itemRemoved(const std::shared_ptr<Item> &item) {
 	if (!item) {
 		return;
 	}
+	std::lock_guard<std::mutex> lock(cacheMutex);
 	itemsCache.erase(item);
 }
 
 void Zone::refresh() {
 	Benchmark bm_refresh;
-	creaturesCache.clear();
-	monstersCache.clear();
-	npcsCache.clear();
-	playersCache.clear();
-	itemsCache.clear();
+	{
+		std::lock_guard<std::mutex> lock(cacheMutex);
+		creaturesCache.clear();
+		monstersCache.clear();
+		npcsCache.clear();
+		playersCache.clear();
+		itemsCache.clear();
+	}
 
 	for (const auto &position : getPositions()) {
 		g_game().map.refreshZones(position);

@@ -90,10 +90,15 @@ function othersFireBug.onUse(player, item, fromPosition, target, toPosition, isH
 			toPosition:sendMagicEffect(CONST_ME_HITBYFIRE)
 			target:transform(2113)
 			return true
-		elseif target.actionid == 12550 or target.actionid == 12551 then -- Secret Service Quest
+		elseif target.position == Position(32893, 32012, 6) then -- Secret Service Quest
 			if player:getStorageValue(Storage.Quest.U8_1.SecretService.TBIMission01) == 1 then
-				Game.createItem(2118, 1, Position(32893, 32012, 6))
+				local fire = Game.createItem(2118, 1, Position(32893, 32012, 6))
 				player:setStorageValue(Storage.Quest.U8_1.SecretService.TBIMission01, 2)
+				addEvent(function()
+					if fire and item:isItem() then
+						item:remove()
+					end
+				end, 7 * 60 * 1000)
 			end
 		end
 		return true

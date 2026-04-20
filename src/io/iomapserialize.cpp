@@ -147,7 +147,7 @@ bool IOMapSerialize::loadItem(PropStream &propStream, const std::shared_ptr<Cyli
 	}
 
 	const ItemType &iType = Item::items[id];
-	if (iType.isBed() || iType.movable || !tile || iType.isCarpet() || iType.isTrashHolder()) {
+	if (iType.isBed() || iType.movable || !tile || iType.isCarpet() || iType.isTrashHolder() || id == ITEM_DECORATION_KIT) {
 		// create a new item
 		auto item = Item::CreateItem(id);
 		if (item) {

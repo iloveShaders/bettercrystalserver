@@ -717,17 +717,9 @@ float Player::getAttackFactor() const {
 float Player::getDefenseFactor(bool sendToClient /* = false*/) const {
 	switch (fightMode) {
 		case FIGHTMODE_ATTACK:
-			if (sendToClient) {
-				return 0.5f;
-			}
-
-			return (OTSYS_TIME() - lastAttack) < getAttackSpeed() ? 0.5f : 1.0f;
+			return 0.5f;
 		case FIGHTMODE_BALANCED:
-			if (sendToClient) {
-				return 0.75f;
-			}
-
-			return (OTSYS_TIME() - lastAttack) < getAttackSpeed() ? 0.75f : 1.0f;
+			return 0.75f;
 		case FIGHTMODE_DEFENSE:
 			return 1.0f;
 		default:
@@ -966,7 +958,8 @@ void Player::updateInventoryImbuement() {
 				continue;
 			}
 			// If the item is not in the backpack slot and it's not a agressive imbuement, ignore it.
-			if (categoryImbuement && !categoryImbuement->agressive && parent && parent != getPlayer()) {
+			// Also skip non-aggressive imbuements in protection zones (they should not tick in PZ).
+			if (categoryImbuement && !categoryImbuement->agressive && (isInProtectionZone || (parent && parent != getPlayer()))) {
 				continue;
 			}
 
@@ -3212,6 +3205,19 @@ uint16_t Player::getXpBoostPercent() const {
 
 uint16_t Player::getDisplayXpBoostPercent() const {
 	return std::clamp<uint16_t>(xpBoostPercent * (baseXpGain / 100), 0, std::numeric_limits<uint16_t>::max());
+}
+
+uint16_t Player::getPreyXpBonusPercent() const {
+	if (!g_configManager().getBoolean(PREY_ENABLED)) {
+		return 0;
+	}
+	uint16_t bonus = 0;
+	for (const auto &slot : preys) {
+		if (slot && slot->isOccupied() && slot->bonus == PreyBonus_Experience) {
+			bonus += slot->bonusPercentage;
+		}
+	}
+	return bonus;
 }
 
 void Player::setXpBoostPercent(uint16_t percent) {
@@ -6298,7 +6304,6 @@ void Player::onAddCondition(ConditionType_t type) {
 
 	if (type == CONDITION_OUTFIT && isMounted()) {
 		dismount();
-		g_game().internalCreatureChangeOutfit(static_self_cast<Player>(), defaultOutfit);
 		wasMounted = true;
 	}
 
@@ -9561,6 +9566,7 @@ void Player::reloadPreySlot(PreySlot_t slotid) {
 	if (g_configManager().getBoolean(PREY_ENABLED) && client) {
 		client->sendPreyData(getPreySlotById(slotid));
 		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints());
+		sendStats();
 	}
 }
 
@@ -10603,7 +10609,8 @@ void Player::forgeTransferItemTier(ForgeAction_t actionType, uint16_t donorItemI
 		sendForgeError(RETURNVALUE_CONTACTADMINISTRATOR);
 		return;
 	}
-		uint8_t coresAmount = 0;
+
+	uint8_t coresAmount = 0;
 	uint64_t cost = 0;
 	for (const auto &itemClassification : g_game().getItemsClassifications()) {
 		if (itemClassification->id != donorItem->getClassification()) {

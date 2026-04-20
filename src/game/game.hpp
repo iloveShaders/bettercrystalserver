@@ -778,6 +778,15 @@ public:
 	void playerSetTyping(uint32_t playerId, uint8_t typing);
 	void refreshItem(const std::shared_ptr<Item> &item);
 
+	/**
+	 * @brief Collects items from the reward chest.
+	 *
+	 * @param player Pointer to the player object.
+	 * @param maxMoveItems Maximum number of items to move (default is 0, which means no limit).
+	 * @return Return value indicating success or error.
+	 */
+	ReturnValue collectRewardChestItems(const std::shared_ptr<Player> &player, uint32_t maxMoveItems = 0);
+
 private:
 	std::map<uint16_t, Achievement> m_achievements;
 	std::map<std::string, uint16_t> m_achievementsNameToId;
@@ -857,15 +866,6 @@ private:
 	 * @return Return value indicating success or error.
 	 */
 	ReturnValue internalCollectManagedItems(const std::shared_ptr<Player> &player, const std::shared_ptr<Item> &item, ObjectCategory_t category, bool isLootContainer = true);
-
-	/**
-	 * @brief Collects items from the reward chest.
-	 *
-	 * @param player Pointer to the player object.
-	 * @param maxMoveItems Maximum number of items to move (default is 0, which means no limit).
-	 * @return Return value indicating success or error.
-	 */
-	ReturnValue collectRewardChestItems(const std::shared_ptr<Player> &player, uint32_t maxMoveItems = 0);
 
 	phmap::flat_hash_map<std::string, QueryHighscoreCacheEntry> queryCache;
 	phmap::flat_hash_map<std::string, HighscoreCacheEntry> highscoreCache;

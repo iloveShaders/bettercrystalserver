@@ -907,6 +907,7 @@ void Party::switchAnalyzerPriceType() {
 
 void Party::resetAnalyzer() {
 	trackerTime = time(nullptr);
+	pzElapsedSeconds = 0;
 	membersData.clear();
 	updateTrackerAnalyzer();
 }
@@ -948,5 +949,6 @@ std::shared_ptr<PartyAnalyzer> Party::getPlayerPartyAnalyzerStruct(uint32_t play
 }
 
 uint32_t Party::getAnalyzerTimeNow() const {
-	return static_cast<uint32_t>(time(nullptr) - trackerTime);
+	const auto totalElapsed = static_cast<uint32_t>(time(nullptr) - trackerTime);
+	return totalElapsed > pzElapsedSeconds ? totalElapsed - pzElapsedSeconds : 0;
 }

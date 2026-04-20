@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <mutex>
 #include "game/movement/position.hpp"
 #include "items/item.hpp"
 #include "creatures/creature.hpp"
@@ -227,6 +228,7 @@ protected:
 	std::unordered_set<Position> positions;
 	uint32_t id = 0; // ID 0 is used in zones created dynamically from lua. The map editor uses IDs starting from 1 (automatically generated).
 
+	mutable std::mutex cacheMutex;
 	weak::set<Item> itemsCache;
 	weak::set<Creature> creaturesCache;
 	weak::set<Monster> monstersCache;
