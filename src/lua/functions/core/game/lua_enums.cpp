@@ -141,8 +141,8 @@ void LuaEnums::initOthersEnums(lua_State* L) {
 	registerEnum(L, CHARM_PASSIVE);
 	registerEnum(L, CHARM_MAJOR);
 	registerEnum(L, CHARM_MINOR);
-	registerEnum(L, CHARM_GUT);
-	registerEnum(L, CHARM_SCAVENGE);
+	registerEnum(L, CHARM_MINOR_GUT);
+	registerEnum(L, CHARM_MINOR_SCAVENGE);
 
 	// Use with container:addItem, container:addItemEx and possibly other functions.
 	registerEnum(L, FLAG_NOLIMIT);
@@ -1182,6 +1182,7 @@ void LuaEnums::initSpeechBubbleEnums(lua_State* L) {
 	registerEnum(L, SPEECHBUBBLE_TRADE);
 	registerEnum(L, SPEECHBUBBLE_QUEST);
 	registerEnum(L, SPEECHBUBBLE_QUESTTRADER);
+	registerEnum(L, SPEECHBUBBLE_TRAVELER);
 	registerEnum(L, SPEECHBUBBLE_HIRELING);
 }
 

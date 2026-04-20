@@ -65,6 +65,7 @@ class Container;
 class KV;
 class BedItem;
 class Npc;
+class Charm;
 
 struct ModalWindow;
 struct Achievement;
@@ -82,6 +83,7 @@ struct Group;
 struct Outfit_t;
 struct TextMessage;
 struct HighscoreCharacter;
+struct NpcDialogOptions;
 
 enum class PlayerIcon : uint8_t;
 enum class IconBakragore : uint8_t;
@@ -1048,6 +1050,7 @@ public:
 	void sendShop(const std::shared_ptr<Npc> &npc) const;
 	void sendSaleItemList(const std::map<uint16_t, uint16_t> &inventoryMap) const;
 	void sendCloseShop() const;
+	void sendNpcDialogOptions(const NpcDialogOptions &dialogOptions) const;
 	void sendMarketEnter(uint32_t depotId) const;
 	void sendMarketLeave();
 	void sendMarketBrowseItem(uint16_t itemId, const MarketOfferList &buyOffers, const MarketOfferList &sellOffers, uint8_t tier) const;
@@ -1252,8 +1255,8 @@ public:
 	void setMaxCharmPoints(uint32_t points);
 	uint32_t getMaxMinorCharmEchoes() const;
 	void setMaxMinorCharmEchoes(uint32_t points);
-	uint8_t getCharmTier(charmRune_t charmId) const;
-	void setCharmTier(charmRune_t charmId, uint8_t newTier);
+	uint8_t getTierByCharmsArray(charmRune_t charmId) const;
+	void setRaceIdByCharmsArray(charmRune_t charmId, uint16_t newRaceId);
 	bool hasCharmExpansion() const;
 	void setCharmExpansion(bool onOff);
 	void setUsedRunesBit(int32_t bit);
@@ -1266,7 +1269,9 @@ public:
 	bool isImmuneFear() const;
 	void setImmuneRoot();
 	bool isImmuneRoot() const;
-	uint16_t parseRacebyCharm(charmRune_t charmId, bool set = false, uint16_t newRaceid = 0);
+	uint16_t getRaceIdByCharmsArray(charmRune_t charmId) const;
+	void setTierByCharmsArray(charmRune_t charmId, uint8_t newTier);
+	std::shared_ptr<Charm> isApplyCharm(charmRune_t charmId, const std::string &monsterName);
 
 	uint64_t getItemCustomPrice(uint16_t itemId, bool buyPrice = false) const;
 	uint16_t getFreeBackpackSlots() const;

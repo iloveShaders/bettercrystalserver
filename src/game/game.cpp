@@ -7113,19 +7113,11 @@ bool Game::combatBlockHit(CombatDamage &damage, const std::shared_ptr<Creature> 
 		InternalGame::sendBlockEffect(primaryBlockType, damage.primary.type, target->getPosition(), attacker);
 		// Damage reflection primary
 		if (!damage.extension && attacker) {
-			std::shared_ptr<Monster> attackerMonster = attacker->getMonster();
+			const auto &attackerMonster = attacker->getMonster();
 			if (attackerMonster && targetPlayer && damage.primary.type != COMBAT_HEALING) {
 				// Charm rune (target as player)
-				const auto &mType = attackerMonster->getMonsterType();
-				if (mType) {
-					auto [activeCharm, _] = g_iobestiary().getCharmFromTarget(targetPlayer, mType);
-					if (activeCharm == CHARM_PARRY) {
-						const auto &charm = g_iobestiary().getBestiaryCharm(activeCharm);
-						const auto charmTier = targetPlayer->getCharmTier(activeCharm);
-						if (charm && charm->type == CHARM_DEFENSIVE && (charm->chance[charmTier] >= normal_random(1, 10000) / 100.0)) {
-							g_iobestiary().parseCharmCombat(charm, targetPlayer, attacker, (damage.primary.value + damage.secondary.value));
-						}
-					}
+				if (const auto &charmParry = targetPlayer->isApplyCharm(CHARM_MAJOR_PARRY, attackerMonster->getName())) {
+					g_iobestiary().parseCharmCombat(charmParry, targetPlayer, attacker, (damage.primary.value + damage.secondary.value));
 				}
 			}
 			double_t primaryReflectPercent = target->getReflectPercent(damage.primary.type, true);
@@ -7148,7 +7140,7 @@ bool Game::combatBlockHit(CombatDamage &damage, const std::shared_ptr<Creature> 
 					}
 					damageReflected.extension = true;
 					damageReflected.exString += " (damage reflection)";
-					damageReflectedParams.combatType = damage.secondary.type;
+					damageReflectedParams.combatType = damage.primary.type;
 					damageReflectedParams.aggressive = true;
 					canReflect = true;
 				}
@@ -7768,23 +7760,30 @@ bool Game::combatChangeHealth(const std::shared_ptr<Creature> &attacker, const s
 		}
 
 		if (!damage.extension && attackerMonster && targetPlayer) {
-			// Charm rune (target as player)
-			auto [major, minor] = g_iobestiary().getCharmFromTarget(targetPlayer, attackerMonster->getMonsterType());
-			if (minor != CHARM_NONE && minor != CHARM_CLEANSE) {
-				const auto &charm = g_iobestiary().getBestiaryCharm(minor);
-				const auto charmTier = targetPlayer->getCharmTier(minor);
-				if (charm && charm->type == CHARM_DEFENSIVE && charm->chance[charmTier] >= normal_random(1, 10000) / 100.0) {
-					g_iobestiary().parseCharmCombat(charm, targetPlayer, attacker, (damage.primary.value + damage.secondary.value));
-				}
-			}
+			const auto &mType = attackerMonster->getMonsterType();
+			if (mType) {
+				const auto &[activeMajorCharm, activeMinorCharm] = g_iobestiary().getCharmFromTarget(targetPlayer, mType);
 
-			if (major != CHARM_NONE) {
-				const auto &charm = g_iobestiary().getBestiaryCharm(major);
-				const auto charmTier = targetPlayer->getCharmTier(major);
-				if (charm && charm->type == CHARM_DEFENSIVE && charm->chance[charmTier] >= normal_random(1, 10000) / 100.0) {
-					g_iobestiary().parseCharmCombat(charm, targetPlayer, attacker, (damage.primary.value + damage.secondary.value));
-					if (charm->id == CHARM_DODGE) {
-						return true;
+				// Major Charm Rune (target as player)
+				if (activeMajorCharm == CHARM_MAJOR_PARRY || activeMajorCharm == CHARM_MAJOR_DODGE) {
+					if (const auto &charm = g_iobestiary().getBestiaryCharm(activeMajorCharm)) {
+						const auto charmTier = targetPlayer->getTierByCharmsArray(activeMajorCharm);
+						if (charm->chance[charmTier] >= uniform_random(1, 100) / 1.0) {
+							g_iobestiary().parseCharmCombat(charm, targetPlayer, attacker, (damage.primary.value + damage.secondary.value));
+							if (activeMajorCharm == CHARM_MAJOR_DODGE) {
+								return true;
+							}
+						}
+					}
+				}
+
+				// Minor Charm Rune (target as player)
+				if (activeMinorCharm == CHARM_MINOR_ADRENALINEBURST || activeMinorCharm == CHARM_MINOR_NUMB || activeMinorCharm == CHARM_MINOR_CLEANSE) {
+					if (const auto &charm = g_iobestiary().getBestiaryCharm(activeMinorCharm)) {
+						const auto charmTier = targetPlayer->getTierByCharmsArray(activeMinorCharm);
+						if (charm->chance[charmTier] >= uniform_random(1, 100) / 1.0) {
+							g_iobestiary().parseCharmCombat(charm, targetPlayer, attacker, (damage.primary.value + damage.secondary.value));
+						}
 					}
 				}
 			}
@@ -7967,7 +7966,7 @@ bool Game::combatChangeHealth(const std::shared_ptr<Creature> &attacker, const s
 
 		if (attackerPlayer) {
 			if (!damage.extension && damage.origin != ORIGIN_CONDITION) {
-				applyCharmRune(targetMonster, attackerPlayer, target, realDamage);
+				applyOffensiveCharmRune(targetMonster, attackerPlayer, target, realDamage);
 				applyLifeLeech(attackerPlayer, targetMonster, target, damage, realDamage);
 				applyManaLeech(attackerPlayer, targetMonster, target, damage, realDamage);
 			}
@@ -8135,8 +8134,8 @@ void Game::buildMessageAsAttacker(
 	if (damage.critical && target->getMonster() && attackerPlayer) {
 		const auto &targetMonster = target->getMonster();
 		static const std::pair<charmRune_t, std::string_view> charms[] = {
-			{ CHARM_LOW, " (low blow charm)" },
-			{ CHARM_SAVAGE, " (savage blow charm)" }
+			{ CHARM_MAJOR_LOWBLOW, " (low blow charm)" },
+			{ CHARM_MAJOR_SAVAGEBLOW, " (savage blow charm)" }
 		};
 
 		for (const auto &[charmType, charmText] : charms) {
@@ -8178,25 +8177,37 @@ void Game::sendEffects(
 	}
 }
 
-void Game::applyCharmRune(
+void Game::applyOffensiveCharmRune(
 	const std::shared_ptr<Monster> &targetMonster, const std::shared_ptr<Player> &attackerPlayer, const std::shared_ptr<Creature> &target, const int32_t &realDamage
 ) const {
 	if (!targetMonster || !attackerPlayer) {
 		return;
 	}
 
-	auto [major, minor] = g_iobestiary().getCharmFromTarget(attackerPlayer, targetMonster->getMonsterType());
-	for (auto charmType : { major, minor }) {
-		if (charmType == CHARM_NONE) {
-			continue;
+	const auto &mType = targetMonster->getMonsterType();
+	if (mType) {
+
+		// Major Charm Rune (target as player)
+		const auto &[activeMajorCharm, activeMinorCharm] = g_iobestiary().getCharmFromTarget(attackerPlayer, mType);
+		if (activeMajorCharm != CHARM_NONE) {
+			if (const auto &charm = g_iobestiary().getBestiaryCharm(activeMajorCharm)) {
+				const auto charmTier = attackerPlayer->getTierByCharmsArray(activeMajorCharm);
+				if (charm->type == CHARM_OFFENSIVE && (charm->chance[charmTier] + static_cast<double_t>(attackerPlayer->getCharmChanceModifier())) > (uniform_random(1, 100) / 1.0)) {
+					g_iobestiary().parseCharmCombat(charm, attackerPlayer, target, realDamage);
+				}
+			}
 		}
 
-		const auto &charm = g_iobestiary().getBestiaryCharm(charmType);
-		const auto charmTier = attackerPlayer->getCharmTier(charmType);
-		int8_t chance = charm->chance[charmTier] + (charm->id == CHARM_CRIPPLE ? 0 : attackerPlayer->getCharmChanceModifier());
-
-		if (charm->type == CHARM_OFFENSIVE && (chance >= normal_random(1, 10000) / 100.0)) {
-			g_iobestiary().parseCharmCombat(charm, attackerPlayer, target, realDamage);
+		if (activeMinorCharm != CHARM_NONE) {
+			if (const auto &charm = g_iobestiary().getBestiaryCharm(activeMinorCharm)) {
+				const auto charmTier = attackerPlayer->getTierByCharmsArray(activeMinorCharm);
+				if (charm->type == CHARM_OFFENSIVE) {
+					const double_t chance = charm->chance[charmTier] + static_cast<double_t>(charm->id == CHARM_MINOR_CRIPPLE ? 0 : attackerPlayer->getCharmChanceModifier());
+					if (chance > (uniform_random(1, 100) / 1.0)) {
+						g_iobestiary().parseCharmCombat(charm, attackerPlayer, target, realDamage);
+					}
+				}
+			}
 		}
 	}
 }
@@ -8214,10 +8225,15 @@ void Game::applyManaLeech(
 	if (normal_random(0, 100) >= manaChance) {
 		return;
 	}
+
 	// Void charm rune
-	if (targetMonster && attackerPlayer->parseRacebyCharm(CHARM_VOID) == targetMonster->getRaceId()) {
-		if (const auto &charm = g_iobestiary().getBestiaryCharm(CHARM_VOID)) {
-			manaSkill += charm->chance[attackerPlayer->getCharmTier(CHARM_VOID)] * 100;
+	if (targetMonster) {
+		const uint16_t playerCharmVoidRaceId = attackerPlayer->getRaceIdByCharmsArray(CHARM_MINOR_VOIDSCALL);
+		if (playerCharmVoidRaceId != 0 && playerCharmVoidRaceId == targetMonster->getRaceId()) {
+			if (const auto &charmVoid = g_iobestiary().getBestiaryCharm(CHARM_MINOR_VOIDSCALL)) {
+				const auto charmTier = attackerPlayer->getTierByCharmsArray(CHARM_MINOR_VOIDSCALL);
+				manaSkill += static_cast<uint16_t>(manaSkill * (charmVoid->chance[charmTier] / 100.0));
+			}
 		}
 	}
 
@@ -8244,9 +8260,14 @@ void Game::applyLifeLeech(
 	if (normal_random(0, 100) >= lifeChance) {
 		return;
 	}
-	if (targetMonster && attackerPlayer->parseRacebyCharm(CHARM_VAMP) == targetMonster->getRaceId()) {
-		if (const auto &charm = g_iobestiary().getBestiaryCharm(CHARM_VAMP)) {
-			lifeSkill += charm->chance[attackerPlayer->getCharmTier(CHARM_VAMP)] * 100;
+
+	if (targetMonster) {
+		const uint16_t playerCharmVampRaceId = attackerPlayer->getRaceIdByCharmsArray(CHARM_MINOR_VAMPIRIC);
+		if (playerCharmVampRaceId != 0 && playerCharmVampRaceId == targetMonster->getRaceId()) {
+			if (const auto &charmVamp = g_iobestiary().getBestiaryCharm(CHARM_MINOR_VAMPIRIC)) {
+				const auto charmTier = attackerPlayer->getTierByCharmsArray(CHARM_MINOR_VAMPIRIC);
+				lifeSkill += charmVamp->chance[charmTier];
+			}
 		}
 	}
 
@@ -8283,16 +8304,17 @@ bool Game::combatChangeMana(const std::shared_ptr<Creature> &attacker, const std
 	const auto &attackerMonster = attacker ? attacker->getMonster() : nullptr;
 	const auto &attackerPlayer = attacker ? attacker->getPlayer() : nullptr;
 	if (targetPlayer && attackerMonster) {
-		uint16_t playerCharmRaceid = targetPlayer->parseRacebyCharm(CHARM_VOIDINVERSION);
-		if (playerCharmRaceid != 0) {
+		uint16_t playerCharmVoidInversionRaceId = targetPlayer->getRaceIdByCharmsArray(CHARM_MINOR_VOIDINVERSION);
+		if (playerCharmVoidInversionRaceId != 0) {
 			const auto &mType = g_monsters().getMonsterType(attackerMonster->getName());
-			if (mType && playerCharmRaceid == mType->info.raceid) {
-				const auto &charm = g_iobestiary().getBestiaryCharm(CHARM_VOIDINVERSION);
-				const auto charmTier = targetPlayer->getCharmTier(CHARM_VOIDINVERSION);
-				if (charm && (charm->chance[charmTier] > normal_random(0, 100)) && manaChange < 0) {
-					damage.primary.value = damage.primary.type == COMBAT_MANADRAIN ? -damage.primary.value : damage.primary.value;
-					damage.secondary.value = damage.secondary.type == COMBAT_MANADRAIN ? -damage.secondary.value : damage.secondary.value;
-					manaChange = damage.primary.value + damage.secondary.value;
+			if (mType && playerCharmVoidInversionRaceId == mType->info.raceid) {
+				if (const auto &charmVoidInversion = g_iobestiary().getBestiaryCharm(CHARM_MINOR_VOIDINVERSION)) {
+					const auto charmTier = targetPlayer->getTierByCharmsArray(CHARM_MINOR_VOIDINVERSION);
+					if ((charmVoidInversion->chance[charmTier] > uniform_random(0, 100)) && manaChange < 0) {
+						damage.primary.value = damage.primary.type == COMBAT_MANADRAIN ? -damage.primary.value : damage.primary.value;
+						damage.secondary.value = damage.secondary.type == COMBAT_MANADRAIN ? -damage.secondary.value : damage.secondary.value;
+						manaChange = damage.primary.value + damage.secondary.value;
+					}
 				}
 			}
 		}
@@ -8400,31 +8422,33 @@ bool Game::combatChangeMana(const std::shared_ptr<Creature> &attacker, const std
 			}
 		}
 
-		std::shared_ptr<MonsterType> mType = nullptr;
-		if (attackerMonster) {
-			mType = g_monsters().getMonsterType(attackerMonster->getName());
-		}
-		if (targetPlayer && attacker && mType) {
-			auto [major, minor] = g_iobestiary().getCharmFromTarget(targetPlayer, mType);
-			for (auto charmType : { major, minor }) {
-				if (charmType == CHARM_NONE || charmType == CHARM_CLEANSE) {
-					continue;
+		if (targetPlayer && attackerMonster) {
+			// Charm rune (target as player)
+			const auto &mType = g_monsters().getMonsterType(attackerMonster->getName());
+			if (mType) {
+				const auto &[activeMajorCharm, activeMinorCharm] = g_iobestiary().getCharmFromTarget(targetPlayer, mType);
+
+				// Minor Charm Rune (target as player)
+				if (activeMinorCharm == CHARM_MINOR_ADRENALINEBURST || activeMinorCharm == CHARM_MINOR_NUMB) {
+					if (const auto &charm = g_iobestiary().getBestiaryCharm(activeMinorCharm)) {
+						const auto charmTier = targetPlayer->getTierByCharmsArray(activeMinorCharm);
+						if (charm->chance[charmTier] >= uniform_random(1, 100) / 1.0) {
+							g_iobestiary().parseCharmCombat(charm, targetPlayer, attacker, manaChange);
+						}
+					}
 				}
 
-				const auto &charm = g_iobestiary().getBestiaryCharm(charmType);
-				if (!charm || charm->type != CHARM_DEFENSIVE) {
-					continue;
-				}
-
-				const auto charmTier = targetPlayer->getCharmTier(charmType);
-				if (charm->chance[charmTier] < normal_random(1, 10000) / 100.0) {
-					continue;
-				}
-
-				g_iobestiary().parseCharmCombat(charm, targetPlayer, attacker, manaChange);
-
-				if (charm->id == CHARM_DODGE) {
-					return false; // Dodge charm
+				// Major Charm Rune (target as player)
+				if (activeMajorCharm == CHARM_MAJOR_PARRY || activeMajorCharm == CHARM_MAJOR_DODGE) {
+					if (const auto &charm = g_iobestiary().getBestiaryCharm(activeMajorCharm)) {
+						const auto charmTier = targetPlayer->getTierByCharmsArray(activeMajorCharm);
+						if (charm->chance[charmTier] >= uniform_random(1, 100) / 1.0) {
+							g_iobestiary().parseCharmCombat(charm, targetPlayer, attacker, manaChange);
+							if (activeMajorCharm == CHARM_MAJOR_DODGE) {
+								return false; // Dodge charm
+							}
+						}
+					}
 				}
 			}
 		}
@@ -9715,13 +9739,7 @@ void Game::playerNpcGreet(uint32_t playerId, uint32_t npcId) {
 	spectators.insert(npc);
 	internalCreatureSay(player, TALKTYPE_SAY, "hi", false, &spectators);
 
-	auto npcsSpectators = spectators.filter<Npc>();
-
-	if (npc->getSpeechBubble() == SPEECHBUBBLE_TRADE) {
-		internalCreatureSay(player, TALKTYPE_PRIVATE_PN, "trade", false, &npcsSpectators);
-	} else {
-		internalCreatureSay(player, TALKTYPE_PRIVATE_PN, "sail", false, &npcsSpectators);
-	}
+	npc->sendDialogOptions(player);
 
 	player->setNextExAction(OTSYS_TIME() + g_configManager().getNumber(UI_ACTIONS_DELAY_INTERVAL) - 10);
 }

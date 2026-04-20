@@ -814,6 +814,13 @@ void Combat::CombatHealthFunc(const std::shared_ptr<Creature> &caster, const std
 			damage.secondary.value += static_cast<int32_t>(std::ceil((damage.secondary.value * slot->bonusPercentage) / 100));
 		}
 
+		// Bounty Talisman damage bonus (value in hundredths of percent)
+		uint16_t bountyDamageBonus = g_iobountytasks().getBountyTalismanBonus(attackerPlayer, targetMonster->getRaceId(), BOUNTY_TALISMAN_DAMAGE);
+		if (bountyDamageBonus > 0) {
+			damage.primary.value += static_cast<int32_t>(std::ceil((damage.primary.value * bountyDamageBonus) / 10000.0));
+			damage.secondary.value += static_cast<int32_t>(std::ceil((damage.secondary.value * bountyDamageBonus) / 10000.0));
+		}
+
 		// Monster type onPlayerAttack event
 		targetMonster->onAttackedByPlayer(attackerPlayer);
 
@@ -842,26 +849,9 @@ void Combat::CombatHealthFunc(const std::shared_ptr<Creature> &caster, const std
 			return;
 		}
 
-		const uint16_t playerCharmRaceid = attackerPlayer->parseRacebyCharm(CHARM_FATAL);
-		if (playerCharmRaceid == 0) {
-			return;
+		if (const auto &fatalCharm = attackerPlayer->isApplyCharm(CHARM_MINOR_FATALHOLD, targetMonster->getName())) {
+			g_iobestiary().parseCharmCombat(fatalCharm, attackerPlayer, targetMonster);
 		}
-
-		const auto &mType = g_monsters().getMonsterType(targetMonster->getName());
-		if (!mType || playerCharmRaceid != mType->info.raceid) {
-			return;
-		}
-
-		const auto &charm = g_iobestiary().getBestiaryCharm(CHARM_FATAL);
-		if (!charm) {
-			return;
-		}
-
-		if (charm->chance[attackerPlayer->getCharmTier(CHARM_FATAL)] <= normal_random(0, 100)) {
-			return;
-		}
-
-		g_iobestiary().parseCharmCombat(charm, attackerPlayer, targetMonster);
 	}
 }
 
@@ -978,21 +968,15 @@ void Combat::CombatConditionFunc(const std::shared_ptr<Creature> &caster, const 
 		const auto &cleansableConditions = targetPlayer->getCleansableConditions();
 
 		if (!cleansableConditions.empty()) {
-			uint16_t playerCharmRaceid = targetPlayer->parseRacebyCharm(CHARM_CLEANSE);
-			if (playerCharmRaceid != 0) {
-				const auto &mType = casterMonster->getMonsterType();
-				if (mType && playerCharmRaceid == mType->info.raceid) {
-					const auto &charm = g_iobestiary().getBestiaryCharm(CHARM_CLEANSE);
-					const auto charmTier = targetPlayer->getCharmTier(CHARM_CLEANSE);
-					if (charm && (charm->chance[charmTier] >= normal_random(0, 10000) / 100.0)) {
-						uint16_t conditionIndex = uniform_random(0, cleansableConditions.size() - 1);
-						const auto &condition = cleansableConditions[conditionIndex];
-						const auto conditionType = condition->getType();
+			if (const auto &cleanseCharm = targetPlayer->isApplyCharm(CHARM_MINOR_CLEANSE, caster->getName())) {
+				uint16_t conditionIndex = uniform_random(0, cleansableConditions.size() - 1);
+				if (const auto &condition = cleansableConditions[conditionIndex]) {
+					if (const auto conditionType = condition->getType()) {
 						if (targetPlayer->hasCondition(conditionType)) {
 							targetPlayer->removeCondition(conditionType);
 						}
 						targetPlayer->setImmuneCleanse(conditionType);
-						if (!charm->cancelMessage.empty()) {
+						if (!cleanseCharm->cancelMessage.empty()) {
 							targetPlayer->onCleanseCondition(conditionType);
 						}
 
@@ -2583,10 +2567,10 @@ void Combat::applyExtensions(const std::shared_ptr<Creature> &caster, const std:
 		// Bonus Low Blow Charm
 		int32_t criticalHitLowBlowChance = 0;
 		bool canApplyCriticalLowBlowChance = false;
-		const uint16_t playerLowBlowCharmRaceId = player->parseRacebyCharm(CHARM_LOW);
+		const uint16_t playerLowBlowCharmRaceId = player->getRaceIdByCharmsArray(CHARM_MAJOR_LOWBLOW);
 		if (!canApplyCritical && (playerLowBlowCharmRaceId != 0)) {
-			if (const auto &charmLowBlow = g_iobestiary().getBestiaryCharm(CHARM_LOW)) {
-				const auto charmTier = player->getCharmTier(CHARM_LOW);
+			if (const auto &charmLowBlow = g_iobestiary().getBestiaryCharm(CHARM_MAJOR_LOWBLOW)) {
+				const auto charmTier = player->getTierByCharmsArray(CHARM_MAJOR_LOWBLOW);
 				criticalHitLowBlowChance = static_cast<int32_t>(charmLowBlow->chance[charmTier] * 100);
 				canApplyCriticalLowBlowChance = rand <= static_cast<int32_t>(baseCriticalHitChance + criticalHitLowBlowChance);
 			}
@@ -2594,10 +2578,10 @@ void Combat::applyExtensions(const std::shared_ptr<Creature> &caster, const std:
 
 		// Bonus Savage Blow Charm
 		int32_t savageBlowBonus = 0;
-		const uint16_t playerSavageBlowCharmRaceId = player->parseRacebyCharm(CHARM_SAVAGE);
+		const uint16_t playerSavageBlowCharmRaceId = player->getRaceIdByCharmsArray(CHARM_MAJOR_SAVAGEBLOW);
 		if (playerSavageBlowCharmRaceId != 0) {
-			if (const auto &charmSavageBlow = g_iobestiary().getBestiaryCharm(CHARM_SAVAGE)) {
-				const auto charmTier = player->getCharmTier(CHARM_SAVAGE);
+			if (const auto &charmSavageBlow = g_iobestiary().getBestiaryCharm(CHARM_MAJOR_SAVAGEBLOW)) {
+				const auto charmTier = player->getTierByCharmsArray(CHARM_MAJOR_SAVAGEBLOW);
 				savageBlowBonus = static_cast<int32_t>(charmSavageBlow->chance[charmTier] * 100);
 			}
 		}

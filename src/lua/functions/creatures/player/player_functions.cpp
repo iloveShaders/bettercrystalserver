@@ -60,6 +60,7 @@ void PlayerFunctions::init(lua_State* L) {
 	Lua::registerMethod(L, "Player", "addCharmPoints", PlayerFunctions::luaPlayeraddCharmPoints);
 	Lua::registerMethod(L, "Player", "addMinorCharmEchoes", PlayerFunctions::luaPlayerAddMinorCharmEchoes);
 	Lua::registerMethod(L, "Player", "getCharmTier", PlayerFunctions::luaPlayerGetCharmTier);
+	Lua::registerMethod(L, "Player", "getTierByCharmsArray", PlayerFunctions::luaPlayerGetCharmTier);
 	Lua::registerMethod(L, "Player", "getCharmChance", PlayerFunctions::luaPlayerGetCharmChance);
 	Lua::registerMethod(L, "Player", "resetOldCharms", PlayerFunctions::luaPlayerResetOldCharms);
 	Lua::registerMethod(L, "Player", "isPlayer", PlayerFunctions::luaPlayerIsPlayer);
@@ -667,8 +668,8 @@ int PlayerFunctions::luaPlayerResetCharmsMonsters(lua_State* L) {
 		player->setCharmExpansion(false);
 		player->setUsedRunesBit(0);
 		player->setUnlockedRunesBit(0);
-		for (int8_t i = CHARM_WOUND; i <= CHARM_LAST; i++) {
-			player->parseRacebyCharm(static_cast<charmRune_t>(i), true, 0);
+		for (int8_t i = magic_enum::enum_value<charmRune_t>(1); i <= magic_enum::enum_count<charmRune_t>(); i++) {
+			player->setRaceIdByCharmsArray(static_cast<charmRune_t>(i), 0);
 		}
 		Lua::pushBoolean(L, true);
 	} else {
@@ -681,9 +682,8 @@ int PlayerFunctions::luaPlayerUnlockAllCharmRunes(lua_State* L) {
 	// player:unlockAllCharmRunes()
 	const auto &player = Lua::getUserdataShared<Player>(L, 1);
 	if (player) {
-		for (int8_t i = CHARM_WOUND; i <= CHARM_LAST; i++) {
-			const auto charm = g_iobestiary().getBestiaryCharm(static_cast<charmRune_t>(i));
-			if (charm) {
+		for (int8_t i = magic_enum::enum_value<charmRune_t>(1); i <= magic_enum::enum_count<charmRune_t>(); i++) {
+			if (const auto &charm = g_iobestiary().getBestiaryCharm(static_cast<charmRune_t>(i))) {
 				const int32_t value = g_iobestiary().bitToggle(player->getUnlockedRunesBit(), charm, true);
 				player->setUnlockedRunesBit(value);
 			}
@@ -722,7 +722,7 @@ int PlayerFunctions::luaPlayerGetCharmTier(lua_State* L) {
 	}
 
 	charmRune_t charmId = Lua::getNumber<charmRune_t>(L, 2);
-	Lua::pushNumber(L, player->getCharmTier(charmId));
+	Lua::pushNumber(L, player->getTierByCharmsArray(charmId));
 	return 1;
 }
 
@@ -736,7 +736,14 @@ int PlayerFunctions::luaPlayerGetCharmChance(lua_State* L) {
 
 	charmRune_t charmId = Lua::getNumber<charmRune_t>(L, 2);
 	const auto &charm = g_iobestiary().getBestiaryCharm(charmId);
-	uint8_t charmTier = player->getCharmTier(charmId);
+	if (!charm) {
+		Lua::pushNumber(L, 0);
+		return 1;
+	}
+
+	uint8_t charmTier = player->getTierByCharmsArray(charmId);
+	double chance = charm->getChance(charmTier);
+	Lua::pushNumber(L, chance);
 	return 1;
 }
 
@@ -917,7 +924,7 @@ int PlayerFunctions::luaPlayergetCharmMonsterType(lua_State* L) {
 	const auto &player = Lua::getUserdataShared<Player>(L, 1);
 	if (player) {
 		const charmRune_t charmid = Lua::getNumber<charmRune_t>(L, 2);
-		const uint16_t raceid = player->parseRacebyCharm(charmid, false, 0);
+		const uint16_t raceid = player->getRaceIdByCharmsArray(charmid);
 		if (raceid > 0) {
 			const auto &mtype = g_monsters().getMonsterTypeByRaceId(raceid);
 			if (mtype) {
@@ -932,7 +939,7 @@ int PlayerFunctions::luaPlayergetCharmMonsterType(lua_State* L) {
 	} else {
 		lua_pushnil(L);
 	}
-	return 1;
+	return 1;;
 }
 
 int PlayerFunctions::luaPlayerRemovePreyStamina(lua_State* L) {

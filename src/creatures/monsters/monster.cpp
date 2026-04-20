@@ -2351,13 +2351,8 @@ void Monster::death(const std::shared_ptr<Creature> &) {
 		return;
 	}
 
-	auto [activeCharm, _] = g_iobestiary().getCharmFromTarget(targetPlayer, mType);
-	if (activeCharm == CHARM_CARNAGE) {
-		const auto &charm = g_iobestiary().getBestiaryCharm(activeCharm);
-		const auto charmTier = targetPlayer->getCharmTier(activeCharm);
-		if (charm && charm->chance[charmTier] >= normal_random(1, 10000) / 100.0) {
-			g_iobestiary().parseCharmCombat(charm, targetPlayer, getMonster());
-		}
+	if (const auto &carnageCharm = targetPlayer->isApplyCharm(CHARM_MAJOR_CARNAGE, getName())) {
+		g_iobestiary().parseCharmCombat(carnageCharm, targetPlayer, getMonster());
 	}
 }
 
@@ -2813,13 +2808,14 @@ bool Monster::checkCanApplyCharm(const std::shared_ptr<Player> &player, charmRun
 		return false;
 	}
 
-	uint16_t playerCharmRaceid = player->parseRacebyCharm(charmRune, false, 0);
-	if (playerCharmRaceid != 0) {
-		const auto &mType = g_monsters().getMonsterType(getName());
-		if (mType && playerCharmRaceid == mType->info.raceid) {
-			const auto &charm = g_iobestiary().getBestiaryCharm(charmRune);
-			if (charm) {
-				return true;
+	const uint16_t playerCharmRaceId = player->getRaceIdByCharmsArray(charmRune);
+	if (playerCharmRaceId != 0) {
+		if (mType && playerCharmRaceId == mType->info.raceid) {
+			if (const auto &charm = g_iobestiary().getBestiaryCharm(charmRune)) {
+				const auto charmTier = player->getTierByCharmsArray(charmRune);
+				if (charm->chance[charmTier] > (uniform_random(0, 100) / 1.0)) {
+					return true;
+				}
 			}
 		}
 	}

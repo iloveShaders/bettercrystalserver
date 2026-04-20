@@ -28,6 +28,7 @@
 #include "creatures/monsters/monster.hpp"
 #include "creatures/monsters/monsters.hpp"
 #include "creatures/npcs/npc.hpp"
+#include "creatures/npcs/npcs.hpp"
 #include "creatures/players/animus_mastery/animus_mastery.hpp"
 #include "creatures/players/achievement/player_achievement.hpp"
 #include "creatures/players/cyclopedia/player_badge.hpp"
@@ -771,6 +772,10 @@ void ProtocolGame::login(const std::string &name, uint32_t accountId, OperatingS
 		player->lastIP = player->getIP();
 		player->lastLoad = OTSYS_TIME();
 		player->lastLoginSaved = std::max<time_t>(time(nullptr), player->lastLoginSaved + 1);
+
+		// Check and distribute weekly task rewards if the reset period has passed
+		g_ioweeklytasks().checkWeeklyRewardsOnLogin(player);
+
 		acceptPackets = true;
 	} else {
 		if (eventConnect != 0 || !g_configManager().getBoolean(REPLACE_KICK_ON_LOGIN)) {
@@ -1089,6 +1094,11 @@ void ProtocolGame::parsePacket(NetworkMessage &msg) {
 	}
 
 	uint8_t recvbyte = msg.getByte();
+
+	// Silence ping/pong: 0x1D = pingBack, 0x1E = ping [TRACKS CLIENT BYTES]
+	if (recvbyte != 0x1D && recvbyte != 0x1E) {
+		g_logger().debug("BYTE RECEIVED: 0x{:02X}", recvbyte);
+	}
 
 	if (!player || player->isRemoved()) {
 		if (recvbyte == 0x0F) {
@@ -3166,11 +3176,10 @@ void ProtocolGame::sendBestiaryCharms() {
 	msg.addByte(charmList.size());
 	for (const auto &c_type : charmList) {
 		msg.addByte(c_type->id);
-		const auto &charmPoints = c_type->points;
 		if (g_iobestiary().hasCharmUnlockedRuneBit(c_type, player->getUnlockedRunesBit())) {
-			const auto charmTier = player->getCharmTier(c_type->id);
+			const auto charmTier = player->getTierByCharmsArray(c_type->id);
 			msg.addByte(charmTier);
-			uint16_t raceId = player->parseRacebyCharm(c_type->id);
+			uint16_t raceId = player->getRaceIdByCharmsArray(c_type->id);
 			if (raceId > 0) {
 				msg.addByte(0x01);
 				msg.add<uint16_t>(raceId);
@@ -3207,7 +3216,7 @@ void ProtocolGame::sendBestiaryCharms() {
 			continue;
 		}
 
-		uint16_t tmpRaceId = player->parseRacebyCharm(tmpCharm->id);
+		uint16_t tmpRaceId = player->getRaceIdByCharmsArray(tmpCharm->id);
 		charmsAssigned[tmpRaceId]++;
 	}
 
@@ -5628,6 +5637,34 @@ void ProtocolGame::sendCloseShop() {
 	writeToOutputBuffer(msg);
 }
 
+void ProtocolGame::sendNpcDialogOptions(const NpcDialogOptions &dialogOptions) {
+	if (!player) {
+		return;
+	}
+
+	NetworkMessage msg;
+	msg.addByte(0x1C);
+
+	msg.addByte(0); // unknown
+	msg.addByte(dialogOptions.conversationId);
+
+	if (dialogOptions.conversationId == 0) {
+		msg.addByte(0); // unknown
+		writeToOutputBuffer(msg);
+		return;
+	}
+
+	msg.add<uint32_t>(dialogOptions.npcId);
+	msg.addByte(static_cast<uint8_t>(dialogOptions.options.size()));
+
+	for (const auto &option : dialogOptions.options) {
+		msg.addByte(option.optionId);
+		msg.addString(option.optionText);
+	}
+
+	writeToOutputBuffer(msg);
+}
+
 void ProtocolGame::sendClientCheck() {
 	if (!player || oldProtocol) {
 		return;
@@ -7836,12 +7873,9 @@ void ProtocolGame::sendAddCreature(const std::shared_ptr<Creature> &creature, co
 	player->sendPreyData();
 	sendForgingData();
 
-	if (!oldProtocol) {
-		g_ioweeklytasks().checkWeeklyRewardsOnLogin(player);
-		player->sendBountyTaskData();
-		player->sendWeeklyTaskData();
-		player->refreshTaskIcons();
-	}
+	player->sendBountyTaskData();
+	player->sendWeeklyTaskData();
+	player->refreshTaskIcons();
 
 	// gameworld light-settings
 	sendWorldLight(g_game().getWorldLightInfo());
@@ -8650,7 +8684,7 @@ void ProtocolGame::sendPreyData(const std::unique_ptr<PreySlot> &slot) {
 			msg.addByte(outfit.lookAddons);
 		}
 	} else if (slot->state == PreyDataState_ListSelection) {
-		const std::map<uint16_t, std::string> bestiaryList = g_game().getBestiaryList();
+		const std::map<uint16_t, std::string> &bestiaryList = g_game().getBestiaryList();
 		msg.add<uint16_t>(static_cast<uint16_t>(bestiaryList.size()));
 		std::for_each(bestiaryList.begin(), bestiaryList.end(), [&msg](auto mType) {
 			msg.add<uint16_t>(mType.first);
@@ -8765,12 +8799,6 @@ void ProtocolGame::AddCreature(NetworkMessage &msg, const std::shared_ptr<Creatu
 	if (!creature->isInGhostMode() && !creature->isInvisible()) {
 		const Outfit_t &outfit = creature->getCurrentOutfit();
 		AddOutfit(msg, outfit);
-		if (!oldProtocol && outfit.lookMount != 0) {
-			msg.addByte(outfit.lookMountHead);
-			msg.addByte(outfit.lookMountBody);
-			msg.addByte(outfit.lookMountLegs);
-			msg.addByte(outfit.lookMountFeet);
-		}
 	} else {
 		static Outfit_t outfit;
 		AddOutfit(msg, outfit);

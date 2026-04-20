@@ -1798,14 +1798,14 @@ void Player::setMaxMinorCharmEchoes(uint32_t points) {
 	maxMinorCharmEchoes = points;
 }
 
-uint8_t Player::getCharmTier(charmRune_t charmId) const {
+uint8_t Player::getTierByCharmsArray(charmRune_t charmId) const {
 	if (charmId == CHARM_NONE || charmId > charmsArray.size()) {
 		return 0;
 	}
 	return charmsArray[charmId].tier;
 }
 
-void Player::setCharmTier(charmRune_t charmId, uint8_t newTier) {
+void Player::setTierByCharmsArray(charmRune_t charmId, uint8_t newTier) {
 	charmsArray[charmId].tier = newTier;
 }
 
@@ -1886,45 +1886,32 @@ bool Player::isImmuneRoot() const {
 	return (m_rootCondition.first == CONDITION_ROOTED) && (timenow <= m_rootCondition.second);
 }
 
-uint16_t Player::parseRacebyCharm(charmRune_t charmId, bool set /*= false*/, uint16_t newRaceid /*= 0*/) {
-	uint16_t raceid = 0;
-	switch (charmId) {
-		case CHARM_WOUND:
-		case CHARM_ENFLAME:
-		case CHARM_POISON:
-		case CHARM_FREEZE:
-		case CHARM_ZAP:
-		case CHARM_CURSE:
-		case CHARM_CRIPPLE:
-		case CHARM_PARRY:
-		case CHARM_DODGE:
-		case CHARM_ADRENALINE:
-		case CHARM_NUMB:
-		case CHARM_CLEANSE:
-		case CHARM_BLESS:
-		case CHARM_SCAVENGE:
-		case CHARM_GUT:
-		case CHARM_LOW:
-		case CHARM_DIVINE:
-		case CHARM_VAMP:
-		case CHARM_VOID:
-		case CHARM_SAVAGE:
-		case CHARM_FATAL:
-		case CHARM_VOIDINVERSION:
-		case CHARM_CARNAGE:
-		case CHARM_OVERPOWER:
-		case CHARM_OVERFLUX:
-			if (set) {
-				charmsArray[charmId].raceId = newRaceid;
-			} else {
-				raceid = charmsArray[charmId].raceId;
-			}
-			break;
-		default:
-			raceid = 0;
-			break;
+void Player::setRaceIdByCharmsArray(charmRune_t charmId, uint16_t newRaceId) {
+	charmsArray[charmId].raceId = newRaceId;
+}
+
+uint16_t Player::getRaceIdByCharmsArray(charmRune_t charmId) const {
+	if (charmId == CHARM_NONE || charmId > charmsArray.size()) {
+		return 0;
 	}
-	return raceid;
+	return charmsArray[charmId].raceId;
+}
+
+std::shared_ptr<Charm> Player::isApplyCharm(charmRune_t charmId, const std::string &monsterName) {
+	const uint16_t playerCharmRaceId = getRaceIdByCharmsArray(charmId);
+	if (playerCharmRaceId != 0) {
+		const auto &mType = g_monsters().getMonsterType(monsterName);
+		if (mType && playerCharmRaceId == mType->info.raceid) {
+			if (const auto &charm = g_iobestiary().getBestiaryCharm(charmId)) {
+				const auto charmTier = getTierByCharmsArray(charmId);
+				if (charm->chance[charmTier] >= (uniform_random(1, 100) / 1.0)) {
+					return charm;
+				}
+			}
+		}
+	}
+
+	return nullptr;
 }
 
 bool Player::isNearDepotBox() {
@@ -2384,6 +2371,12 @@ bool Player::hasBlessing(uint8_t index) const {
 void Player::sendCloseShop() const {
 	if (client) {
 		client->sendCloseShop();
+	}
+}
+
+void Player::sendNpcDialogOptions(const NpcDialogOptions &dialogOptions) const {
+	if (client) {
+		client->sendNpcDialogOptions(dialogOptions);
 	}
 }
 
@@ -4038,14 +4031,15 @@ void Player::death(const std::shared_ptr<Creature> &lastHitCreature) {
 		double deathLossPercent = getLostPercent() * (unfairFightReduction / 100.);
 
 		// Charm bless bestiary
-		const auto charmBless = charmsArray[CHARM_BLESS];
-		const auto charmBlessRaceId = charmBless.raceId;
-		const auto &charm = g_iobestiary().getBestiaryCharm(CHARM_BLESS);
-		if (charm && lastHitCreature && lastHitCreature->getMonster() && charmBlessRaceId != 0) {
+		const auto charmBlessRaceId = getRaceIdByCharmsArray(CHARM_MINOR_BLESS);
+		if (lastHitCreature && lastHitCreature->getMonster() && charmBlessRaceId != 0) {
 			const auto &mType = g_monsters().getMonsterType(lastHitCreature->getName());
 			if (mType && mType->info.raceid == charmBlessRaceId) {
-				const auto percentReduction = charm->chance[charmBless.tier] / 100;
-				deathLossPercent -= deathLossPercent * percentReduction;
+				if (const auto &charmBless = g_iobestiary().getBestiaryCharm(CHARM_MINOR_BLESS)) {
+					const auto charmTier = getTierByCharmsArray(CHARM_MINOR_BLESS);
+					const auto percentReduction = charmBless->chance[charmTier] / 100;
+					deathLossPercent -= deathLossPercent * percentReduction;
+				}
 			}
 		}
 

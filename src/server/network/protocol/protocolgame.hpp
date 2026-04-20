@@ -72,6 +72,7 @@ struct ShopBlock;
 struct MarketOfferEx;
 struct HistoryMarketOffer;
 struct LightInfo;
+struct NpcDialogOptions;
 
 using ProtocolGame_ptr = std::shared_ptr<ProtocolGame>;
 using ItemVector = std::vector<std::shared_ptr<Item>>;
@@ -388,6 +389,7 @@ private:
 
 	void sendShop(const std::shared_ptr<Npc> &npc);
 	void sendCloseShop();
+	void sendNpcDialogOptions(const NpcDialogOptions &dialogOptions);
 	void sendClientCheck();
 	void sendGameNews();
 	void sendResourcesBalance(uint64_t money = 0, uint64_t bank = 0, uint64_t preyCards = 0, uint64_t taskHunting = 0, uint64_t soulsealsPoints = 0, uint64_t forgeDust = 0, uint64_t forgeSliver = 0, uint64_t forgeCores = 0);
