@@ -26,13 +26,27 @@ namespace {
 	int parseDayOfWeek(const std::string &dayStr) {
 		std::string day = dayStr;
 		std::transform(day.begin(), day.end(), day.begin(), ::tolower);
-		if (day == "sunday") return 0;
-		if (day == "monday") return 1;
-		if (day == "tuesday") return 2;
-		if (day == "wednesday") return 3;
-		if (day == "thursday") return 4;
-		if (day == "friday") return 5;
-		if (day == "saturday") return 6;
+		if (day == "sunday") {
+			return 0;
+		}
+		if (day == "monday") {
+			return 1;
+		}
+		if (day == "tuesday") {
+			return 2;
+		}
+		if (day == "wednesday") {
+			return 3;
+		}
+		if (day == "thursday") {
+			return 4;
+		}
+		if (day == "friday") {
+			return 5;
+		}
+		if (day == "saturday") {
+			return 6;
+		}
 		g_logger().warn("[IOWeeklyTasks] Invalid weeklyTasksResetDay '{}', defaulting to monday", dayStr);
 		return 1;
 	}
@@ -214,7 +228,6 @@ void IOWeeklyTasks::generateWeeklyTasks(const std::shared_ptr<Player> &player, u
 	// Initialize reward values (0 completed tasks = 0 HTP, 0 soulseals)
 	weeklyData.rewardHuntingTasksPoints = 0;
 	weeklyData.rewardSoulseals = 0;
-
 }
 
 void IOWeeklyTasks::onCreatureKill(const std::shared_ptr<Player> &player, uint16_t raceId) {
@@ -410,7 +423,7 @@ bool IOWeeklyTasks::shouldResetWeekly() const {
 #else
 	gmtime_r(&time_t_now, &tm_buf);
 #endif
-	std::tm *tm_now = &tm_buf;
+	std::tm* tm_now = &tm_buf;
 
 	// Reset on configured day during server save window
 	int resetDay = parseDayOfWeek(g_configManager().getString(WEEKLY_TASKS_RESET_DAY));
@@ -446,11 +459,16 @@ uint32_t IOWeeklyTasks::getHTPPerKillTask(uint8_t difficulty) {
 	// HTP awarded per completed kill task, based on difficulty
 	// Beginner: 25, Adept: 50, Expert: 100, Master: 110
 	switch (difficulty) {
-		case 0: return 25;
-		case 1: return 50;
-		case 2: return 100;
-		case 3: return 110;
-		default: return 25;
+		case 0:
+			return 25;
+		case 1:
+			return 50;
+		case 2:
+			return 100;
+		case 3:
+			return 110;
+		default:
+			return 25;
 	}
 }
 
@@ -508,9 +526,7 @@ void IOWeeklyTasks::distributeWeeklyRewards(const std::shared_ptr<Player> &playe
 	}
 
 	// Notify the player about received rewards
-	player->sendTextMessage(MESSAGE_EVENT_ADVANCE,
-		fmt::format("[Weekly Tasks] Week ended! You completed {} tasks.\n  Hunting Task Points: +{}\n  Soulseals: +{}",
-			totalCompleted, totalHTP, soulseals));
+	player->sendTextMessage(MESSAGE_EVENT_ADVANCE, fmt::format("[Weekly Tasks] Week ended! You completed {} tasks.\n  Hunting Task Points: +{}\n  Soulseals: +{}", totalCompleted, totalHTP, soulseals));
 
 	// Update resource balance on the client
 	player->sendTaskBoardResourceBalance();
@@ -526,14 +542,12 @@ const std::vector<HuntingTaskShopOffer> &IOWeeklyTasks::getShopOffers() const {
 
 void IOWeeklyTasks::buyShopOffer(const std::shared_ptr<Player> &player, uint8_t offerIndex) {
 	if (!player || offerIndex >= shopOffers.size()) {
-		g_logger().warn("[IOWeeklyTasks::buyShopOffer] - Invalid: player={}, offerIndex={}, shopSize={}",
-			player ? player->getName() : "null", offerIndex, shopOffers.size());
+		g_logger().warn("[IOWeeklyTasks::buyShopOffer] - Invalid: player={}, offerIndex={}, shopSize={}", player ? player->getName() : "null", offerIndex, shopOffers.size());
 		return;
 	}
 
 	const auto &offer = shopOffers[offerIndex];
-	g_logger().info("[IOWeeklyTasks::buyShopOffer] - Player {} buying offer #{}: '{}' (type={}, itemId={}, price={})",
-		player->getName(), offerIndex, offer.name, static_cast<int>(offer.offerType), offer.looktypeOrItemId, offer.price);
+	g_logger().info("[IOWeeklyTasks::buyShopOffer] - Player {} buying offer #{}: '{}' (type={}, itemId={}, price={})", player->getName(), offerIndex, offer.name, static_cast<int>(offer.offerType), offer.looktypeOrItemId, offer.price);
 
 	// For Bonus Promotion, price is progressive: cost(n) = 100 + 50 * n * (n - 1)
 	// where n = next point number (alreadyPurchased + 1)
@@ -597,8 +611,7 @@ void IOWeeklyTasks::buyShopOffer(const std::shared_ptr<Player> &player, uint8_t 
 		const ItemType &it = Item::items[itemId];
 		auto kit = std::make_shared<Item>(ITEM_DECORATION_KIT, 1);
 		kit->setCustomAttribute("unWrapId", static_cast<int64_t>(itemId));
-		kit->setAttribute(ItemAttribute_t::DESCRIPTION,
-			"Unwrap it in your own house to create a <" + it.name + ">.");
+		kit->setAttribute(ItemAttribute_t::DESCRIPTION, "Unwrap it in your own house to create a <" + it.name + ">.");
 		return kit;
 	};
 
@@ -618,8 +631,7 @@ void IOWeeklyTasks::buyShopOffer(const std::shared_ptr<Player> &player, uint8_t 
 			}
 			auto ret = g_game().internalAddItem(inbox, item, INDEX_WHEREEVER, FLAG_NOLIMIT);
 			if (ret != RETURNVALUE_NOERROR) {
-				g_logger().warn("[IOWeeklyTasks::buyShopOffer] - Failed to add item {} to inbox of {}: {}",
-					offer.looktypeOrItemId, player->getName(), static_cast<int>(ret));
+				g_logger().warn("[IOWeeklyTasks::buyShopOffer] - Failed to add item {} to inbox of {}: {}", offer.looktypeOrItemId, player->getName(), static_cast<int>(ret));
 				player->sendMessageDialog("Failed to deliver item to your inbox.");
 				break;
 			}
@@ -643,8 +655,7 @@ void IOWeeklyTasks::buyShopOffer(const std::shared_ptr<Player> &player, uint8_t 
 			}
 			auto ret = g_game().internalAddItem(inbox, item, INDEX_WHEREEVER, FLAG_NOLIMIT);
 			if (ret != RETURNVALUE_NOERROR) {
-				g_logger().warn("[IOWeeklyTasks::buyShopOffer] - Failed to add item {} to inbox of {}: {}",
-					offer.looktypeOrItemId, player->getName(), static_cast<int>(ret));
+				g_logger().warn("[IOWeeklyTasks::buyShopOffer] - Failed to add item {} to inbox of {}: {}", offer.looktypeOrItemId, player->getName(), static_cast<int>(ret));
 				player->sendMessageDialog("Failed to deliver item to your inbox.");
 				break;
 			}
@@ -749,8 +760,7 @@ void IOWeeklyTasks::initializeShopOffers() {
 			if (offer.offerType == HUNTING_SHOP_OFFER_MOUNT) {
 				auto mount = g_game().mounts->getMountByClientID(static_cast<uint16_t>(offer.looktypeOrItemId));
 				if (!mount) {
-					g_logger().warn("[IOWeeklyTasks::initializeShopOffers] - Mount offer '{}' has invalid clientId {}, skipping",
-						offer.name, offer.looktypeOrItemId);
+					g_logger().warn("[IOWeeklyTasks::initializeShopOffers] - Mount offer '{}' has invalid clientId {}, skipping", offer.name, offer.looktypeOrItemId);
 					lua_pop(L, 1);
 					continue;
 				}
@@ -759,8 +769,7 @@ void IOWeeklyTasks::initializeShopOffers() {
 			// Validate outfit looktype
 			if (offer.offerType == HUNTING_SHOP_OFFER_OUTFIT) {
 				if (!g_game().isLookTypeRegistered(static_cast<uint16_t>(offer.looktypeOrItemId))) {
-					g_logger().warn("[IOWeeklyTasks::initializeShopOffers] - Outfit offer '{}' has unregistered looktype {}, skipping",
-						offer.name, offer.looktypeOrItemId);
+					g_logger().warn("[IOWeeklyTasks::initializeShopOffers] - Outfit offer '{}' has unregistered looktype {}, skipping", offer.name, offer.looktypeOrItemId);
 					lua_pop(L, 1);
 					continue;
 				}
@@ -859,7 +868,7 @@ uint32_t IOWeeklyTasks::getNextResetTimestamp() {
 #else
 	localtime_r(&time_t_now, &tm_buf);
 #endif
-	std::tm *tm_now = &tm_buf;
+	std::tm* tm_now = &tm_buf;
 
 	// Get configured reset day from config string (e.g. "monday", "tuesday", etc.)
 	int resetDay = parseDayOfWeek(g_configManager().getString(WEEKLY_TASKS_RESET_DAY));
@@ -915,11 +924,16 @@ void IOWeeklyTasks::markAllPlayersForRewardDistribution() {
 uint16_t IOWeeklyTasks::getAnyCreatureKillCount(uint8_t difficulty) {
 	// Fixed kill counts per difficulty: Beginner=1000, Adept=2000, Expert=3000, Master=4000
 	switch (difficulty) {
-		case 0: return 1000;
-		case 1: return 2000;
-		case 2: return 3000;
-		case 3: return 4000;
-		default: return 1000;
+		case 0:
+			return 1000;
+		case 1:
+			return 2000;
+		case 2:
+			return 3000;
+		case 3:
+			return 4000;
+		default:
+			return 1000;
 	}
 }
 
@@ -980,21 +994,31 @@ uint32_t IOWeeklyTasks::calculateRewardExp(uint32_t playerLevel, uint8_t difficu
 
 uint32_t IOWeeklyTasks::getExpCap(uint8_t difficulty) {
 	switch (difficulty) {
-		case 0: return 200000;    // Beginner
-		case 1: return 800000;    // Adept
-		case 2: return 3000000;   // Expert
-		case 3: return 0;         // Master: no limit
-		default: return 200000;
+		case 0:
+			return 200000; // Beginner
+		case 1:
+			return 800000; // Adept
+		case 2:
+			return 3000000; // Expert
+		case 3:
+			return 0; // Master: no limit
+		default:
+			return 200000;
 	}
 }
 
 uint32_t IOWeeklyTasks::getMinLevelForDifficulty(uint8_t difficulty) {
 	switch (difficulty) {
-		case 0: return 8;    // Beginner
-		case 1: return 30;   // Adept
-		case 2: return 150;  // Expert
-		case 3: return 300;  // Master
-		default: return 8;
+		case 0:
+			return 8; // Beginner
+		case 1:
+			return 30; // Adept
+		case 2:
+			return 150; // Expert
+		case 3:
+			return 300; // Master
+		default:
+			return 8;
 	}
 }
 
@@ -1134,10 +1158,18 @@ void IOWeeklyTasks::ensureWeeklyTaskCount(const std::shared_ptr<Player> &player)
 
 				bool validForDifficulty = false;
 				switch (weeklyData.weeklyDifficulty) {
-					case 0: validForDifficulty = (mtype->info.bestiaryStars <= 1); break;
-					case 1: validForDifficulty = (mtype->info.bestiaryStars <= 3); break;
-					case 2: validForDifficulty = (mtype->info.bestiaryStars >= 2 && mtype->info.bestiaryStars <= 5); break;
-					case 3: validForDifficulty = (mtype->info.bestiaryStars >= 4); break;
+					case 0:
+						validForDifficulty = (mtype->info.bestiaryStars <= 1);
+						break;
+					case 1:
+						validForDifficulty = (mtype->info.bestiaryStars <= 3);
+						break;
+					case 2:
+						validForDifficulty = (mtype->info.bestiaryStars >= 2 && mtype->info.bestiaryStars <= 5);
+						break;
+					case 3:
+						validForDifficulty = (mtype->info.bestiaryStars >= 4);
+						break;
 				}
 
 				if (!validForDifficulty) {

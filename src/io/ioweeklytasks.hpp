@@ -71,11 +71,11 @@ enum HuntingTaskShopOfferType_t : uint8_t {
 // 3 = BUY button, tooltip "Requires base outfit", not clickable
 // 4 = BOUGHT button (already purchased)
 enum HuntingTaskShopOfferStatus_t : uint8_t {
-	HUNTING_SHOP_STATUS_AVAILABLE = 0,        // BUY, clickable if HTP >= price
-	HUNTING_SHOP_STATUS_NOT_AVAILABLE = 1,    // BUY, "Not Available"
-	HUNTING_SHOP_STATUS_NOT_ENOUGH_HTP = 2,   // BUY, "You don't have enough hunting task points"
-	HUNTING_SHOP_STATUS_REQUIRES_OUTFIT = 3,  // BUY, "Requires base outfit"
-	HUNTING_SHOP_STATUS_BOUGHT = 4            // BOUGHT
+	HUNTING_SHOP_STATUS_AVAILABLE = 0, // BUY, clickable if HTP >= price
+	HUNTING_SHOP_STATUS_NOT_AVAILABLE = 1, // BUY, "Not Available"
+	HUNTING_SHOP_STATUS_NOT_ENOUGH_HTP = 2, // BUY, "You don't have enough hunting task points"
+	HUNTING_SHOP_STATUS_REQUIRES_OUTFIT = 3, // BUY, "Requires base outfit"
+	HUNTING_SHOP_STATUS_BOUGHT = 4 // BOUGHT
 };
 
 // Single shop offer

@@ -30,7 +30,7 @@ void IOBountyTasks::initializeListSlots(BountyTaskData &bountyData) {
 	// Initialize talisman bonuses if not yet calculated (new player with no DB row)
 	// Level 0 talismans should have isActivedUpgrade=1 and bountyPointsToUpgrade=5
 	if (bountyData.talismanTiers[0].isActivedUpgrade == 0 && bountyData.talismanTiers[0].level == 0
-		&& bountyData.talismanTiers[0].bountyPointsToUpgrade == 0) {
+	    && bountyData.talismanTiers[0].bountyPointsToUpgrade == 0) {
 		for (uint8_t i = 0; i < TALISMAN_PATH_COUNT; ++i) {
 			recalculateTalismanBonuses(bountyData.talismanTiers[i], i);
 		}
@@ -311,8 +311,7 @@ void IOBountyTasks::changeDifficulty(const std::shared_ptr<Player> &player, Boun
 	// Uses the same level gates as weekly tasks: Beginner=8, Adept=30, Expert=150, Master=300
 	uint32_t minLevel = IOWeeklyTasks::getMinLevelForDifficulty(static_cast<uint8_t>(difficulty));
 	if (player->getLevel() < minLevel) {
-		g_logger().warn("[IOBountyTasks::changeDifficulty] - Player {} (level {}) tried to set difficulty {} (requires level {})",
-			player->getName(), player->getLevel(), static_cast<int>(difficulty), minLevel);
+		g_logger().warn("[IOBountyTasks::changeDifficulty] - Player {} (level {}) tried to set difficulty {} (requires level {})", player->getName(), player->getLevel(), static_cast<int>(difficulty), minLevel);
 		return;
 	}
 
