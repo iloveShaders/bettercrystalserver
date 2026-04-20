@@ -6450,6 +6450,8 @@ void Player::addBestiaryKill(const std::shared_ptr<MonsterType> &mType) {
 		kills *= 2;
 	}
 
+	// Bounty Talisman bestiary bonus (chance to double bestiary kills)
+	// Value is in hundredths of percent (e.g. 100 = 1%, 2050 = 20.50%)
 	uint16_t bountyBestiaryBonus = g_iobountytasks().getBountyTalismanBonus(getPlayer(), mType->info.raceid, BOUNTY_TALISMAN_BESTIARY);
 	if (bountyBestiaryBonus > 0 && uniform_random(1, 10000) <= bountyBestiaryBonus) {
 		kills *= 2;

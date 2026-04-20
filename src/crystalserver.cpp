@@ -100,6 +100,11 @@ int CrystalServer::run() {
 				IOMarket::checkExpiredOffers();
 				IOMarket::getInstance().updateStatistics();
 
+				g_ioweeklytasks().initializeShopOffers(); // Winter Update 2025 - Task Board Shop (after mounts/outfits are loaded)
+				g_ioweeklytasks().initializeDeliveryItems(); // Winter Update 2025 - Load delivery items from Lua
+				g_ioweeklytasks().initializeResetTimestamp(); // Winter Update 2025 - Calculate global weekly reset timestamp
+				g_ioweeklytasks().checkWeeklyResetOnStartup(); // Winter Update 2025 - Mark players for reward distribution if reset day
+
 				logger.info("Loaded all modules, server starting up...");
 
 #ifndef _WIN32
@@ -109,10 +114,6 @@ int CrystalServer::run() {
 #endif
 
 				g_game().start(&serviceManager);
-				g_ioweeklytasks().initializeShopOffers(); // Winter Update 2025 - Task Board Shop (after mounts/outfits are loaded)
-				g_ioweeklytasks().initializeDeliveryItems(); // Winter Update 2025 - Load delivery items from Lua
-				g_ioweeklytasks().initializeResetTimestamp(); // Winter Update 2025 - Calculate global weekly reset timestamp
-				g_ioweeklytasks().checkWeeklyResetOnStartup(); // Winter Update 2025 - Mark players for reward distribution if reset day
 
 				if (g_configManager().getBoolean(TOGGLE_MAINTAIN_MODE)) {
 					g_game().setGameState(GAME_STATE_CLOSED);

@@ -543,7 +543,7 @@ combatChainSkillFormulaMissile = 0.9
 combatChainSkillFormulaWandsAndRods = 1.0
 
 -- Spells
-toggleLearnSpells = true
+toggleLearnSpells = false
 emoteSpells = false
 spellNameInsteadOfWords = false
 

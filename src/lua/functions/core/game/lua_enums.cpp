@@ -694,6 +694,14 @@ void LuaEnums::initConstMeEnums(lua_State* L) {
 	registerEnum(L, CONST_ME_SMALLWHITE_ENERGY_SPARK);
 	registerEnum(L, CONST_ME_SMALLGREEN_ENERGY_SPARK);
 	registerEnum(L, CONST_ME_SMALLPINK_ENERGY_SPARK);
+
+	// 15.12 - Weapon Attack Effects
+	registerEnum(L, CONST_ME_SWORD_ATTACK);
+	registerEnum(L, CONST_ME_CLUB_ATTACK);
+	registerEnum(L, CONST_ME_AXE_ATTACK);
+	registerEnum(L, CONST_ME_MONK_STAFF_ATTACK);
+	registerEnum(L, CONST_ME_MONK_DAGGERS_ATTACK);
+	registerEnum(L, CONST_ME_FIST_ATTACK);
 }
 
 void LuaEnums::initConstAniEnums(lua_State* L) {

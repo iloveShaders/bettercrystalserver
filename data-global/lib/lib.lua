@@ -10,5 +10,3 @@ dofile(DATA_DIRECTORY .. "/lib/quests/quest.lua")
 -- Tables library
 dofile(DATA_DIRECTORY .. "/lib/tables/load.lua")
 
--- Winter Update 2025 — Task Board (weekly shop + delivery pool)
-dofile(DATA_DIRECTORY .. "/lib/task_board.lua")
