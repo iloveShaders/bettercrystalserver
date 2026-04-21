@@ -477,11 +477,6 @@ void ProtocolGame::AddItem(NetworkMessage &msg, const std::shared_ptr<Item> &ite
 
 	const ItemType &it = Item::items[item->getID()];
 
-	if (it.id == 0) {
-		g_logger().warn("[ProtocolGame::AddItem] Item with server id {} has no client appearance, skipping send.", item->getID());
-		return;
-	}
-
 	msg.add<uint16_t>(it.id);
 
 	if (oldProtocol) {
