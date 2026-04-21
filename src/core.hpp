@@ -18,7 +18,7 @@
 #pragma once
 
 static constexpr auto SOFTWARE_NAME = "Crystal Server";
-static constexpr auto SOFTWARE_VERSION = "4.1.7";
+static constexpr auto SOFTWARE_VERSION = "4.1.8";
 static constexpr auto GAME_UPDATE = "Winter Update 2025";
 
 static constexpr auto AUTHENTICATOR_DIGITS = 6U;

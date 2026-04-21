@@ -20,6 +20,7 @@
 #include "config/configmanager.hpp"
 #include "creatures/appearance/mounts/mounts.hpp"
 #include "database/database.hpp"
+#include "database/databasemanager.hpp"
 #include "creatures/monsters/monsters.hpp"
 #include "creatures/players/player.hpp"
 #include "creatures/players/wheel/player_wheel.hpp"
@@ -31,36 +32,8 @@
 #include "lua/scripts/lua_environment.hpp"
 #include "utils/tools.hpp"
 
-namespace {
-	// Convert day name string to tm_wday number (0=Sunday, 1=Monday, ..., 6=Saturday)
-	int parseDayOfWeek(const std::string &dayStr) {
-		std::string day = dayStr;
-		std::transform(day.begin(), day.end(), day.begin(), ::tolower);
-		if (day == "sunday") {
-			return 0;
-		}
-		if (day == "monday") {
-			return 1;
-		}
-		if (day == "tuesday") {
-			return 2;
-		}
-		if (day == "wednesday") {
-			return 3;
-		}
-		if (day == "thursday") {
-			return 4;
-		}
-		if (day == "friday") {
-			return 5;
-		}
-		if (day == "saturday") {
-			return 6;
-		}
-		g_logger().warn("[IOWeeklyTasks] Invalid weeklyTasksResetDay '{}', defaulting to monday", dayStr);
-		return 1;
-	}
-}
+constexpr uint32_t WEEK_SECONDS = 7 * 24 * 60 * 60;
+constexpr const char* WEEKLY_TASKS_LAST_RESET_CONFIG = "weekly_tasks_last_reset_timestamp";
 
 IOWeeklyTasks &IOWeeklyTasks::getInstance() {
 	return inject<IOWeeklyTasks>();
@@ -557,7 +530,7 @@ void IOWeeklyTasks::buyShopOffer(const std::shared_ptr<Player> &player, uint8_t 
 	}
 
 	const auto &offer = shopOffers[offerIndex];
-	g_logger().info("[IOWeeklyTasks::buyShopOffer] - Player {} buying offer #{}: '{}' (type={}, itemId={}, price={})", player->getName(), offerIndex, offer.name, static_cast<int>(offer.offerType), offer.looktypeOrItemId, offer.price);
+	g_logger().debug("[IOWeeklyTasks::buyShopOffer] - Player {} buying offer #{}: '{}' (type={}, itemId={}, price={})", player->getName(), offerIndex, offer.name, static_cast<int>(offer.offerType), offer.looktypeOrItemId, offer.price);
 
 	// For Bonus Promotion, price is progressive: cost(n) = 100 + 50 * n * (n - 1)
 	// where n = next point number (alreadyPurchased + 1)
@@ -794,7 +767,7 @@ void IOWeeklyTasks::initializeShopOffers() {
 
 	lua_pop(L, 1);
 
-	g_logger().info("[IOWeeklyTasks::initializeShopOffers] - Loaded {} shop offers from Lua", shopOffers.size());
+	g_logger().info("Loaded {} weekly task shop offers from Lua", shopOffers.size());
 }
 
 void IOWeeklyTasks::initializeDeliveryItems() {
@@ -840,12 +813,19 @@ void IOWeeklyTasks::initializeDeliveryItems() {
 
 	lua_pop(L, 1);
 
-	g_logger().info("[IOWeeklyTasks::initializeDeliveryItems] - Loaded {} delivery items from Lua", deliveryItems.size());
+	g_logger().info("Loaded {} weekly task delivery items from Lua", deliveryItems.size());
 }
 
 void IOWeeklyTasks::initializeResetTimestamp() {
 	globalResetTimestamp = getNextResetTimestamp();
-	g_logger().info("[IOWeeklyTasks::initializeResetTimestamp] - Next weekly reset at timestamp: {}", globalResetTimestamp);
+	const uint32_t now = static_cast<uint32_t>(std::time(nullptr));
+	const std::string remaining = formatTimeUntilReset(now, globalResetTimestamp);
+	g_logger().info(
+		"Next weekly reset: {} (timestamp: {}, in: {})",
+		formatDate(static_cast<time_t>(globalResetTimestamp)),
+		globalResetTimestamp,
+		remaining
+	);
 }
 
 void IOWeeklyTasks::checkWeeklyResetOnStartup() {
@@ -853,19 +833,35 @@ void IOWeeklyTasks::checkWeeklyResetOnStartup() {
 		return;
 	}
 
-	auto time_t_now = std::time(nullptr);
-	std::tm tm_buf {};
-#ifdef _WIN32
-	localtime_s(&tm_buf, &time_t_now);
-#else
-	localtime_r(&time_t_now, &tm_buf);
-#endif
-
-	int resetDay = parseDayOfWeek(g_configManager().getString(WEEKLY_TASKS_RESET_DAY));
-	if (tm_buf.tm_wday == resetDay) {
-		markAllPlayersForRewardDistribution();
-		g_logger().info("[IOWeeklyTasks::checkWeeklyResetOnStartup] - Reset day detected, marked all players for reward distribution");
+	const auto now = static_cast<uint32_t>(std::time(nullptr));
+	const uint32_t nextResetTimestamp = getNextResetTimestamp();
+	if (nextResetTimestamp < WEEK_SECONDS) {
+		return;
 	}
+
+	// "Current reset" is the most recent reset boundary already reached.
+	const uint32_t currentResetTimestamp = nextResetTimestamp - WEEK_SECONDS;
+
+	// If we've not reached this reset boundary yet, nothing to process.
+	if (now < currentResetTimestamp) {
+		return;
+	}
+
+	int32_t lastProcessedReset = 0;
+	if (!DatabaseManager::getDatabaseConfig(WEEKLY_TASKS_LAST_RESET_CONFIG, lastProcessedReset)) {
+		lastProcessedReset = 0;
+	}
+
+	if (static_cast<uint32_t>(lastProcessedReset) >= currentResetTimestamp) {
+		return;
+	}
+
+	markAllPlayersForRewardDistribution();
+	DatabaseManager::registerDatabaseConfig(WEEKLY_TASKS_LAST_RESET_CONFIG, static_cast<int32_t>(currentResetTimestamp));
+	g_logger().info(
+		"Processed weekly reset boundary {} and marked active players",
+		currentResetTimestamp
+	);
 }
 
 uint32_t IOWeeklyTasks::getResetTimestamp() const {
@@ -927,9 +923,9 @@ void IOWeeklyTasks::markAllPlayersForRewardDistribution() {
 	Database &db = Database::getInstance();
 	// Set needs_reward = 1 for all players who have active weekly tasks (kill_tasks not empty)
 	if (!db.executeQuery("UPDATE `player_weekly_tasks` SET `needs_reward` = 1 WHERE LENGTH(`kill_tasks`) > 0")) {
-		g_logger().warn("[IOWeeklyTasks::markAllPlayersForRewardDistribution] - Failed to mark players for reward distribution");
+		g_logger().warn("Failed to mark players for reward distribution");
 	} else {
-		g_logger().info("[IOWeeklyTasks::markAllPlayersForRewardDistribution] - Marked all active players for weekly reward distribution");
+		g_logger().info("Marked all active players for weekly reward distribution");
 	}
 }
 
