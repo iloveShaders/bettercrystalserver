@@ -1444,7 +1444,7 @@ uint32_t ConditionRegeneration::getHealthTicks(const std::shared_ptr<Creature> &
 }
 
 uint32_t ConditionRegeneration::getManaTicks(const std::shared_ptr<Creature> &creature) const {
-if (isBuff) {
+	if (isBuff) {
 		return static_cast<uint32_t>(static_cast<double>(manaTicks) / g_configManager().getFloat(RATE_SPELL_COOLDOWN));
 	}
 
