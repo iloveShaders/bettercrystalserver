@@ -78,6 +78,9 @@ void PlayerFunctions::init(lua_State* L) {
 	Lua::registerMethod(L, "Player", "addBestiaryKill", PlayerFunctions::luaPlayerAddBestiaryKill);
 	Lua::registerMethod(L, "Player", "charmExpansion", PlayerFunctions::luaPlayercharmExpansion);
 	Lua::registerMethod(L, "Player", "getCharmMonsterType", PlayerFunctions::luaPlayergetCharmMonsterType);
+	Lua::registerMethod(L, "Player", "weeklyTaskExpansion", PlayerFunctions::luaPlayerWeeklyTaskExpansion);
+	Lua::registerMethod(L, "Player", "resetWeeklyTasks", PlayerFunctions::luaPlayerResetWeeklyTasks);
+	Lua::registerMethod(L, "Player", "performWeeklyReset", PlayerFunctions::luaPlayerPerformWeeklyReset);
 
 	Lua::registerMethod(L, "Player", "isMonsterPrey", PlayerFunctions::luaPlayerisMonsterPrey);
 	Lua::registerMethod(L, "Player", "getPreyCards", PlayerFunctions::luaPlayerGetPreyCards);
@@ -1162,6 +1165,52 @@ int PlayerFunctions::luaPlayercharmExpansion(lua_State* L) {
 			player->setCharmExpansion(Lua::getBoolean(L, 2, false));
 			Lua::pushBoolean(L, true);
 		}
+	} else {
+		lua_pushnil(L);
+	}
+	return 1;
+}
+
+int PlayerFunctions::luaPlayerWeeklyTaskExpansion(lua_State* L) {
+	// get: player:weeklyTaskExpansion() set: player:weeklyTaskExpansion(bool)
+	const auto &player = Lua::getUserdataShared<Player>(L, 1);
+	if (player) {
+		if (lua_gettop(L) == 1) {
+			Lua::pushBoolean(L, player->hasWeeklyTaskExpansion());
+		} else {
+			player->setWeeklyTaskExpansion(Lua::getBoolean(L, 2, false));
+			Lua::pushBoolean(L, true);
+		}
+	} else {
+		lua_pushnil(L);
+	}
+	return 1;
+}
+
+int PlayerFunctions::luaPlayerResetWeeklyTasks(lua_State* L) {
+	// player:resetWeeklyTasks() - resets weekly tasks and shows the finished screen
+	// The client will then show the difficulty selection after the player confirms
+	const auto &player = Lua::getUserdataShared<Player>(L, 1);
+	if (player) {
+		g_ioweeklytasks().resetWeeklyTaskData(player);
+		player->sendWeeklyTaskData();
+		Lua::pushBoolean(L, true);
+	} else {
+		lua_pushnil(L);
+	}
+	return 1;
+}
+
+int PlayerFunctions::luaPlayerPerformWeeklyReset(lua_State* L) {
+	// player:performWeeklyReset() - distributes weekly rewards and resets tasks
+	const auto &player = Lua::getUserdataShared<Player>(L, 1);
+	if (player) {
+		auto &weeklyData = player->getWeeklyTaskData();
+		if (!weeklyData.killTasks.empty() && weeklyData.weeklyProgressFinished == 0) {
+			g_ioweeklytasks().performWeeklyReset(player);
+			player->sendWeeklyTaskData();
+		}
+		Lua::pushBoolean(L, true);
 	} else {
 		lua_pushnil(L);
 	}
