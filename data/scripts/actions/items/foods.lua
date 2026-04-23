@@ -142,18 +142,15 @@ function food.onUse(player, item, fromPosition, target, toPosition, isHotkey)
 		return false
 	end
 
-	local existingCondition = player:getCondition(CONDITION_REGENERATION, CONDITIONID_DEFAULT)
-	if not existingCondition then
-		player:sendTextMessage(MESSAGE_FAILURE, "Regeneration condition not found.")
-		return true
-	end
-
 	local foodTime = itemFood[1] * 12000
+	local existingCondition = player:getCondition(CONDITION_REGENERATION, CONDITIONID_DEFAULT)
 
-	local currentFoodTicks = existingCondition:getFoodTicks()
-	if currentFoodTicks + foodTime > 1200000 then
-		player:sendTextMessage(MESSAGE_FAILURE, "You are full.")
-		return true
+	if existingCondition then
+		local currentFoodTicks = existingCondition:getFoodTicks()
+		if currentFoodTicks + foodTime > 1200000 then
+			player:sendTextMessage(MESSAGE_FAILURE, "You are full.")
+			return true
+		end
 	end
 
 	local condition = Condition(CONDITION_REGENERATION, CONDITIONID_DEFAULT, 0, true)

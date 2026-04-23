@@ -1436,16 +1436,38 @@ bool ConditionRegeneration::setParam(ConditionParam_t param, int32_t value) {
 }
 
 uint32_t ConditionRegeneration::getHealthTicks(const std::shared_ptr<Creature> &creature) const {
-	if (isBuff) {
-		return static_cast<uint32_t>(static_cast<double>(healthTicks) / g_configManager().getFloat(RATE_SPELL_COOLDOWN));
+	const auto &player = creature->getPlayer();
+
+	if (player) {
+		uint32_t playerHealthTicks = g_configManager().getNumber(BASE_HEALTH_REGEN_INTERVAL);
+		if (foodTicks > 0) {
+			playerHealthTicks = g_configManager().getNumber(FOOD_HEALTH_REGEN_INTERVAL);
+		}
+
+		if (isBuff) {
+			playerHealthTicks = static_cast<uint32_t>(static_cast<double>(playerHealthTicks) / g_configManager().getFloat(RATE_SPELL_COOLDOWN));
+		}
+
+		return playerHealthTicks - healthTicks;
 	}
 
 	return healthTicks;
 }
 
 uint32_t ConditionRegeneration::getManaTicks(const std::shared_ptr<Creature> &creature) const {
-	if (isBuff) {
-		return static_cast<uint32_t>(static_cast<double>(manaTicks) / g_configManager().getFloat(RATE_SPELL_COOLDOWN));
+	const auto &player = creature->getPlayer();
+
+	if (player) {
+		uint32_t playerManaTicks = g_configManager().getNumber(BASE_MANA_REGEN_INTERVAL);
+		if (foodTicks > 0) {
+			playerManaTicks = g_configManager().getNumber(FOOD_MANA_REGEN_INTERVAL);
+		}
+
+		if (isBuff) {
+			playerManaTicks = static_cast<uint32_t>(static_cast<double>(playerManaTicks) / g_configManager().getFloat(RATE_SPELL_COOLDOWN));
+		}
+
+		return playerManaTicks - manaTicks;
 	}
 
 	return manaTicks;
