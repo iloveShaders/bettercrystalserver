@@ -3769,10 +3769,6 @@ void ProtocolGame::sendCreatureOutfit(const std::shared_ptr<Creature> &creature,
 	msg.add<uint32_t>(creature->getID());
 	AddOutfit(msg, newOutfit);
 
-	if (!oldProtocol) {
-		msg.add<uint16_t>(newOutfit.lookFamiliarsType);
-	}
-
 	writeToOutputBuffer(msg);
 }
 
@@ -8262,10 +8258,12 @@ void ProtocolGame::sendOutfitWindow() {
 		return;
 	}
 
-	msg.addByte(isSupportOutfit ? 0 : currentOutfit.lookMountHead);
-	msg.addByte(isSupportOutfit ? 0 : currentOutfit.lookMountBody);
-	msg.addByte(isSupportOutfit ? 0 : currentOutfit.lookMountLegs);
-	msg.addByte(isSupportOutfit ? 0 : currentOutfit.lookMountFeet);
+	if (currentOutfit.lookMount == 0) {
+		msg.addByte(isSupportOutfit ? 0 : currentOutfit.lookMountHead);
+		msg.addByte(isSupportOutfit ? 0 : currentOutfit.lookMountBody);
+		msg.addByte(isSupportOutfit ? 0 : currentOutfit.lookMountLegs);
+		msg.addByte(isSupportOutfit ? 0 : currentOutfit.lookMountFeet);
+	}
 
 	msg.add<uint16_t>(currentOutfit.lookFamiliarsType);
 
@@ -9127,6 +9125,12 @@ void ProtocolGame::AddOutfit(NetworkMessage &msg, const Outfit_t &outfit, bool a
 
 	if (addMount) {
 		msg.add<uint16_t>(outfit.lookMount);
+		if (!oldProtocol && outfit.lookMount != 0) {
+			msg.addByte(outfit.lookMountHead);
+			msg.addByte(outfit.lookMountBody);
+			msg.addByte(outfit.lookMountLegs);
+			msg.addByte(outfit.lookMountFeet);
+		}
 	}
 
 	if (isOTCR) {
