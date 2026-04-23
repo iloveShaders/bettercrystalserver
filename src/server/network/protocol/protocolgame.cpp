@@ -3769,6 +3769,10 @@ void ProtocolGame::sendCreatureOutfit(const std::shared_ptr<Creature> &creature,
 	msg.add<uint32_t>(creature->getID());
 	AddOutfit(msg, newOutfit);
 
+	if (!oldProtocol) {
+		msg.add<uint16_t>(newOutfit.lookFamiliarsType);
+	}
+
 	writeToOutputBuffer(msg);
 }
 
