@@ -89,7 +89,7 @@ local function creatureSayCallback(npc, creature, type, message)
 			end
 		end
 	elseif MsgContains(message, "myra") then
-		if player:getSex() == PLAYERSEX_FEMALE and player:getStorageValue(Storage.Quest.U7_8.MageAndSummonerOutfits.AddonHatCloak) == 10 and not player:hasOutfit(138, 2) then
+		if player:getSex() == PLAYERSEX_FEMALE and player:getStorageValue(Storage.Quest.U7_8.MageAndSummonerOutfits.AddonHatCloak) == 10 then
 			npcHandler:say({
 				"Bah, I know. I received some sort of 'nomination' from our outpost in Port Hope. ...",
 				"Usually it takes a little more than that for an award though. However, I honour Myra's word. ...",
