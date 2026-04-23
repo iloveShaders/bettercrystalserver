@@ -70,8 +70,6 @@
 #include "enums/player_cyclopedia.hpp"
 #include "enums/container_type.hpp"
 
-#include <memory>
-
 /*
  * NOTE: This namespace is used so that we can add functions without having to declare them in the ".hpp/.hpp" file
  * Do not use functions only in the .cpp scope without having a namespace, it may conflict with functions in other files of the same name
@@ -1072,17 +1070,9 @@ void ProtocolGame::disconnectClient(const std::string &message) const {
 }
 
 void ProtocolGame::writeToOutputBuffer(NetworkMessage &msg) {
-	if (g_dispatcher().context().isAsync()) {
-		auto msgPtr = std::make_shared<NetworkMessage>(msg);
-		g_dispatcher().addEvent(
-			[self = getThis(), msgPtr] {
-				self->getOutputBuffer(msgPtr->getLength())->append(*msgPtr);
-			},
-			__FUNCTION__
-		);
-	} else {
-		getOutputBuffer(msg.getLength())->append(msg);
-	}
+	g_dispatcher().safeCall([self = getThis(), msg = std::move(msg)] {
+		self->getOutputBuffer(msg.getLength())->append(msg);
+	});
 }
 
 void ProtocolGame::parsePacket(NetworkMessage &msg) {
@@ -3559,13 +3549,6 @@ void ProtocolGame::sendCreatureOutfit(const std::shared_ptr<Creature> &creature,
 	msg.addByte(0x8E);
 	msg.add<uint32_t>(creature->getID());
 	AddOutfit(msg, newOutfit);
-
-	if (!oldProtocol && newOutfit.lookMount != 0) {
-		msg.addByte(newOutfit.lookMountHead);
-		msg.addByte(newOutfit.lookMountBody);
-		msg.addByte(newOutfit.lookMountLegs);
-		msg.addByte(newOutfit.lookMountFeet);
-	}
 	writeToOutputBuffer(msg);
 }
 
@@ -7714,7 +7697,6 @@ void ProtocolGame::sendOutfitWindow() {
 	if (currentShader) {
 		currentOutfit.lookShader = currentShader->id;
 	}
-
 	AddOutfit(msg, currentOutfit);
 
 	if (oldProtocol) {
@@ -7763,11 +7745,12 @@ void ProtocolGame::sendOutfitWindow() {
 		return;
 	}
 
-	msg.addByte(isSupportOutfit ? 0 : currentOutfit.lookMountHead);
-	msg.addByte(isSupportOutfit ? 0 : currentOutfit.lookMountBody);
-	msg.addByte(isSupportOutfit ? 0 : currentOutfit.lookMountLegs);
-	msg.addByte(isSupportOutfit ? 0 : currentOutfit.lookMountFeet);
-
+	if (currentOutfit.lookMount == 0) {
+		msg.addByte(isSupportOutfit ? 0 : currentOutfit.lookMountHead);
+		msg.addByte(isSupportOutfit ? 0 : currentOutfit.lookMountBody);
+		msg.addByte(isSupportOutfit ? 0 : currentOutfit.lookMountLegs);
+		msg.addByte(isSupportOutfit ? 0 : currentOutfit.lookMountFeet);
+	}
 	msg.add<uint16_t>(currentOutfit.lookFamiliarsType);
 
 	auto startOutfits = msg.getBufferPosition();
@@ -8331,12 +8314,6 @@ void ProtocolGame::AddCreature(NetworkMessage &msg, const std::shared_ptr<Creatu
 	if (!creature->isInGhostMode() && !creature->isInvisible()) {
 		const Outfit_t &outfit = creature->getCurrentOutfit();
 		AddOutfit(msg, outfit);
-		if (!oldProtocol && outfit.lookMount != 0) {
-			msg.addByte(outfit.lookMountHead);
-			msg.addByte(outfit.lookMountBody);
-			msg.addByte(outfit.lookMountLegs);
-			msg.addByte(outfit.lookMountFeet);
-		}
 	} else {
 		static Outfit_t outfit;
 		AddOutfit(msg, outfit);
@@ -8637,6 +8614,12 @@ void ProtocolGame::AddOutfit(NetworkMessage &msg, const Outfit_t &outfit, bool a
 
 	if (addMount) {
 		msg.add<uint16_t>(outfit.lookMount);
+		if (!oldProtocol && outfit.lookMount != 0) {
+			msg.addByte(outfit.lookMountHead);
+			msg.addByte(outfit.lookMountBody);
+			msg.addByte(outfit.lookMountLegs);
+			msg.addByte(outfit.lookMountFeet);
+		}
 	}
 
 	if (isOTCR) {

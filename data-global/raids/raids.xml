@@ -20,7 +20,13 @@
 	<raid name="ankrahmun.terramites" file="ankrahmun/terramites.xml" interval2="1440" margin="180" />
 
 	<!-- Carlin -->
+	<raid name="carlin.amazons" file="carlin/amazons.xml" interval2="1440" margin="180" />
+	<raid name="carlin.femorhillsorcs" file="carlin/femor_hills_orcs.xml" interval2="1440" margin="720" />
+	<raid name="carlin.hunterandwildwarrior" file="carlin/hunter_and_wild_warrior.xml" interval2="1440" margin="180" />
+	<raid name="carlin.lesserundeads" file="carlin/lesser_undeads.xml" interval2="1440" margin="180" />
 	<raid name="carlin.orcs" file="carlin/orcs.xml" interval2="1440" margin="180" />
+	<raid name="carlin.trolls" file="carlin/trolls.xml" interval2="1440" margin="180" />
+	<raid name="carlin.undeads" file="carlin/undeads.xml" interval2="1440" margin="360" />
 	<raid name="carlin.williwasp" file="carlin/willi_wasp.xml" interval2="1440" margin="180" />
 	<raid name="carlin.yeti" file="carlin/yeti.xml" interval2="1440" margin="360" />
 	<raid name="carlin.zarabustor" file="carlin/zarabustor.xml" interval2="1440" margin="360" />
