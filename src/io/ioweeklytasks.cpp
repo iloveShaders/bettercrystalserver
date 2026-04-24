@@ -665,6 +665,7 @@ void IOWeeklyTasks::buyShopOffer(const std::shared_ptr<Player> &player, uint8_t 
 		case HUNTING_SHOP_OFFER_BONUS_PROMOTION: {
 			player->wheel()->addExtraPointsFromHuntingTaskShop(1);
 			player->sendTextMessage(MESSAGE_STATUS, "You have purchased an extra Wheel of Destiny promotion point.");
+			player->wheel()->sendOpenWheelWindow(player->getID());
 			break;
 		}
 		case HUNTING_SHOP_OFFER_WEEKLY_EXPANSION: {
@@ -1113,6 +1114,13 @@ uint8_t IOWeeklyTasks::getPlayerOfferStatus(const std::shared_ptr<Player> &playe
 		}
 		case HUNTING_SHOP_OFFER_ITEM:
 		case HUNTING_SHOP_OFFER_ITEM_DOUBLE: {
+			return HUNTING_SHOP_STATUS_AVAILABLE;
+		}
+		case HUNTING_SHOP_OFFER_BONUS_PROMOTION: {
+			uint16_t alreadyPurchased = player->wheel()->getExtraPointsFromHuntingTaskShop();
+			if (alreadyPurchased >= 50) {
+				return HUNTING_SHOP_STATUS_BOUGHT;
+			}
 			return HUNTING_SHOP_STATUS_AVAILABLE;
 		}
 		default:
