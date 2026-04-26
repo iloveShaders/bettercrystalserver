@@ -72,6 +72,9 @@ class PlayerFunctions {
 	static int luaPlayerAddSoulsealsPoints(lua_State* L);
 	static int luaPlayerRemoveSoulsealsPoints(lua_State* L);
 
+	static int luaPlayerSetBountyTalismanEquipped(lua_State* L);
+	static int luaPlayerGetBountyTalismanLootBonus(lua_State* L);
+
 	static int luaPlayerGetCapacity(lua_State* L);
 	static int luaPlayerSetCapacity(lua_State* L);
 
