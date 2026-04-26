@@ -1091,7 +1091,7 @@ int PlayerFunctions::luaPlayerGetBountyTalismanLootBonus(lua_State* L) {
 	// player:getBountyTalismanLootBonus(raceId)
 	if (const auto &player = Lua::getUserdataShared<Player>(L, 1)) {
 		const uint16_t raceId = Lua::getNumber<uint16_t>(L, 2, 0);
-		lua_pushnumber(L, g_iobountytasks()->getBountyTalismanBonus(player, raceId, BOUNTY_TALISMAN_LOOT));
+		lua_pushnumber(L, g_iobountytasks().getBountyTalismanBonus(player, raceId, BOUNTY_TALISMAN_LOOT));
 	} else {
 		lua_pushnil(L);
 	}
