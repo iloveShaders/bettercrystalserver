@@ -1956,7 +1956,7 @@ void PlayerWheel::addExtraPointsFromHuntingTaskShop(uint16_t amount) {
 
 	const uint32_t total = static_cast<uint32_t>(m_extraPointsFromHuntingTaskShop) + amount;
 	m_extraPointsFromHuntingTaskShop = static_cast<uint16_t>(std::min<uint32_t>(total, std::numeric_limits<uint16_t>::max()));
-		saveKVHuntingTaskShopExtraPoints();
+	saveKVHuntingTaskShopExtraPoints();
 }
 
 uint16_t PlayerWheel::getWheelPoints(bool includeExtraPoints /* = true*/) const {
