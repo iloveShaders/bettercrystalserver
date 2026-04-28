@@ -1940,7 +1940,7 @@ uint16_t PlayerWheel::getExtraPoints() const {
 
 	// Hunting Task Shop bonus promotion points
 	totalBonus += m_extraPointsFromHuntingTaskShop;
-	
+
 	return totalBonus;
 }
 
