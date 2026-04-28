@@ -1938,6 +1938,9 @@ uint16_t PlayerWheel::getExtraPoints() const {
 		totalBonus += 10;
 	}
 
+	// Hunting Task Shop bonus promotion points
+	totalBonus += m_extraPointsFromHuntingTaskShop;
+	
 	return totalBonus;
 }
 
@@ -1956,7 +1959,6 @@ void PlayerWheel::addExtraPointsFromHuntingTaskShop(uint16_t amount) {
 
 	const uint32_t total = static_cast<uint32_t>(m_extraPointsFromHuntingTaskShop) + amount;
 	m_extraPointsFromHuntingTaskShop = static_cast<uint16_t>(std::min<uint32_t>(total, std::numeric_limits<uint16_t>::max()));
-	saveKVHuntingTaskShopExtraPoints();
 }
 
 uint16_t PlayerWheel::getWheelPoints(bool includeExtraPoints /* = true*/) const {
@@ -1965,7 +1967,6 @@ uint16_t PlayerWheel::getWheelPoints(bool includeExtraPoints /* = true*/) const 
 
 	if (includeExtraPoints) {
 		totalPoints += getExtraPoints();
-		totalPoints += getExtraPointsFromHuntingTaskShop();
 	}
 
 	return totalPoints;
