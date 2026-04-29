@@ -972,7 +972,7 @@ bool Creature::setAttackedCreature(const std::shared_ptr<Creature> &creature) {
 void Creature::getPathSearchParams(const std::shared_ptr<Creature> &, FindPathParams &fpp) {
 	fpp.fullPathSearch = !hasFollowPath;
 	fpp.clearSight = true;
-	fpp.maxSearchDist = 12;
+	fpp.maxSearchDist = 9;
 	fpp.minTargetDist = 1;
 	fpp.maxTargetDist = 1;
 }
