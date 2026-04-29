@@ -998,7 +998,7 @@ bool PlayerWheel::handleBeamMasteryCooldown(const std::shared_ptr<Player> &playe
 }
 
 void PlayerWheel::addPromotionScrolls(NetworkMessage &msg) const {
-	uint16_t monkPoints = (hasMonkQuest() && m_player.getLevel() >= 51) ? 10 : 0;
+	uint16_t monkPoints = (hasMonkQuest() && m_player.getLevel() >= 51) ? 20 : 0;
 	uint16_t huntingPoints = (m_extraPointsFromHuntingTaskShop > 0 && m_player.getLevel() >= 51) ? m_extraPointsFromHuntingTaskShop : 0;
 	uint16_t total = static_cast<uint16_t>(m_unlockedScrolls.size()) + (monkPoints > 0 ? 1 : 0) + (huntingPoints > 0 ? 1 : 0);
 	msg.add<uint16_t>(total);
@@ -1513,7 +1513,7 @@ void PlayerWheel::sendOpenWheelWindow(NetworkMessage &msg, uint32_t ownerId) {
 		msg.add<uint16_t>(getPointsBySlotType(slot));
 	}
 	addPromotionScrolls(msg);
-	msg.addByte(hasMonkQuest() ? 10 : 0); // The Way of The Monk Quest
+	msg.addByte(hasMonkQuest() ? 20 : 0); // The Way of The Monk Quest
 	msg.add<uint16_t>(getExtraPointsFromHuntingTaskShop());
 	addGems(msg);
 	addGradeModifiers(msg);
@@ -1946,7 +1946,7 @@ uint16_t PlayerWheel::getExtraPoints() const {
 
 	// The Way of The Monk Quest
 	if (hasMonkQuest()) {
-		totalBonus += 10;
+		totalBonus += 20;
 	}
 
 	// Hunting Task Shop bonus promotion points
