@@ -998,10 +998,21 @@ bool PlayerWheel::handleBeamMasteryCooldown(const std::shared_ptr<Player> &playe
 }
 
 void PlayerWheel::addPromotionScrolls(NetworkMessage &msg) const {
-	msg.add<uint16_t>(m_unlockedScrolls.size());
+	uint16_t monkPoints = (hasMonkQuest() && m_player.getLevel() >= 51) ? 10 : 0;
+	uint16_t huntingPoints = (m_extraPointsFromHuntingTaskShop > 0 && m_player.getLevel() >= 51) ? m_extraPointsFromHuntingTaskShop : 0;
+	uint16_t total = static_cast<uint16_t>(m_unlockedScrolls.size()) + (monkPoints > 0 ? 1 : 0) + (huntingPoints > 0 ? 1 : 0);
+	msg.add<uint16_t>(total);
 	for (const auto &[itemId, name, extraPoints] : m_unlockedScrolls) {
 		msg.add<uint16_t>(itemId);
 		msg.addByte(extraPoints);
+	}
+	if (monkPoints > 0) {
+		msg.add<uint16_t>(0); // no item ID for monk quest bonus
+		msg.addByte(static_cast<uint8_t>(monkPoints));
+	}
+	if (huntingPoints > 0) {
+		msg.add<uint16_t>(0); // no item ID for hunting task shop bonus
+		msg.addByte(static_cast<uint8_t>(std::min<uint16_t>(huntingPoints, 255)));
 	}
 }
 
