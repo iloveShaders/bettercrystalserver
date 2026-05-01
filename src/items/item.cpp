@@ -3435,6 +3435,13 @@ void Item::startDecaying() {
 }
 
 void Item::stopDecaying() {
+	// Guard against accessing freed Decay singleton during Lua GC finalization.
+	// When lua_close() runs during LuaEnvironment::~LuaEnvironment(), the GC
+	// finalizes lingering Player userdatas which call ~Player() -> stopDecaying().
+	// By that point GAME_STATE_SHUTDOWN is already set and Decay may be freed.
+	if (g_game().getGameState() == GAME_STATE_SHUTDOWN) {
+		return;
+	}
 	g_game().stopDecay(static_self_cast<Item>());
 }
 
