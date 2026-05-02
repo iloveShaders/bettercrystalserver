@@ -1256,7 +1256,9 @@ void ConditionAttributes::setIncreasePercent(uint8_t index, int32_t value) {
  */
 
 ConditionRegeneration::ConditionRegeneration(ConditionId_t initId, ConditionType_t initType, int32_t iniTicks, bool initBuff, uint32_t initSubId) :
-	ConditionGeneric(initId, initType, iniTicks, initBuff, initSubId) { }
+	ConditionGeneric(initId, initType, iniTicks, initBuff, initSubId) {
+	m_isPersistent = true;
+}
 
 bool ConditionRegeneration::startCondition(std::shared_ptr<Creature> creature) {
 	if (!Condition::startCondition(creature)) {
@@ -1337,10 +1339,14 @@ bool ConditionRegeneration::executeCondition(const std::shared_ptr<Creature> &cr
 	internalManaTicks += interval;
 
 	if (foodTicks > 0) {
-		internalFoodTicks += interval;
-		if (internalFoodTicks >= foodTicks) {
+		if (static_cast<uint32_t>(interval) >= foodTicks) {
 			foodTicks = 0;
 			internalFoodTicks = 0;
+			if (const auto &player = creature->getPlayer()) {
+				player->sendStats();
+			}
+		} else {
+			foodTicks -= static_cast<uint32_t>(interval);
 		}
 	}
 
