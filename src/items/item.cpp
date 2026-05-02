@@ -17,6 +17,8 @@
 
 #include "items/item.hpp"
 
+#include "lua/scripts/lua_environment.hpp"
+
 #include "config/configmanager.hpp"
 #include "containers/rewards/rewardchest.hpp"
 #include "creatures/combat/combat.hpp"
@@ -3436,10 +3438,11 @@ void Item::startDecaying() {
 
 void Item::stopDecaying() {
 	// Guard against accessing freed Decay singleton during Lua GC finalization.
-	// When lua_close() runs during LuaEnvironment::~LuaEnvironment(), the GC
-	// finalizes lingering Player userdatas which call ~Player() -> stopDecaying().
-	// By that point GAME_STATE_SHUTDOWN is already set and Decay may be freed.
-	if (g_game().getGameState() == GAME_STATE_SHUTDOWN) {
+	// LuaEnvironment::~LuaEnvironment() sets shuttingDown = true BEFORE calling
+	// closeState() -> lua_close(). The GC then finalizes lingering Player userdatas
+	// which call ~Player() -> stopDecaying(). By that point Decay is already freed.
+	// LuaEnvironment::isShuttingDown() reads a plain static bool - no DI/singleton access.
+	if (LuaEnvironment::isShuttingDown()) {
 		return;
 	}
 	g_game().stopDecay(static_self_cast<Item>());
