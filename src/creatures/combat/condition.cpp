@@ -1361,37 +1361,37 @@ bool ConditionRegeneration::executeCondition(const std::shared_ptr<Creature> &cr
 
 	bool inProtectionZone = creature->getZoneType() == ZONE_PROTECTION;
 	if (internalHealthTicks >= getHealthTicks(creature)) {
-			internalHealthTicks = 0;
+		internalHealthTicks = 0;
 
-			int32_t realHealthGain = creature->getHealth();
-			if (inProtectionZone && dailyStreak >= DAILY_REWARD_DOUBLE_HP_REGENERATION) {
-				creature->changeHealth(healthGain * 2); // Double regen from daily reward
-			} else {
-				creature->changeHealth(healthGain);
-			}
+		int32_t realHealthGain = creature->getHealth();
+		if (inProtectionZone && dailyStreak >= DAILY_REWARD_DOUBLE_HP_REGENERATION) {
+			creature->changeHealth(healthGain * 2); // Double regen from daily reward
+		} else {
+			creature->changeHealth(healthGain);
+		}
 
-			realHealthGain = creature->getHealth() - realHealthGain;
+		realHealthGain = creature->getHealth() - realHealthGain;
 
-			if (isBuff && realHealthGain > 0) {
-				if (player) {
-					std::string healString = fmt::format("{} hitpoint{}.", realHealthGain, (realHealthGain != 1 ? "s" : ""));
+		if (isBuff && realHealthGain > 0) {
+			if (player) {
+				std::string healString = fmt::format("{} hitpoint{}.", realHealthGain, (realHealthGain != 1 ? "s" : ""));
 
-					TextMessage message(MESSAGE_HEALED, "You were healed for " + healString);
-					message.position = player->getPosition();
-					message.primary.value = realHealthGain;
-					message.primary.color = TEXTCOLOR_PASTELRED;
-					player->sendTextMessage(message);
+				TextMessage message(MESSAGE_HEALED, "You were healed for " + healString);
+				message.position = player->getPosition();
+				message.primary.value = realHealthGain;
+				message.primary.color = TEXTCOLOR_PASTELRED;
+				player->sendTextMessage(message);
 
-					auto spectators = Spectators().find<Player>(player->getPosition());
-					spectators.erase(player);
-					if (!spectators.empty()) {
-						message.type = MESSAGE_HEALED_OTHERS;
-						message.text = player->getName() + " was healed for " + healString;
-						for (const auto &spectator : spectators) {
-							spectator->getPlayer()->sendTextMessage(message);
-						}
+				auto spectators = Spectators().find<Player>(player->getPosition());
+				spectators.erase(player);
+				if (!spectators.empty()) {
+					message.type = MESSAGE_HEALED_OTHERS;
+					message.text = player->getName() + " was healed for " + healString;
+					for (const auto &spectator : spectators) {
+						spectator->getPlayer()->sendTextMessage(message);
 					}
 				}
+			}
 		}
 	}
 
@@ -1530,14 +1530,14 @@ void ConditionManaShield::addCondition(std::shared_ptr<Creature> creature, const
 	}
 }
 
-bool ConditionManaShield::unserializeProp(ConditionAttr_t attr, PropStream & propStream) {
+bool ConditionManaShield::unserializeProp(ConditionAttr_t attr, PropStream &propStream) {
 	if (attr == CONDITIONATTR_MANASHIELD) {
 		return propStream.read<uint32_t>(manaShield);
 	}
 	return Condition::unserializeProp(attr, propStream);
 }
 
-void ConditionManaShield::serialize(PropWriteStream & propWriteStream) {
+void ConditionManaShield::serialize(PropWriteStream &propWriteStream) {
 	Condition::serialize(propWriteStream);
 
 	propWriteStream.write<uint8_t>(CONDITIONATTR_MANASHIELD);
@@ -1588,7 +1588,7 @@ void ConditionSoul::addCondition(std::shared_ptr<Creature> creature, const std::
 	}
 }
 
-bool ConditionSoul::unserializeProp(ConditionAttr_t attr, PropStream & propStream) {
+bool ConditionSoul::unserializeProp(ConditionAttr_t attr, PropStream &propStream) {
 	if (attr == CONDITIONATTR_SOULGAIN) {
 		return propStream.read<uint32_t>(soulGain);
 	} else if (attr == CONDITIONATTR_SOULTICKS) {
@@ -1597,7 +1597,7 @@ bool ConditionSoul::unserializeProp(ConditionAttr_t attr, PropStream & propStrea
 	return Condition::unserializeProp(attr, propStream);
 }
 
-void ConditionSoul::serialize(PropWriteStream & propWriteStream) {
+void ConditionSoul::serialize(PropWriteStream &propWriteStream) {
 	Condition::serialize(propWriteStream);
 
 	propWriteStream.write<uint8_t>(CONDITIONATTR_SOULGAIN);
@@ -1693,7 +1693,7 @@ bool ConditionDamage::setParam(ConditionParam_t param, int32_t value) {
 	return ret;
 }
 
-bool ConditionDamage::unserializeProp(ConditionAttr_t attr, PropStream & propStream) {
+bool ConditionDamage::unserializeProp(ConditionAttr_t attr, PropStream &propStream) {
 	if (attr == CONDITIONATTR_DELAYED) {
 		uint8_t value;
 		if (!propStream.read<uint8_t>(value)) {
@@ -1721,7 +1721,7 @@ bool ConditionDamage::unserializeProp(ConditionAttr_t attr, PropStream & propStr
 	return Condition::unserializeProp(attr, propStream);
 }
 
-void ConditionDamage::serialize(PropWriteStream & propWriteStream) {
+void ConditionDamage::serialize(PropWriteStream &propWriteStream) {
 	Condition::serialize(propWriteStream);
 
 	propWriteStream.write<uint8_t>(CONDITIONATTR_DELAYED);
@@ -1871,7 +1871,7 @@ bool ConditionDamage::executeCondition(const std::shared_ptr<Creature> &creature
 	return Condition::executeCondition(creature, interval);
 }
 
-bool ConditionDamage::getNextDamage(int32_t & damage) {
+bool ConditionDamage::getNextDamage(int32_t &damage) {
 	if (periodDamage != 0) {
 		damage = periodDamage;
 		return true;
@@ -2034,7 +2034,7 @@ std::shared_ptr<Condition> ConditionDamage::clone() const {
 ConditionDamage::ConditionDamage(ConditionId_t intiId, ConditionType_t initType, bool initBuff, uint32_t initSubId) :
 	Condition(intiId, initType, 0, initBuff, initSubId) { }
 
-void ConditionDamage::generateDamageList(int32_t amount, int32_t start, std::list<int32_t> & list) {
+void ConditionDamage::generateDamageList(int32_t amount, int32_t start, std::list<int32_t> &list) {
 	amount = std::abs(amount);
 	int32_t sum = 0;
 	double x1, x2;
@@ -2400,7 +2400,7 @@ void ConditionSpeed::setFormulaVars(float NewMina, float NewMinb, float NewMaxa,
 	this->maxb = NewMaxb;
 }
 
-void ConditionSpeed::getFormulaValues(int32_t var, int32_t & min, int32_t & max) const {
+void ConditionSpeed::getFormulaValues(int32_t var, int32_t &min, int32_t &max) const {
 	int32_t difference = var - 40;
 	min = mina * difference + minb;
 	max = maxa * difference + maxb;
@@ -2422,7 +2422,7 @@ bool ConditionSpeed::setParam(ConditionParam_t param, int32_t value) {
 	return true;
 }
 
-bool ConditionSpeed::unserializeProp(ConditionAttr_t attr, PropStream & propStream) {
+bool ConditionSpeed::unserializeProp(ConditionAttr_t attr, PropStream &propStream) {
 	if (attr == CONDITIONATTR_SPEEDDELTA) {
 		return propStream.read<int32_t>(speedDelta);
 	} else if (attr == CONDITIONATTR_FORMULA_MINA) {
@@ -2437,7 +2437,7 @@ bool ConditionSpeed::unserializeProp(ConditionAttr_t attr, PropStream & propStre
 	return Condition::unserializeProp(attr, propStream);
 }
 
-void ConditionSpeed::serialize(PropWriteStream & propWriteStream) {
+void ConditionSpeed::serialize(PropWriteStream &propWriteStream) {
 	Condition::serialize(propWriteStream);
 
 	propWriteStream.write<uint8_t>(CONDITIONATTR_SPEEDDELTA);
@@ -2587,14 +2587,14 @@ void ConditionOutfit::setLazyMonsterOutfit(const std::string &monsterName) {
 	this->monsterName = monsterName;
 }
 
-bool ConditionOutfit::unserializeProp(ConditionAttr_t attr, PropStream & propStream) {
+bool ConditionOutfit::unserializeProp(ConditionAttr_t attr, PropStream &propStream) {
 	if (attr == CONDITIONATTR_OUTFIT) {
 		return propStream.read<Outfit_t>(outfit);
 	}
 	return Condition::unserializeProp(attr, propStream);
 }
 
-void ConditionOutfit::serialize(PropWriteStream & propWriteStream) {
+void ConditionOutfit::serialize(PropWriteStream &propWriteStream) {
 	Condition::serialize(propWriteStream);
 
 	propWriteStream.write<uint8_t>(CONDITIONATTR_OUTFIT);
@@ -2749,7 +2749,7 @@ bool ConditionLight::setParam(ConditionParam_t param, int32_t value) {
 	}
 }
 
-bool ConditionLight::unserializeProp(ConditionAttr_t attr, PropStream & propStream) {
+bool ConditionLight::unserializeProp(ConditionAttr_t attr, PropStream &propStream) {
 	if (attr == CONDITIONATTR_LIGHTCOLOR) {
 		uint32_t value;
 		if (!propStream.read<uint32_t>(value)) {
@@ -2774,7 +2774,7 @@ bool ConditionLight::unserializeProp(ConditionAttr_t attr, PropStream & propStre
 	return Condition::unserializeProp(attr, propStream);
 }
 
-void ConditionLight::serialize(PropWriteStream & propWriteStream) {
+void ConditionLight::serialize(PropWriteStream &propWriteStream) {
 	Condition::serialize(propWriteStream);
 
 	// TODO: color and level could be serialized as 8-bit if we can retain backwards
