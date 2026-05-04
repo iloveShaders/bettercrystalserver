@@ -1360,8 +1360,7 @@ bool ConditionRegeneration::executeCondition(const std::shared_ptr<Creature> &cr
 	}
 
 	bool inProtectionZone = creature->getZoneType() == ZONE_PROTECTION;
-	if (!inProtectionZone || dailyStreak >= DAILY_REWARD_HP_REGENERATION) {
-		if (internalHealthTicks >= getHealthTicks(creature)) {
+	if (internalHealthTicks >= getHealthTicks(creature)) {
 			internalHealthTicks = 0;
 
 			int32_t realHealthGain = creature->getHealth();
