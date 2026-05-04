@@ -928,6 +928,19 @@ void IOWeeklyTasks::markAllPlayersForRewardDistribution() {
 	} else {
 		g_logger().info("Marked all active players for weekly reward distribution");
 	}
+
+	// Also update in-memory state for any currently online players.
+	// Without this, the next periodic savePlayer() would overwrite the DB's needs_reward=1
+	// back to 0 (from the in-memory false value), silently losing their rewards.
+	for (const auto &[id, onlinePlayer] : g_game().getPlayers()) {
+		if (!onlinePlayer) {
+			continue;
+		}
+		auto &weeklyData = onlinePlayer->getWeeklyTaskData();
+		if (!weeklyData.killTasks.empty()) {
+			weeklyData.needsRewardDistribution = true;
+		}
+	}
 }
 
 uint16_t IOWeeklyTasks::getAnyCreatureKillCount(uint8_t difficulty) {

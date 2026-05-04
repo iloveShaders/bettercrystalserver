@@ -9609,6 +9609,13 @@ void Game::playerWeeklyTasksRegenerate(uint32_t playerId, uint8_t difficulty) {
 		return;
 	}
 
+	// Guard: only allow difficulty selection when the week has ended.
+	// Without this check a client packet can wipe mid-week progress at any time.
+	const auto &weeklyData = player->getWeeklyTaskData();
+	if (weeklyData.weeklyProgressFinished != 1) {
+		return;
+	}
+
 	uint32_t minLevel = IOWeeklyTasks::getMinLevelForDifficulty(difficulty);
 	if (player->getLevel() < minLevel) {
 		player->sendTextMessage(MESSAGE_STATUS, fmt::format("You need at least level {} to select this difficulty.", minLevel));
