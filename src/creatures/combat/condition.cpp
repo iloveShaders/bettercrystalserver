@@ -1361,53 +1361,53 @@ bool ConditionRegeneration::executeCondition(const std::shared_ptr<Creature> &cr
 
 	bool inProtectionZone = creature->getZoneType() == ZONE_PROTECTION;
 	if (internalHealthTicks >= getHealthTicks(creature)) {
-			internalHealthTicks = 0;
+		internalHealthTicks = 0;
 
-			int32_t realHealthGain = creature->getHealth();
-			if (inProtectionZone && dailyStreak >= DAILY_REWARD_DOUBLE_HP_REGENERATION) {
-				creature->changeHealth(healthGain * 2); // Double regen from daily reward
-			} else {
-				creature->changeHealth(healthGain);
-			}
+		int32_t realHealthGain = creature->getHealth();
+		if (inProtectionZone && dailyStreak >= DAILY_REWARD_DOUBLE_HP_REGENERATION) {
+			creature->changeHealth(healthGain * 2); // Double regen from daily reward
+		} else {
+			creature->changeHealth(healthGain);
+		}
 
-			realHealthGain = creature->getHealth() - realHealthGain;
+		realHealthGain = creature->getHealth() - realHealthGain;
 
-			if (isBuff && realHealthGain > 0) {
-				if (player) {
-					std::string healString = fmt::format("{} hitpoint{}.", realHealthGain, (realHealthGain != 1 ? "s" : ""));
+		if (isBuff && realHealthGain > 0) {
+			if (player) {
+				std::string healString = fmt::format("{} hitpoint{}.", realHealthGain, (realHealthGain != 1 ? "s" : ""));
 
-					TextMessage message(MESSAGE_HEALED, "You were healed for " + healString);
-					message.position = player->getPosition();
-					message.primary.value = realHealthGain;
-					message.primary.color = TEXTCOLOR_PASTELRED;
-					player->sendTextMessage(message);
+				TextMessage message(MESSAGE_HEALED, "You were healed for " + healString);
+				message.position = player->getPosition();
+				message.primary.value = realHealthGain;
+				message.primary.color = TEXTCOLOR_PASTELRED;
+				player->sendTextMessage(message);
 
-					auto spectators = Spectators().find<Player>(player->getPosition());
-					spectators.erase(player);
-					if (!spectators.empty()) {
-						message.type = MESSAGE_HEALED_OTHERS;
-						message.text = player->getName() + " was healed for " + healString;
-						for (const auto &spectator : spectators) {
-							spectator->getPlayer()->sendTextMessage(message);
-						}
+				auto spectators = Spectators().find<Player>(player->getPosition());
+				spectators.erase(player);
+				if (!spectators.empty()) {
+					message.type = MESSAGE_HEALED_OTHERS;
+					message.text = player->getName() + " was healed for " + healString;
+					for (const auto &spectator : spectators) {
+						spectator->getPlayer()->sendTextMessage(message);
 					}
 				}
 			}
 		}
 	}
+}
 
-	if (creature->getZoneType() != ZONE_PROTECTION || dailyStreak >= DAILY_REWARD_MP_REGENERATION) {
-		if (internalManaTicks >= getManaTicks(creature)) {
-			internalManaTicks = 0;
-			if (creature->getZoneType() == ZONE_PROTECTION && dailyStreak >= DAILY_REWARD_DOUBLE_MP_REGENERATION) {
-				creature->changeMana(manaGain * 2); // Double regen from daily reward
-			} else {
-				creature->changeMana(manaGain);
-			}
+if (creature->getZoneType() != ZONE_PROTECTION || dailyStreak >= DAILY_REWARD_MP_REGENERATION) {
+	if (internalManaTicks >= getManaTicks(creature)) {
+		internalManaTicks = 0;
+		if (creature->getZoneType() == ZONE_PROTECTION && dailyStreak >= DAILY_REWARD_DOUBLE_MP_REGENERATION) {
+			creature->changeMana(manaGain * 2); // Double regen from daily reward
+		} else {
+			creature->changeMana(manaGain);
 		}
 	}
+}
 
-	return ConditionGeneric::executeCondition(creature, interval);
+return ConditionGeneric::executeCondition(creature, interval);
 }
 
 bool ConditionRegeneration::setParam(ConditionParam_t param, int32_t value) {
