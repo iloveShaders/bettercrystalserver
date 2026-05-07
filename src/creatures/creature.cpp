@@ -694,7 +694,7 @@ bool Creature::dropCorpse(const std::shared_ptr<Creature> &lastHitCreature, cons
 			case RACE_INK:
 				splash = Item::CreateItem(ITEM_FULLSPLASH, FLUID_INK);
 				break;
-				
+
 			case RACE_CHOCOLATE:
 				splash = Item::CreateItem(ITEM_FULLSPLASH, FLUID_CHOCOLATE);
 				break;
