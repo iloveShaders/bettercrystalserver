@@ -4185,7 +4185,7 @@ void Player::death(const std::shared_ptr<Creature> &lastHitCreature) {
 			const auto &amulet = getInventoryItem(CONST_SLOT_NECKLACE);
 			const bool usingAol = amulet && amulet->getID() == ITEM_AMULETOFLOSS;
 			const bool twistProtectsAol = !hasSkull && pvpDeath && hasBlessing(1);
-			bool consumedBlessingProtection = false;			
+			bool consumedBlessingProtection = false;
 			uint8_t maxBlessing = 8;
 			if (twistProtectsAol) {
 				consumedBlessingProtection = true;
