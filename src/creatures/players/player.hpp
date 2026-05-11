@@ -1102,6 +1102,10 @@ public:
 	void resetAllWeaponProficiencyPerks(const uint16_t itemId);
 	void applyEquippedWeaponProficiency(const uint16_t itemId);
 	void removeEquippedWeaponProficiency(const uint16_t itemId);
+
+	// Account Synergy: armor penetration bonus (decimal fraction, e.g. 0.05 = 5%)
+	float getSynergyArmorPenetration() const { return synergyArmorPenetration; }
+	void setSynergyArmorPenetration(float value) { synergyArmorPenetration = std::max(0.f, value); }
 	void sendWeaponProficiencyExperience(const uint16_t itemId, const uint32_t addProficiencyExperience);
 
 	std::unordered_map<uint16_t, WeaponProficiencyData> weaponProficiencies;
@@ -1833,6 +1837,7 @@ private:
 	uint32_t manaMax = 0;
 	int32_t varSkills[SKILL_LAST + 1] = {};
 	int32_t varStats[STAT_LAST + 1] = {};
+	float synergyArmorPenetration = 0.f; // set by Account Synergies system
 	int32_t shopCallback = -1;
 	int32_t MessageBufferCount = 0;
 	int32_t bloodHitCount = 0;

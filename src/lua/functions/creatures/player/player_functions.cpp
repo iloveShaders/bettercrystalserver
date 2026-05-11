@@ -182,6 +182,7 @@ void PlayerFunctions::init(lua_State* L) {
 	Lua::registerMethod(L, "Player", "getVocation", PlayerFunctions::luaPlayerGetVocation);
 	Lua::registerMethod(L, "Player", "setVocation", PlayerFunctions::luaPlayerSetVocation);
 	Lua::registerMethod(L, "Player", "isPromoted", PlayerFunctions::luaPlayerIsPromoted);
+	Lua::registerMethod(L, "Player", "setSynergyArmorPenetration", PlayerFunctions::luaPlayerSetSynergyArmorPenetration);
 
 	Lua::registerMethod(L, "Player", "getSex", PlayerFunctions::luaPlayerGetSex);
 	Lua::registerMethod(L, "Player", "setSex", PlayerFunctions::luaPlayerSetSex);
@@ -2093,6 +2094,20 @@ int PlayerFunctions::luaPlayerGetItemById(lua_State* L) {
 	} else {
 		lua_pushnil(L);
 	}
+	return 1;
+}
+
+int PlayerFunctions::luaPlayerSetSynergyArmorPenetration(lua_State* L) {
+	// player:setSynergyArmorPenetration(value)
+	// value: decimal fraction (e.g. 0.05 = 5% armor penetration)
+	const auto &player = Lua::getUserdataShared<Player>(L, 1);
+	if (!player) {
+		Lua::pushBoolean(L, false);
+		return 1;
+	}
+	const float value = Lua::getNumber<float>(L, 2, 0.f);
+	player->setSynergyArmorPenetration(value);
+	Lua::pushBoolean(L, true);
 	return 1;
 }
 
