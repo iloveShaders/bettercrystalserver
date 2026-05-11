@@ -911,7 +911,7 @@ BlockType_t Creature::blockHit(const std::shared_ptr<Creature> &attacker, const 
 				const auto &attackerPlayer = attacker->getPlayer();
 				if (attackerPlayer) {
 					const float armorPen = attackerPlayer->getEquippedWeaponProficiency().armorPenetration
-					                     + attackerPlayer->getSynergyArmorPenetration();
+						+ attackerPlayer->getSynergyArmorPenetration();
 					if (armorPen > 0) {
 						armor = std::max<int32_t>(0, armor - static_cast<int32_t>(armor * armorPen));
 					}

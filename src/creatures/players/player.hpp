@@ -1104,8 +1104,12 @@ public:
 	void removeEquippedWeaponProficiency(const uint16_t itemId);
 
 	// Account Synergy: armor penetration bonus (decimal fraction, e.g. 0.05 = 5%)
-	float getSynergyArmorPenetration() const { return synergyArmorPenetration; }
-	void setSynergyArmorPenetration(float value) { synergyArmorPenetration = std::max(0.f, value); }
+	float getSynergyArmorPenetration() const {
+		return synergyArmorPenetration;
+	}
+	void setSynergyArmorPenetration(float value) {
+		synergyArmorPenetration = std::max(0.f, value);
+	}
 	void sendWeaponProficiencyExperience(const uint16_t itemId, const uint32_t addProficiencyExperience);
 
 	std::unordered_map<uint16_t, WeaponProficiencyData> weaponProficiencies;
