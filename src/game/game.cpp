@@ -7127,13 +7127,10 @@ bool Game::combatBlockHit(CombatDamage &damage, const std::shared_ptr<Creature> 
 			double_t primaryReflectPercent = target->getReflectPercent(damage.primary.type, true);
 			int32_t primaryReflectFlat = target->getReflectFlat(damage.primary.type, true);
 			if (primaryReflectPercent > 0 || primaryReflectFlat > 0) {
-				int32_t distanceX = Position::getDistanceX(target->getPosition(), attacker->getPosition());
-				int32_t distanceY = Position::getDistanceY(target->getPosition(), attacker->getPosition());
-				if (target->getMonster() || damage.primary.type != COMBAT_PHYSICALDAMAGE || primaryReflectPercent > 0 || std::max(distanceX, distanceY) < 2) {
+				{
 					int32_t reflectFlat = -static_cast<int32_t>(primaryReflectFlat);
 					int32_t reflectPercent = std::ceil(damage.primary.value * primaryReflectPercent / 100.);
-					int32_t reflectLimit = std::ceil(attacker->getMaxHealth() * 0.01);
-					damageReflected.primary.value = std::max(-reflectLimit, reflectFlat + reflectPercent);
+					damageReflected.primary.value = reflectFlat + reflectPercent;
 					if (targetPlayer) {
 						damageReflected.primary.type = COMBAT_NEUTRALDAMAGE;
 					} else {
@@ -7185,8 +7182,7 @@ bool Game::combatBlockHit(CombatDamage &damage, const std::shared_ptr<Creature> 
 				if (!canReflect) {
 					int32_t reflectFlat = -static_cast<int32_t>(secondaryReflectFlat);
 					int32_t reflectPercent = std::ceil(damage.secondary.value * secondaryReflectPercent / 100.);
-					int32_t reflectLimit = std::ceil(attacker->getMaxHealth() * 0.01);
-					damageReflected.primary.value = std::max(-reflectLimit, reflectFlat + reflectPercent);
+					damageReflected.primary.value = reflectFlat + reflectPercent;
 					damageReflected.primary.type = damage.secondary.type;
 					if (!damageReflected.exString.empty()) {
 						damageReflected.exString += ", ";
@@ -7199,9 +7195,8 @@ bool Game::combatBlockHit(CombatDamage &damage, const std::shared_ptr<Creature> 
 				} else {
 					int32_t reflectFlat = -static_cast<int32_t>(secondaryReflectFlat);
 					int32_t reflectPercent = std::ceil(damage.secondary.value * secondaryReflectPercent / 100.);
-					int32_t reflectLimit = std::ceil(attacker->getMaxHealth() * 0.01);
 					damageReflected.secondary.type = damage.secondary.type;
-					damageReflected.secondary.value = std::max(-static_cast<int32_t>(std::ceil(attacker->getMaxHealth() * 0.01)), -static_cast<int32_t>(secondaryReflectFlat) + static_cast<int32_t>(std::ceil(damage.secondary.value * secondaryReflectPercent / 100.)));
+					damageReflected.secondary.value = reflectFlat + reflectPercent;
 				}
 			}
 		}
