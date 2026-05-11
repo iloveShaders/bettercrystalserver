@@ -907,7 +907,7 @@ int MonsterFunctions::luaMonsterWalkTo(lua_State* L) {
 		Lua::pushBoolean(L, false);
 		return 0;
 	}
-	
+
 	const Position &position = Lua::getPosition(L, 2);
 
 	monster->walkTo(position);
