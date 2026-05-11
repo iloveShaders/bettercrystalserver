@@ -3362,6 +3362,17 @@ void ProtocolGame::parseBountyTaskAction(NetworkMessage &msg) {
 
 	uint8_t option = msg.getByte();
 
+	// Client opcodes from TibiaTrace enum:
+	// 0 = BOUNTY_TASKS (open), 1 = WEEKLY_TASKS (open), 2 = TASK_CHANGE_DIFFICULTY (u8)
+	// 3 = REROLL_TASKS, 4 = CLAIM_DAILY, 5 = TASK_SELECTED (u8)
+	// 6 = CLAIM_REWARD, 7 = BOUNTY_TALISMAN_UPGRADE (u8 pathIndex)
+	// 8 = DELIVERY_TASKS_DELIVER (u8 taskIndex)
+	// 9 = WEEKLY_TASKS_SELECT_DIFICULTY (u8)
+	// 10 = HUNTING_TASK_SHOP, 11 = HUNTING_TASK_SHOP_BUY_OFFER (u8 + u8)
+	// 12 = PREFERRED_LIST_UNLOCKED (u16), 13 = PREFERRED_LIST_PREFERRED_CLEAR (u16)
+	// 14 = PREFERRED_LIST_UNWANTED_CLEAR (u16)
+	// 15 = PREFERRED_LIST_PREFERRED_ASSIGN (u16 slot + u16 raceId)
+	// 16 = PREFERRED_LIST_UNWANTED_ASSIGN (u16 slot + u16 raceId)
 	switch (option) {
 		case 0: {
 			if (!g_configManager().getBoolean(BOUNTY_TASKS_ENABLED)) {
@@ -3779,15 +3790,18 @@ void ProtocolGame::addCreatureIcon(NetworkMessage &msg, const std::shared_ptr<Cr
 
 	auto icons = creature->getIcons();
 
+	// Add per-player task icons for monsters
 	const auto monster = creature->getMonster();
 	if (monster) {
 		const uint16_t raceId = monster->getRaceId();
 
+		// Bounty task icon
 		const auto &bountyData = player->getBountyTaskData();
 		if (bountyData.state == BOUNTY_STATE_ACTIVE && bountyData.activeTask.raceId == raceId) {
 			icons.emplace_back(CreatureIcon(CreatureIconModifications_t::BountyTask));
 		}
 
+		// Weekly task icon
 		const auto &weeklyData = player->getWeeklyTaskData();
 		for (const auto &task : weeklyData.killTasks) {
 			if (task.raceId == raceId && task.currentKills < task.totalKills) {

@@ -235,6 +235,14 @@ bool Monster::isAttackable() const {
 	return mType->info.isAttackable;
 }
 
+bool Monster::canWalk() const {
+	return mType->info.canWalk;
+}
+
+bool Monster::canTarget() const {
+	return mType->info.canTarget;
+}
+
 bool Monster::canPushItems() const {
 	return mType->info.canPushItems;
 }
@@ -992,6 +1000,9 @@ bool Monster::selectTarget(const std::shared_ptr<Creature> &creature) {
 		return false;
 	}
 
+	if (!canTarget()) {
+		return false;
+	}
 	auto player = std::dynamic_pointer_cast<Player>(creature);
 	if (player && player->checkLoginDelay(player->getID())) {
 		return false;
@@ -1536,6 +1547,8 @@ bool Monster::getNextStep(Direction &nextDirection, uint32_t &flags) {
 		doFollowCreature(flags, nextDirection, result);
 	} else if (isWalkingBack) {
 		doWalkBack(flags, nextDirection, result);
+	} else if (isWalkingTo && !randomStepping) {
+		doWalkTo(flags, nextDirection, result);
 	} else {
 		doRandomStep(nextDirection, result);
 	}
@@ -1564,10 +1577,20 @@ bool Monster::getNextStep(Direction &nextDirection, uint32_t &flags) {
 }
 
 void Monster::doRandomStep(Direction &nextDirection, bool &result) {
-	if (getTimeSinceLastMove() >= 1000) {
+	if (getTimeSinceLastMove() >= 1000 && canWalk()) {
 		randomStepping = true;
 		result = getRandomStep(getPosition(), nextDirection);
 	}
+}
+
+void Monster::walkTo(const Position &walkToPosition) {
+	randomStepping = false;
+	isWalkingTo = true;
+	std::vector<Direction> listDir;
+	if (!getPathTo(walkToPosition, listDir, 0, 0, true, true, 25)) {
+		return;
+	}
+	startAutoWalk(listDir, true);
 }
 
 void Monster::doWalkBack(uint32_t &flags, Direction &nextDirection, bool &result) {
@@ -1618,6 +1641,20 @@ void Monster::doFollowCreature(uint32_t &flags, Direction &nextDirection, bool &
 				result = getDanceStep(getPosition(), nextDirection);
 			}
 		}
+	}
+}
+
+void Monster::doWalkTo(uint32_t &flags, Direction &nextDirection, bool &result) {
+	result = Creature::getNextStep(nextDirection, flags);
+	if (result) {
+		flags |= FLAG_PATHFINDING;
+	} else {
+		if (ignoreFieldDamage) {
+			ignoreFieldDamage = false;
+		}
+
+		randomStepping = true;
+		isWalkingTo = false;
 	}
 }
 

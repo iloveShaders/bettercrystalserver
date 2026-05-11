@@ -194,6 +194,7 @@ private:
 	void parseBugReport(NetworkMessage &msg);
 	void parseOfferDescription(NetworkMessage &msg);
 	void parsePreyAction(NetworkMessage &msg);
+	
 	void parseBountyTaskAction(NetworkMessage &msg);
 	void parseSendResourceBalance();
 	void parseSendResourceBalance(NetworkMessage &msg);
