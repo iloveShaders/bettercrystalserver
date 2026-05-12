@@ -60,8 +60,7 @@ public:
 		thread_local static int16_t id = -1;
 
 		if (id == -1) {
-			lastId.fetch_add(1);
-			id = lastId.load();
+			id = lastId.fetch_add(1) + 1;
 		}
 
 		return id;
