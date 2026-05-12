@@ -583,10 +583,12 @@ void Monster::addFriend(const std::shared_ptr<Creature> &creature) {
 	}
 
 	assert(creature != getMonster());
+	std::lock_guard<std::mutex> lock(targetMutex);
 	friendList.try_emplace(creature->getID(), creature);
 }
 
 void Monster::removeFriend(const std::shared_ptr<Creature> &creature) {
+	std::lock_guard<std::mutex> lock(targetMutex);
 	std::erase_if(friendList, [id = creature->getID()](const auto &it) {
 		const auto &target = it.second.lock();
 		return !target || target->getID() == id;
@@ -601,6 +603,7 @@ bool Monster::addTarget(const std::shared_ptr<Creature> &creature, bool pushFron
 
 	assert(creature != getMonster());
 
+	std::lock_guard<std::mutex> lock(targetMutex);
 	auto it = getTargetIterator(creature);
 	if (it != targetList.end()) {
 		return false;
@@ -625,6 +628,7 @@ bool Monster::removeTarget(const std::shared_ptr<Creature> &creature) {
 		return false;
 	}
 
+	std::lock_guard<std::mutex> lock(targetMutex);
 	auto it = getTargetIterator(creature);
 	if (it == targetList.end()) {
 		return false;
@@ -650,6 +654,7 @@ void Monster::updateTargetList() {
 		return;
 	}
 
+	std::lock_guard<std::mutex> lock(targetMutex);
 	std::erase_if(friendList, [this](const auto &it) {
 		const auto &target = it.second.lock();
 		return !target || target->getHealth() <= 0 || !canSee(target->getPosition());
@@ -668,10 +673,12 @@ void Monster::updateTargetList() {
 }
 
 void Monster::clearTargetList() {
+	std::lock_guard<std::mutex> lock(targetMutex);
 	targetList.clear();
 }
 
 void Monster::clearFriendList() {
+	std::lock_guard<std::mutex> lock(targetMutex);
 	friendList.clear();
 }
 
@@ -1008,6 +1015,7 @@ bool Monster::selectTarget(const std::shared_ptr<Creature> &creature) {
 		return false;
 	}
 
+	std::lock_guard<std::mutex> lock(targetMutex);
 	auto it = getTargetIterator(creature);
 	if (it == targetList.end()) {
 		// Target not found in our target list.

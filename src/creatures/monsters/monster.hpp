@@ -16,6 +16,7 @@
 ////////////////////////////////////////////////////////////////////////
 
 #pragma once
+#include <mutex>
 #include "creatures/creature.hpp"
 #include "lua/lua_definitions.hpp"
 
@@ -125,6 +126,7 @@ public:
 
 	auto getTargetList() {
 		CreatureVector list;
+		std::lock_guard<std::mutex> lock(targetMutex);
 		list.reserve(targetList.size());
 
 		std::erase_if(targetList, [&list](const std::weak_ptr<Creature> &ref) {
@@ -141,6 +143,7 @@ public:
 
 	auto getFriendList() {
 		CreatureVector list;
+		std::lock_guard<std::mutex> lock(targetMutex);
 		list.reserve(friendList.size());
 
 		std::erase_if(friendList, [&list](const auto &it) {
@@ -256,6 +259,7 @@ private:
 		});
 	}
 
+	mutable std::mutex targetMutex;
 	std::unordered_map<uint32_t, std::weak_ptr<Creature>> friendList;
 	std::deque<std::weak_ptr<Creature>> targetList;
 
