@@ -1001,7 +1001,7 @@ bool IOLoginDataSave::savePlayerBosstiary(const std::shared_ptr<Player> &player)
 	query << player->getGUID() << ','
 		  << player->getSlotBossId(1) << ','
 		  << player->getSlotBossId(2) << ','
-		  << std::to_string(player->getRemoveTimes()) << ','
+		  << std::to_string(1) << ','
 		  << Database::getInstance().escapeBlob(chars, static_cast<uint32_t>(size));
 
 	if (!insertQuery.addRow(query)) {
