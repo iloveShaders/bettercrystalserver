@@ -3812,9 +3812,9 @@ void ProtocolGame::addCreatureIcon(NetworkMessage &msg, const std::shared_ptr<Cr
 	}
 
 	// client only supports 3 icons, otherwise it will crash
-	const auto count = icons.size() > 3 ? 3 : icons.size();
-	msg.addByte(count);
-	for (uint8_t i = 0; i < count; ++i) {
+	const size_t count = std::min<size_t>(icons.size(), 3);
+	msg.addByte(static_cast<uint8_t>(count));
+	for (size_t i = 0; i < count; ++i) {
 		const auto icon = icons[i];
 		msg.addByte(icon.serialize());
 		msg.addByte(static_cast<uint8_t>(icon.category));
@@ -4734,10 +4734,10 @@ void ProtocolGame::sendCyclopediaCharacterOffenceStats() {
 			}
 
 			const auto distanceAccuracy = player->getDamageAccuracy(it);
-			const auto distanceAccuracySize = distanceAccuracy.size();
-			msg.addByte(distanceAccuracy.size());
-			for (uint8_t i = 0; i < distanceAccuracySize; ++i) {
-				msg.addByte(i + 1);
+			const size_t distanceAccuracySize = std::min<size_t>(distanceAccuracy.size(), std::numeric_limits<uint8_t>::max());
+			msg.addByte(static_cast<uint8_t>(distanceAccuracySize));
+			for (size_t i = 0; i < distanceAccuracySize; ++i) {
+				msg.addByte(static_cast<uint8_t>(i + 1));
 				msg.addDouble(distanceAccuracy[i] / 100.);
 			}
 		} else {
