@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <atomic>
 #include "task.hpp"
 #include "lib/thread/thread_pool.hpp"
 
@@ -241,7 +242,7 @@ private:
 	phmap::btree_multiset<std::shared_ptr<Task>, Task::Compare> scheduledTasks {};
 	phmap::parallel_flat_hash_map_m<uint64_t, std::shared_ptr<Task>> scheduledTasksRef {};
 
-	bool asyncWaitDisabled = false;
+	std::atomic<bool> asyncWaitDisabled = false;
 
 	friend class CrystalServer;
 };
