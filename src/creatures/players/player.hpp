@@ -1370,7 +1370,6 @@ public:
 	void removeRerollTasks(uint32_t amount);
 	uint32_t getRerollTasks() const;
 
-	void setBountyTalismanEquipped(bool equipped);
 	bool isBountyTalismanEquipped() const;
 
 	void sendTaskBoardResourceBalance() const;
@@ -1734,7 +1733,6 @@ private:
 
 	BountyTaskData bountyTaskData;
 	WeeklyTaskData weeklyTaskData;
-	bool bountyTalismanEquipped = false;
 	bool weeklyTaskExpansion = false;
 
 	GuildWarVector guildWarVector;
