@@ -68,6 +68,13 @@ class PlayerFunctions {
 	static int luaPlayerRemoveTaskHuntingPoints(lua_State* L);
 	static int luaPlayerGetTaskHuntingPoints(lua_State* L);
 	static int luaPlayerAddTaskHuntingPoints(lua_State* L);
+
+	static int luaPlayerGetBountyPoints(lua_State* L);
+	static int luaPlayerAddBountyPoints(lua_State* L);
+	static int luaPlayerRemoveBountyPoints(lua_State* L);
+	static int luaPlayerGetRerollTasks(lua_State* L);
+	static int luaPlayerAddRerollTasks(lua_State* L);
+	static int luaPlayerRemoveRerollTasks(lua_State* L);
 	static int luaPlayerGetSoulsealsPoints(lua_State* L);
 	static int luaPlayerAddSoulsealsPoints(lua_State* L);
 	static int luaPlayerRemoveSoulsealsPoints(lua_State* L);

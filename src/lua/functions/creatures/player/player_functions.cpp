@@ -94,6 +94,13 @@ void PlayerFunctions::init(lua_State* L) {
 	Lua::registerMethod(L, "Player", "removeTaskHuntingPoints", PlayerFunctions::luaPlayerRemoveTaskHuntingPoints);
 	Lua::registerMethod(L, "Player", "getTaskHuntingPoints", PlayerFunctions::luaPlayerGetTaskHuntingPoints);
 	Lua::registerMethod(L, "Player", "addTaskHuntingPoints", PlayerFunctions::luaPlayerAddTaskHuntingPoints);
+
+	Lua::registerMethod(L, "Player", "getBountyPoints", PlayerFunctions::luaPlayerGetBountyPoints);
+	Lua::registerMethod(L, "Player", "addBountyPoints", PlayerFunctions::luaPlayerAddBountyPoints);
+	Lua::registerMethod(L, "Player", "removeBountyPoints", PlayerFunctions::luaPlayerRemoveBountyPoints);
+	Lua::registerMethod(L, "Player", "getRerollTasks", PlayerFunctions::luaPlayerGetRerollTasks);
+	Lua::registerMethod(L, "Player", "addRerollTasks", PlayerFunctions::luaPlayerAddRerollTasks);
+	Lua::registerMethod(L, "Player", "removeRerollTasks", PlayerFunctions::luaPlayerRemoveRerollTasks);
 	Lua::registerMethod(L, "Player", "getSoulsealsPoints", PlayerFunctions::luaPlayerGetSoulsealsPoints);
 	Lua::registerMethod(L, "Player", "addSoulsealsPoints", PlayerFunctions::luaPlayerAddSoulsealsPoints);
 	Lua::registerMethod(L, "Player", "removeSoulsealsPoints", PlayerFunctions::luaPlayerRemoveSoulsealsPoints);
@@ -1063,6 +1070,79 @@ int PlayerFunctions::luaPlayerAddTaskHuntingPoints(lua_State* L) {
 		const auto points = Lua::getNumber<uint64_t>(L, 2);
 		player->addTaskHuntingPoints(Lua::getNumber<uint64_t>(L, 2));
 		lua_pushnumber(L, static_cast<lua_Number>(points));
+	} else {
+		lua_pushnil(L);
+	}
+	return 1;
+}
+
+int PlayerFunctions::luaPlayerGetBountyPoints(lua_State* L) {
+	// player:getBountyPoints()
+	const auto &player = Lua::getUserdataShared<Player>(L, 1);
+	if (player == nullptr) {
+		Lua::reportErrorFunc(Lua::getErrorDesc(LUA_ERROR_PLAYER_NOT_FOUND));
+		lua_pushnil(L);
+		return 1;
+	}
+
+	lua_pushnumber(L, static_cast<lua_Number>(player->getBountyPoints()));
+	return 1;
+}
+
+int PlayerFunctions::luaPlayerAddBountyPoints(lua_State* L) {
+	// player:addBountyPoints(amount)
+	if (const auto &player = Lua::getUserdataShared<Player>(L, 1)) {
+		const auto points = Lua::getNumber<uint32_t>(L, 2);
+		player->addBountyPoints(points);
+		lua_pushnumber(L, static_cast<lua_Number>(points));
+	} else {
+		lua_pushnil(L);
+	}
+	return 1;
+}
+
+int PlayerFunctions::luaPlayerRemoveBountyPoints(lua_State* L) {
+	// player:removeBountyPoints(amount)
+	if (const auto &player = Lua::getUserdataShared<Player>(L, 1)) {
+		const auto points = Lua::getNumber<uint32_t>(L, 2);
+		player->removeBountyPoints(points);
+		Lua::pushBoolean(L, true);
+	} else {
+		lua_pushnil(L);
+	}
+	return 1;
+}
+
+int PlayerFunctions::luaPlayerGetRerollTasks(lua_State* L) {
+	// player:getRerollTasks()
+	const auto &player = Lua::getUserdataShared<Player>(L, 1);
+	if (player == nullptr) {
+		Lua::reportErrorFunc(Lua::getErrorDesc(LUA_ERROR_PLAYER_NOT_FOUND));
+		lua_pushnil(L);
+		return 1;
+	}
+
+	lua_pushnumber(L, static_cast<lua_Number>(player->getRerollTasks()));
+	return 1;
+}
+
+int PlayerFunctions::luaPlayerAddRerollTasks(lua_State* L) {
+	// player:addRerollTasks(amount)
+	if (const auto &player = Lua::getUserdataShared<Player>(L, 1)) {
+		const auto tokens = Lua::getNumber<uint32_t>(L, 2);
+		player->addRerollTasks(tokens);
+		lua_pushnumber(L, static_cast<lua_Number>(tokens));
+	} else {
+		lua_pushnil(L);
+	}
+	return 1;
+}
+
+int PlayerFunctions::luaPlayerRemoveRerollTasks(lua_State* L) {
+	// player:removeRerollTasks(amount)
+	if (const auto &player = Lua::getUserdataShared<Player>(L, 1)) {
+		player->removeRerollTasks(Lua::getNumber<uint32_t>(L, 2));
+		Lua::pushBoolean(L, true);
 	} else {
 		lua_pushnil(L);
 	}
