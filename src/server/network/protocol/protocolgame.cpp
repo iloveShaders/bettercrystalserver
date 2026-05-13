@@ -1908,8 +1908,8 @@ void ProtocolGame::parseSetOutfit(NetworkMessage &msg) {
 		newOutfit.lookBody = std::min<uint8_t>(132, msg.getByte());
 		newOutfit.lookLegs = std::min<uint8_t>(132, msg.getByte());
 		newOutfit.lookFeet = std::min<uint8_t>(132, msg.getByte());
-		newOutfit.lookAddons = msg.getByte();
 		if (outfitType == 0) {
+			newOutfit.lookAddons = msg.getByte();
 			newOutfit.lookMount = msg.get<uint16_t>();
 			if (!oldProtocol) {
 				newOutfit.lookMountHead = std::min<uint8_t>(132, msg.getByte());
@@ -1945,10 +1945,9 @@ void ProtocolGame::parseSetOutfit(NetworkMessage &msg) {
 				g_game().playerChangeOutfit(player->getID(), newOutfit, false, 0);
 			}
 		} else if (outfitType == 1) {
-			// This value probably has something to do with try outfit variable inside outfit window dialog
-			// if try outfit is set to 2 it expects uint32_t value after mounted and disable mounts from outfit window dialog
+			// outfitType 1 = try outfit (preview click in outfit window)
+			// Official 15.23 client sends: lookType(2) + head+body+legs+feet(4) only - no addons, no mount bytes
 			newOutfit.lookMount = 0;
-			msg.get<uint32_t>();
 		} else if (outfitType == 2) {
 			Position pos = msg.getPosition();
 			auto itemId = msg.get<uint16_t>();
