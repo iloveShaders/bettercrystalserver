@@ -1189,28 +1189,6 @@ int PlayerFunctions::luaPlayerRemoveSoulsealsPoints(lua_State* L) {
 	return 1;
 }
 
-int PlayerFunctions::luaPlayerSetBountyTalismanEquipped(lua_State* L) {
-	// player:setBountyTalismanEquipped(equipped)
-	if (const auto &player = Lua::getUserdataShared<Player>(L, 1)) {
-		player->setBountyTalismanEquipped(Lua::getBoolean(L, 2));
-		Lua::pushBoolean(L, true);
-	} else {
-		lua_pushnil(L);
-	}
-	return 1;
-}
-
-int PlayerFunctions::luaPlayerGetBountyTalismanLootBonus(lua_State* L) {
-	// player:getBountyTalismanLootBonus(raceId)
-	if (const auto &player = Lua::getUserdataShared<Player>(L, 1)) {
-		const uint16_t raceId = Lua::getNumber<uint16_t>(L, 2, 0);
-		lua_pushnumber(L, g_iobountytasks().getBountyTalismanBonus(player, raceId, BOUNTY_TALISMAN_LOOT));
-	} else {
-		lua_pushnil(L);
-	}
-	return 1;
-}
-
 int PlayerFunctions::luaPlayerGetPreyLootPercentage(lua_State* L) {
 	// player:getPreyLootPercentage(raceid)
 	if (const auto &player = Lua::getUserdataShared<Player>(L, 1)) {
