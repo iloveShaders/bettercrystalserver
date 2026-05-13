@@ -226,16 +226,26 @@ void IOWeeklyTasks::onCreatureKill(const std::shared_ptr<Player> &player, uint16
 	bool updated = false;
 
 	// Update "any creature" counter
-	if (weeklyData.anyCreatureCurrentKills < weeklyData.anyCreatureTotalKills) {
-		weeklyData.anyCreatureCurrentKills++;
-		updated = true;
+	const auto mtype = g_monsters().getMonsterTypeByRaceId(raceId);
+	const auto &bestiaryList = g_game().getBestiaryList();
 
-		// Check if "any creature" task just completed
-		if (weeklyData.anyCreatureCurrentKills >= weeklyData.anyCreatureTotalKills) {
-			weeklyData.completedKillTasks++;
-			player->addExperience(nullptr, weeklyData.killTaskRewardExp, false);
-			player->sendTextMessage(MESSAGE_STATUS, "You have completed the weekly 'any creature' kill task!");
-			recalculateWeeklyRewardValues(player);
+	bool validBestiaryCreature = mtype
+		&& mtype->info.experience > 0
+		&& mtype->info.isPreyable
+		&& !mtype->info.isPreyExclusive
+		&& bestiaryList.find(raceId) != bestiaryList.end();
+
+	if (validBestiaryCreature) {
+		if (weeklyData.anyCreatureCurrentKills < weeklyData.anyCreatureTotalKills) {
+			weeklyData.anyCreatureCurrentKills += kills;
+			updated = true;
+
+			if (weeklyData.anyCreatureCurrentKills >= weeklyData.anyCreatureTotalKills) {
+				weeklyData.completedKillTasks++;
+				player->addExperience(nullptr, weeklyData.killTaskRewardExp, false);
+				player->sendTextMessage(MESSAGE_STATUS, "You have completed the weekly 'any creature' kill task!");
+				recalculateWeeklyRewardValues(player);
+			}
 		}
 	}
 
