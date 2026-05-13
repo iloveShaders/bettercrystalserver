@@ -7126,7 +7126,7 @@ bool Game::combatBlockHit(CombatDamage &damage, const std::shared_ptr<Creature> 
 			}
 			double_t primaryReflectPercent = target->getReflectPercent(damage.primary.type, true);
 			int32_t primaryReflectFlat = target->getReflectFlat(damage.primary.type, true);
-			if (primaryReflectPercent > 0 || primaryReflectFlat > 0) {
+			if ((primaryReflectPercent > 0 || primaryReflectFlat > 0) && damage.primary.value < 0) {
 				{
 					int32_t reflectFlat = -static_cast<int32_t>(primaryReflectFlat);
 					int32_t reflectPercent = std::ceil(damage.primary.value * primaryReflectPercent / 100.);
@@ -7143,6 +7143,7 @@ bool Game::combatBlockHit(CombatDamage &damage, const std::shared_ptr<Creature> 
 					damageReflected.exString += " (damage reflection)";
 					damageReflectedParams.combatType = damage.primary.type;
 					damageReflectedParams.aggressive = true;
+					damageReflectedParams.origin = ORIGIN_CONDITION;
 					canReflect = true;
 				}
 			}
@@ -7178,7 +7179,7 @@ bool Game::combatBlockHit(CombatDamage &damage, const std::shared_ptr<Creature> 
 		if (!damage.extension && attacker) {
 			int32_t secondaryReflectPercent = target->getReflectPercent(damage.secondary.type, true);
 			int32_t secondaryReflectFlat = target->getReflectFlat(damage.secondary.type, true);
-			if (secondaryReflectPercent > 0 || secondaryReflectFlat > 0) {
+			if ((secondaryReflectPercent > 0 || secondaryReflectFlat > 0) && damage.secondary.value < 0) {
 				if (!canReflect) {
 					int32_t reflectFlat = -static_cast<int32_t>(secondaryReflectFlat);
 					int32_t reflectPercent = std::ceil(damage.secondary.value * secondaryReflectPercent / 100.);
@@ -7191,6 +7192,7 @@ bool Game::combatBlockHit(CombatDamage &damage, const std::shared_ptr<Creature> 
 					damageReflected.exString += " (damage reflection)";
 					damageReflectedParams.combatType = damage.secondary.type;
 					damageReflectedParams.aggressive = true;
+					damageReflectedParams.origin = ORIGIN_CONDITION;
 					canReflect = true;
 				} else {
 					int32_t reflectFlat = -static_cast<int32_t>(secondaryReflectFlat);
