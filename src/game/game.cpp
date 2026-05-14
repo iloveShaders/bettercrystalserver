@@ -7141,6 +7141,7 @@ bool Game::combatBlockHit(CombatDamage &damage, const std::shared_ptr<Creature> 
 					}
 					damageReflected.extension = true;
 					damageReflected.exString += " (damage reflection)";
+					damageReflected.origin = ORIGIN_CONDITION;
 					damageReflectedParams.combatType = damage.primary.type;
 					damageReflectedParams.aggressive = true;
 					damageReflectedParams.origin = ORIGIN_CONDITION;
@@ -7190,6 +7191,7 @@ bool Game::combatBlockHit(CombatDamage &damage, const std::shared_ptr<Creature> 
 					}
 					damageReflected.extension = true;
 					damageReflected.exString += " (damage reflection)";
+					damageReflected.origin = ORIGIN_CONDITION;
 					damageReflectedParams.combatType = damage.secondary.type;
 					damageReflectedParams.aggressive = true;
 					damageReflectedParams.origin = ORIGIN_CONDITION;
