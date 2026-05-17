@@ -1949,6 +1949,7 @@ void ProtocolGame::parseSetOutfit(NetworkMessage &msg) {
 			// Official 15.23 client sends: lookType(2) + head+body+legs+feet(4) only - no addons, no mount bytes
 			newOutfit.lookMount = 0;
 		} else if (outfitType == 2) {
+			newOutfit.lookAddons = msg.getByte();
 			Position pos = msg.getPosition();
 			auto itemId = msg.get<uint16_t>();
 			uint8_t stackpos = msg.getByte();
