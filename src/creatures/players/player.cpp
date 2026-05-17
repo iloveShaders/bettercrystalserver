@@ -10189,15 +10189,10 @@ bool Player::saySpell(SpeakClasses type, const std::string &text, bool isGhostMo
 	}
 
 	// Send to client
-	bool emoteSpellsEnabled = g_configManager().getBoolean(EMOTE_SPELLS);
 	for (const auto &spectator : spectators) {
 		if (const auto &tmpPlayer = spectator->getPlayer()) {
 			if (!isGhostMode || tmpPlayer->canSeeCreature(static_self_cast<Player>())) {
-				if (emoteSpellsEnabled) {
-					tmpPlayer->sendCreatureSay(static_self_cast<Player>(), TALKTYPE_MONSTER_SAY, text, pos);
-				} else {
-					tmpPlayer->sendCreatureSay(static_self_cast<Player>(), TALKTYPE_SAY, text, pos);
-				}
+				tmpPlayer->sendCreatureSay(static_self_cast<Player>(), TALKTYPE_SPELL_USE, text, pos);
 			}
 		}
 	}
@@ -10761,6 +10756,13 @@ void Player::forgeResourceConversion(ForgeAction_t actionType) {
 		if (cost > dusts) {
 			g_logger().error("[{}] Not enough dust", __FUNCTION__);
 			sendForgeError(RETURNVALUE_CONTACTADMINISTRATOR);
+			{
+				const int32_t cur = getStorageValue(30160);
+				addStorageValue(30160, (cur < 0 ? 0 : cur) + 1, true);
+				if (getStorageValue(30161) < 0) {
+					addStorageValue(30161, static_cast<int32_t>(OTSYS_TIME() / 1000), true);
+				}
+			}
 			return;
 		}
 
@@ -10782,6 +10784,13 @@ void Player::forgeResourceConversion(ForgeAction_t actionType) {
 		if (cost > sliverCount) {
 			g_logger().error("[{}] Not enough sliver", __FUNCTION__);
 			sendForgeError(RETURNVALUE_CONTACTADMINISTRATOR);
+			{
+				const int32_t cur = getStorageValue(30160);
+				addStorageValue(30160, (cur < 0 ? 0 : cur) + 1, true);
+				if (getStorageValue(30161) < 0) {
+					addStorageValue(30161, static_cast<int32_t>(OTSYS_TIME() / 1000), true);
+				}
+			}
 			return;
 		}
 
@@ -10817,6 +10826,13 @@ void Player::forgeResourceConversion(ForgeAction_t actionType) {
 		    upgradeCost > dusts) {
 			g_logger().error("[{}] Not enough dust", __FUNCTION__);
 			sendForgeError(RETURNVALUE_CONTACTADMINISTRATOR);
+			{
+				const int32_t cur = getStorageValue(30160);
+				addStorageValue(30160, (cur < 0 ? 0 : cur) + 1, true);
+				if (getStorageValue(30161) < 0) {
+					addStorageValue(30161, static_cast<int32_t>(OTSYS_TIME() / 1000), true);
+				}
+			}
 			return;
 		}
 
