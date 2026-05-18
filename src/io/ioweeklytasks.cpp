@@ -865,12 +865,20 @@ void IOWeeklyTasks::checkWeeklyResetOnStartup() {
 		lastProcessedReset = 0;
 	}
 
-	if (static_cast<uint32_t>(lastProcessedReset) >= currentResetTimestamp) {
+	// Guard: skip if the last recorded reset is within the current week window.
+	// We compare against (now - WEEK_SECONDS) rather than currentResetTimestamp so
+	// that changing globalServerSaveTime in config does not shift the computed
+	// boundary and cause a spurious re-fire against a stale DB value.
+	// Any lastProcessedReset newer than one week ago means this week already ran.
+	const uint32_t oneWeekAgo = now - WEEK_SECONDS;
+	if (static_cast<uint32_t>(lastProcessedReset) > oneWeekAgo) {
 		return;
 	}
 
 	markAllPlayersForRewardDistribution();
-	DatabaseManager::registerDatabaseConfig(WEEKLY_TASKS_LAST_RESET_CONFIG, static_cast<int32_t>(currentResetTimestamp));
+	// Store the actual current time so the recorded value is always a real
+	// wall-clock timestamp and never depends on the configured save time.
+	DatabaseManager::registerDatabaseConfig(WEEKLY_TASKS_LAST_RESET_CONFIG, static_cast<int32_t>(now));
 	g_logger().info(
 		"Processed weekly reset boundary {} and marked active players",
 		currentResetTimestamp
