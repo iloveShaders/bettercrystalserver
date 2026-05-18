@@ -1953,6 +1953,7 @@ void ProtocolGame::parseSetOutfit(NetworkMessage &msg) {
 			Position pos = msg.getPosition();
 			auto itemId = msg.get<uint16_t>();
 			uint8_t stackpos = msg.getByte();
+			msg.get<uint16_t>(); // lookFamiliarsType - not used for podium
 			newOutfit.lookMount = msg.get<uint16_t>();
 			newOutfit.lookMountHead = std::min<uint8_t>(132, msg.getByte());
 			newOutfit.lookMountBody = std::min<uint8_t>(132, msg.getByte());
