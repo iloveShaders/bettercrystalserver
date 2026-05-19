@@ -3477,6 +3477,17 @@ std::shared_ptr<Item> Item::transform(uint16_t itemId, uint16_t itemCount /*= -1
 	}
 
 	cylinder->replaceThing(itemIndex, newItem);
+
+	// Notify zones: old item left, new item arrived.
+	// replaceThing bypasses onRemoveTileItem/internalAddThing so zones never
+	// hear about the swap — leaving a stale expired weak_ptr in itemsCache.
+	if (fromTile) {
+		for (const auto &zone : fromTile->getZones()) {
+			zone->itemRemoved(static_self_cast<Item>());
+			zone->itemAdded(newItem);
+		}
+	}
+
 	cylinder->postAddNotification(newItem, cylinder, itemIndex);
 
 	resetParent();
