@@ -872,8 +872,11 @@ void Npc::setPlayerInteraction(uint32_t playerId, uint16_t topicId /*= 0*/) {
 		turnToCreature(creature);
 
 		// Send dialog options when player starts a new conversation with the NPC
+		// Skip for hireling NPCs - their action bar is rendered client-side via speechbubble 7
 		if (const auto &player = creature->getPlayer()) {
-			sendDialogOptions(player);
+			if (npcType->info.speechBubble != SPEECHBUBBLE_HIRELING) {
+				sendDialogOptions(player);
+			}
 		}
 	}
 

@@ -9774,7 +9774,10 @@ void Game::playerNpcGreet(uint32_t playerId, uint32_t npcId) {
 	spectators.insert(npc);
 	internalCreatureSay(player, TALKTYPE_SAY, "hi", false, &spectators);
 
-	npc->sendDialogOptions(player);
+	// Hireling NPCs render their action bar client-side via speechbubble 7
+	if (npc->getSpeechBubble() != SPEECHBUBBLE_HIRELING) {
+		npc->sendDialogOptions(player);
+	}
 
 	player->setNextExAction(OTSYS_TIME() + g_configManager().getNumber(UI_ACTIONS_DELAY_INTERVAL) - 10);
 }
