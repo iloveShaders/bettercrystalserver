@@ -16,7 +16,7 @@
 ////////////////////////////////////////////////////////////////////////
 
 #include "items/item.hpp"
-
+#include "game/zones/zone.hpp"
 #include "lua/scripts/lua_environment.hpp"
 
 #include "config/configmanager.hpp"
