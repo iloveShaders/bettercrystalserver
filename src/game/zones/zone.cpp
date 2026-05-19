@@ -129,7 +129,16 @@ std::vector<std::shared_ptr<Npc>> Zone::getNpcs() {
 
 std::vector<std::shared_ptr<Item>> Zone::getItems() {
 	std::lock_guard<std::mutex> lock(cacheMutex);
-	return weak::lock(itemsCache);
+	std::vector<std::shared_ptr<Item>> result;
+	for (auto it = itemsCache.begin(); it != itemsCache.end();) {
+		if (it->second.expired()) {
+			it = itemsCache.erase(it);
+		} else {
+			result.push_back(it->second.lock());
+			++it;
+		}
+	}
+	return result;
 }
 
 void Zone::removePlayers() {
@@ -243,7 +252,7 @@ void Zone::itemAdded(const std::shared_ptr<Item> &item) {
 		return;
 	}
 	std::lock_guard<std::mutex> lock(cacheMutex);
-	itemsCache.insert(item);
+	itemsCache[item.get()] = item;
 }
 
 void Zone::itemRemoved(const std::shared_ptr<Item> &item) {
@@ -251,7 +260,7 @@ void Zone::itemRemoved(const std::shared_ptr<Item> &item) {
 		return;
 	}
 	std::lock_guard<std::mutex> lock(cacheMutex);
-	itemsCache.erase(item);
+	itemsCache.erase(item.get());
 }
 
 void Zone::refresh() {

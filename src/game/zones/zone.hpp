@@ -229,7 +229,7 @@ protected:
 	uint32_t id = 0; // ID 0 is used in zones created dynamically from lua. The map editor uses IDs starting from 1 (automatically generated).
 
 	mutable std::mutex cacheMutex;
-	weak::set<Item> itemsCache;
+	std::unordered_map<const Item*, std::weak_ptr<Item>> itemsCache;
 	weak::set<Creature> creaturesCache;
 	weak::set<Monster> monstersCache;
 	weak::set<Npc> npcsCache;
