@@ -4614,7 +4614,10 @@ void Game::playerSetShowOffSocket(uint32_t playerId, Outfit_t &outfit, const Pos
 		item->removeCustomAttribute("PastLookMount");
 	}
 
-	item->setCustomAttribute("PodiumVisible", static_cast<int64_t>(podiumVisible));
+	if (podiumVisible != 0xFF) {
+		item->setCustomAttribute("PodiumVisible", static_cast<int64_t>(podiumVisible));
+	}
+	// else: preserve existing PodiumVisible — 15.23 client doesn't send this byte in setOutfit response
 	item->setCustomAttribute("LookDirection", static_cast<int64_t>(direction));
 	item->removeAttribute(ItemAttribute_t::NAME);
 

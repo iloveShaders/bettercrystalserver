@@ -1960,8 +1960,9 @@ void ProtocolGame::parseSetOutfit(NetworkMessage &msg) {
 			newOutfit.lookMountLegs = std::min<uint8_t>(132, msg.getByte());
 			newOutfit.lookMountFeet = std::min<uint8_t>(132, msg.getByte());
 			uint8_t direction = std::max<uint8_t>(DIRECTION_NORTH, std::min<uint8_t>(DIRECTION_WEST, msg.getByte()));
-			uint8_t podiumVisible = msg.getByte();
-			g_game().playerSetShowOffSocket(player->getID(), newOutfit, pos, stackpos, itemId, podiumVisible, direction);
+			// 15.23 client does not send podiumVisible in the setOutfit response packet.
+			// Pass 0xFF as sentinel so playerSetShowOffSocket preserves the existing attribute.
+			g_game().playerSetShowOffSocket(player->getID(), newOutfit, pos, stackpos, itemId, 0xFF, direction);
 		}
 	}
 }
