@@ -4616,8 +4616,10 @@ void Game::playerSetShowOffSocket(uint32_t playerId, Outfit_t &outfit, const Pos
 
 	if (podiumVisible != 0xFF) {
 		item->setCustomAttribute("PodiumVisible", static_cast<int64_t>(podiumVisible));
+	} else {
+		// 15.23 client no longer sends podiumVisible byte — always set visible when player saves outfit/mount
+		item->setCustomAttribute("PodiumVisible", static_cast<int64_t>(1));
 	}
-	// else: preserve existing PodiumVisible — 15.23 client doesn't send this byte in setOutfit response
 	item->setCustomAttribute("LookDirection", static_cast<int64_t>(direction));
 	item->removeAttribute(ItemAttribute_t::NAME);
 
