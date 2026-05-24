@@ -1960,8 +1960,7 @@ void ProtocolGame::parseSetOutfit(NetworkMessage &msg) {
 					snprintf(tmp, sizeof(tmp), "%02X ", buf[i]);
 					debugHex += tmp;
 				}
-				g_logger().info("[parseSetOutfit outfitType==2] pos={} len={} remaining={} bytes=[{}]",
-					debugPos, msg.getLength(), debugRemaining, debugHex);
+				g_logger().info("[parseSetOutfit outfitType==2] pos={} len={} remaining={} bytes=[{}]", debugPos, msg.getLength(), debugRemaining, debugHex);
 			}
 			newOutfit.lookAddons = msg.getByte();
 			Position pos = msg.getPosition();
