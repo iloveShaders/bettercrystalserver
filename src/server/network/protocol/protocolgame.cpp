@@ -1949,6 +1949,20 @@ void ProtocolGame::parseSetOutfit(NetworkMessage &msg) {
 			// Official 15.23 client sends: lookType(2) + head+body+legs+feet(4) only - no addons, no mount bytes
 			newOutfit.lookMount = 0;
 		} else if (outfitType == 2) {
+			// DEBUG: dump entire remaining packet bytes to log so we can verify 15.23 byte layout
+			{
+				uint16_t debugPos = msg.getBufferPosition();
+				int debugRemaining = msg.getLength() - (debugPos - 7);
+				const uint8_t* buf = msg.getBuffer() + debugPos;
+				std::string debugHex;
+				char tmp[8];
+				for (int i = 0; i < debugRemaining; ++i) {
+					snprintf(tmp, sizeof(tmp), "%02X ", buf[i]);
+					debugHex += tmp;
+				}
+				g_logger().info("[parseSetOutfit outfitType==2] pos={} len={} remaining={} bytes=[{}]",
+					debugPos, msg.getLength(), debugRemaining, debugHex);
+			}
 			newOutfit.lookAddons = msg.getByte();
 			Position pos = msg.getPosition();
 			auto itemId = msg.get<uint16_t>();
