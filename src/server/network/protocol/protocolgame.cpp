@@ -1953,33 +1953,20 @@ void ProtocolGame::parseSetOutfit(NetworkMessage &msg) {
 			// Official 15.23 client sends: lookType(2) + head+body+legs+feet(4) only - no addons, no mount bytes
 			newOutfit.lookMount = 0;
 		} else if (outfitType == 2) {
-			// DEBUG: dump entire remaining packet bytes to log so we can verify 15.23 byte layout
-			{
-				uint16_t debugPos = msg.getBufferPosition();
-				int debugRemaining = msg.getLength() - (debugPos - 7);
-				const uint8_t* buf = msg.getBuffer() + debugPos;
-				std::string debugHex;
-				char tmp[8];
-				for (int i = 0; i < debugRemaining; ++i) {
-					snprintf(tmp, sizeof(tmp), "%02X ", buf[i]);
-					debugHex += tmp;
-				}
-				g_logger().info("[parseSetOutfit outfitType==2] pos={} len={} remaining={} bytes=[{}]", debugPos, msg.getLength(), debugRemaining, debugHex);
-			}
 			newOutfit.lookAddons = msg.getByte();
 			Position pos = msg.getPosition();
 			auto itemId = msg.get<uint16_t>();
 			uint8_t stackpos = msg.getByte();
-			msg.get<uint16_t>(); // lookFamiliarsType - not used for podium
+			// 15.23: no lookFamiliarsType in podium response
 			newOutfit.lookMount = msg.get<uint16_t>();
 			newOutfit.lookMountHead = std::min<uint8_t>(132, msg.getByte());
 			newOutfit.lookMountBody = std::min<uint8_t>(132, msg.getByte());
 			newOutfit.lookMountLegs = std::min<uint8_t>(132, msg.getByte());
 			newOutfit.lookMountFeet = std::min<uint8_t>(132, msg.getByte());
 			uint8_t direction = std::max<uint8_t>(DIRECTION_NORTH, std::min<uint8_t>(DIRECTION_WEST, msg.getByte()));
-			// 15.23 client does not send podiumVisible in the setOutfit response packet.
-			// Pass 0xFF as sentinel so playerSetShowOffSocket preserves the existing attribute.
-			g_game().playerSetShowOffSocket(player->getID(), newOutfit, pos, stackpos, itemId, 0xFF, direction);
+			uint8_t podiumVisible = msg.getByte();
+			msg.getByte(); // 15.23: skip unknown trailing byte
+			g_game().playerSetShowOffSocket(player->getID(), newOutfit, pos, stackpos, itemId, podiumVisible, direction);
 		}
 	}
 }
