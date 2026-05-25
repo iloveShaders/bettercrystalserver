@@ -694,8 +694,7 @@ void IOWeeklyTasks::buyShopOffer(const std::shared_ptr<Player> &player, uint8_t 
 			// cannot roll back the purchase.
 			Database &expansionDb = Database::getInstance();
 			expansionDb.executeQuery(
-				"UPDATE `player_weekly_tasks` SET `has_expansion` = 1 WHERE `player_id` = " +
-				std::to_string(player->getGUID())
+				"UPDATE `player_weekly_tasks` SET `has_expansion` = 1 WHERE `player_id` = " + std::to_string(player->getGUID())
 			);
 			player->sendTextMessage(MESSAGE_STATUS, "You have purchased the Permanent Weekly Task Expansion! Your weekly tasks will now have 9 slots instead of 6.");
 			break;
