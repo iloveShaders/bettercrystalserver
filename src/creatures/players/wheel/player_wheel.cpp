@@ -1563,9 +1563,12 @@ bool PlayerWheel::checkSavePointsBySlotType(WheelSlots_t slotType, uint16_t poin
 		return false;
 	}
 
-	setPointsBySlotType(static_cast<uint8_t>(slotType), 0);
-
-	const auto unusedPoints = getUnusedPoints();
+	// Calculate available budget as if this slot were zero, WITHOUT modifying m_wheelSlots yet.
+	// The old code called setPointsBySlotType(slot, 0) before checking unusedPoints, which
+	// caused mid-loop slot mutations that were never rolled back when sortedTableRetry happened
+	// to drain to empty — bypassing the snapshot restore and leaving a corrupted wheel state.
+	const auto currentPoints = getPointsBySlotType(slotType);
+	const auto unusedPoints = getUnusedPoints() + currentPoints; // add back current slot's contribution
 	if (points > unusedPoints) {
 		return false;
 	}
