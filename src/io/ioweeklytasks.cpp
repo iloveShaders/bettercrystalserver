@@ -121,8 +121,22 @@ void IOWeeklyTasks::generateWeeklyTasks(const std::shared_ptr<Player> &player, u
 
 	const auto &bestiaryList = g_game().getBestiaryList();
 	if (bestiaryList.size() < 36) {
+		g_logger().warn("[IOWeeklyTasks::generateWeeklyTasks] - Bestiary list too small ({}), cannot generate tasks", bestiaryList.size());
 		return;
 	}
+
+	// Only clear and reset fields after confirming we can actually generate.
+	weeklyData.killTasks.clear();
+	weeklyData.deliveryTasks.clear();
+	weeklyData.weeklyDifficulty = difficulty;
+	weeklyData.difficultyMultiplier = std::min(difficulty, static_cast<uint8_t>(DIFFICULTY_MULTIPLIER_MASTER));
+	weeklyData.completedKillTasks = 0;
+	weeklyData.completedDeliveryTasks = 0;
+	weeklyData.weeklyProgressFinished = 0;
+	weeklyData.rewardHuntingTasksPoints = 0;
+	weeklyData.rewardSoulseals = 0;
+	weeklyData.killTaskRewardExp = 0;
+	weeklyData.deliveryTaskRewardExp = 0;
 
 	// Generate kill tasks
 	std::vector<uint16_t> blackList;
@@ -687,6 +701,13 @@ void IOWeeklyTasks::buyShopOffer(const std::shared_ptr<Player> &player, uint8_t 
 		}
 		case HUNTING_SHOP_OFFER_WEEKLY_EXPANSION: {
 			player->setWeeklyTaskExpansion(true);
+			// Write immediately to DB so a crash/disconnect before the next savePlayer
+			// cannot roll back the purchase.
+			Database &expansionDb = Database::getInstance();
+			expansionDb.executeQuery(
+				"UPDATE `player_weekly_tasks` SET `has_expansion` = 1 WHERE `player_id` = " +
+				std::to_string(player->getGUID())
+			);
 			player->sendTextMessage(MESSAGE_STATUS, "You have purchased the Permanent Weekly Task Expansion! Your weekly tasks will now have 9 slots instead of 6.");
 			break;
 		}
