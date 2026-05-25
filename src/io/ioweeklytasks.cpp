@@ -103,17 +103,6 @@ void IOWeeklyTasks::generateWeeklyTasks(const std::shared_ptr<Player> &player, u
 	}
 
 	auto &weeklyData = player->getWeeklyTaskData();
-	weeklyData.killTasks.clear();
-	weeklyData.deliveryTasks.clear();
-	weeklyData.weeklyDifficulty = difficulty;
-	weeklyData.difficultyMultiplier = std::min(difficulty, static_cast<uint8_t>(DIFFICULTY_MULTIPLIER_MASTER));
-	weeklyData.completedKillTasks = 0;
-	weeklyData.completedDeliveryTasks = 0;
-	weeklyData.weeklyProgressFinished = 0;
-	weeklyData.rewardHuntingTasksPoints = 0;
-	weeklyData.rewardSoulseals = 0;
-	weeklyData.killTaskRewardExp = 0;
-	weeklyData.deliveryTaskRewardExp = 0;
 
 	bool hasExpansion = player->hasWeeklyTaskExpansion();
 	uint8_t maxKillTasks = hasExpansion ? WEEKLY_KILL_TASKS_EXPANSION : WEEKLY_KILL_TASKS_NORMAL;
@@ -705,7 +694,8 @@ void IOWeeklyTasks::buyShopOffer(const std::shared_ptr<Player> &player, uint8_t 
 			// cannot roll back the purchase.
 			Database &expansionDb = Database::getInstance();
 			expansionDb.executeQuery(
-				"UPDATE `player_weekly_tasks` SET `has_expansion` = 1 WHERE `player_id` = " + std::to_string(player->getGUID())
+				"UPDATE `player_weekly_tasks` SET `has_expansion` = 1 WHERE `player_id` = " +
+				std::to_string(player->getGUID())
 			);
 			player->sendTextMessage(MESSAGE_STATUS, "You have purchased the Permanent Weekly Task Expansion! Your weekly tasks will now have 9 slots instead of 6.");
 			break;
