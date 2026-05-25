@@ -55,10 +55,15 @@ void IOWeeklyTasks::checkWeeklyRewardsOnLogin(const std::shared_ptr<Player> &pla
 	if (weeklyData.needsRewardDistribution) {
 		weeklyData.needsRewardDistribution = false;
 
-		if (!weeklyData.killTasks.empty() && weeklyData.weeklyProgressFinished == 0) {
+		// Do not gate on weeklyProgressFinished here. A player who was offline during
+		// last week's reset will have wpf=1 (set by the previous resetWeeklyTaskData call)
+		// still in their DB row. Requiring wpf==0 would permanently block their reward.
+		// The correct check is simply: do they have tasks with pending rewards?
+		if (!weeklyData.killTasks.empty() && weeklyData.rewardHuntingTasksPoints > 0) {
 			distributeWeeklyRewards(player);
-			resetWeeklyTaskData(player);
 		}
+		// Always reset so they see the new-week difficulty selector.
+		resetWeeklyTaskData(player);
 	}
 }
 
@@ -85,10 +90,10 @@ void IOWeeklyTasks::initializeWeeklyTasks(const std::shared_ptr<Player> &player)
 	if (weeklyData.needsRewardDistribution) {
 		weeklyData.needsRewardDistribution = false;
 
-		if (weeklyData.weeklyProgressFinished == 0) {
+		if (weeklyData.rewardHuntingTasksPoints > 0) {
 			distributeWeeklyRewards(player);
-			resetWeeklyTaskData(player);
 		}
+		resetWeeklyTaskData(player);
 	}
 }
 
@@ -942,8 +947,10 @@ uint32_t IOWeeklyTasks::getNextResetTimestamp() {
 
 void IOWeeklyTasks::markAllPlayersForRewardDistribution() {
 	Database &db = Database::getInstance();
-	// Set needs_reward = 1 for all players who have active weekly tasks (kill_tasks not empty)
-	if (!db.executeQuery("UPDATE `player_weekly_tasks` SET `needs_reward` = 1 WHERE LENGTH(`kill_tasks`) > 0")) {
+	// Mark all players who either have active task blobs OR have pending reward points.
+	// Using only LENGTH(kill_tasks)>0 misses players who completed tasks but had their
+	// blobs cleared (e.g. by a mid-week regen or because they were online during shutdown).
+	if (!db.executeQuery("UPDATE `player_weekly_tasks` SET `needs_reward` = 1 WHERE LENGTH(`kill_tasks`) > 0 OR `reward_hunting_points` > 0")) {
 		g_logger().warn("Failed to mark players for reward distribution");
 	} else {
 		g_logger().info("Marked all active players for weekly reward distribution");
@@ -957,7 +964,7 @@ void IOWeeklyTasks::markAllPlayersForRewardDistribution() {
 			continue;
 		}
 		auto &weeklyData = onlinePlayer->getWeeklyTaskData();
-		if (!weeklyData.killTasks.empty()) {
+		if (!weeklyData.killTasks.empty() || weeklyData.rewardHuntingTasksPoints > 0) {
 			weeklyData.needsRewardDistribution = true;
 		}
 	}
