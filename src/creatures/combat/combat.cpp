@@ -166,23 +166,13 @@ CombatDamage Combat::getCombatDamage(const std::shared_ptr<Creature> &creature, 
 			wheelSpell->getCombatDataAugment(attackerPlayer, damage);
 		}
 
-		// Wheel of destiny - apply damageMultiplier and healingMultiplier
-		// These are percentage bonuses (e.g. 14 = 14%) accumulated from wheel gem
-		// spell bonuses and grade-based spell boosts via getCombatDataSpell.
-		// Damage values are negative; healing values are positive.
-		// Reset to 0 after applying so applyExtensions can accumulate fresh (e.g. Divine Empowerment).
-		if (attackerPlayer) {
-			if (damage.damageMultiplier != 0) {
-				damage.primary.value += static_cast<int32_t>(damage.primary.value * damage.damageMultiplier / 100.0);
-				if (damage.secondary.value != 0) {
-					damage.secondary.value += static_cast<int32_t>(damage.secondary.value * damage.damageMultiplier / 100.0);
-				}
-				damage.damageMultiplier = 0;
-			}
-			if (damage.healingMultiplier != 0 && damage.primary.type == COMBAT_HEALING) {
-				damage.primary.value += static_cast<int32_t>(damage.primary.value * damage.healingMultiplier / 100.0);
-				damage.healingMultiplier = 0;
-			}
+		// Wheel of destiny - apply healingMultiplier here for healing spells.
+		// Healing bypasses applyExtensions (which early-returns on COMBAT_HEALING),
+		// so this is the only place it can be applied.
+		// damageMultiplier is intentionally NOT applied here — it is applied once
+		// in applyExtensions after Divine Empowerment also accumulates into it.
+		if (attackerPlayer && damage.healingMultiplier != 0 && damage.primary.type == COMBAT_HEALING) {
+			damage.primary.value += static_cast<int32_t>(damage.primary.value * damage.healingMultiplier / 100.0);
 		}
 	}
 
@@ -727,12 +717,16 @@ void Combat::CombatHealthFunc(const std::shared_ptr<Creature> &caster, const std
 
 		damage.damageMultiplier += attackerPlayer->wheel()->getMajorStatConditional("Divine Empowerment", WheelMajor_t::DAMAGE);
 		g_logger().trace("Wheel Divine Empowerment damage multiplier {}", damage.damageMultiplier);
+
+		// Wheel of destiny - apply damageMultiplier once here.
+		// Gem spell bonuses + grade boosts are accumulated in getCombatDamage via getCombatDataSpell.
+		// Divine Empowerment is added just above. All contributions arrive here together.
+		// Values are percentages (e.g. 14 = 14%). Damage values are negative.
 		if (damage.damageMultiplier != 0) {
 			damage.primary.value += static_cast<int32_t>(damage.primary.value * damage.damageMultiplier / 100.0);
 			if (damage.secondary.value != 0) {
 				damage.secondary.value += static_cast<int32_t>(damage.secondary.value * damage.damageMultiplier / 100.0);
 			}
-			damage.damageMultiplier = 0;
 		}
 
 		auto &proficiencyPerk = attackerPlayer->getEquippedWeaponProficiency();
