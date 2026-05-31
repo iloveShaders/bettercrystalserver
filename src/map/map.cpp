@@ -496,19 +496,19 @@ bool Map::checkSightLine(Position start, Position destination) {
 		const int32_t moveVertical = std::abs(a * start.x + b * (start.y + stepY) + c);
 		const int32_t moveDiagonal = std::abs(a * (start.x + stepX) + b * (start.y + stepY) + c);
 
-	if (start.y != destination.y && (start.x == destination.x || moveHorizontal > moveVertical || moveHorizontal > moveDiagonal)) {
+		if (start.y != destination.y && (start.x == destination.x || moveHorizontal > moveVertical || moveHorizontal > moveDiagonal)) {
 			start.y += stepY;
 		}
 
-	if (start.x != destination.x && (start.y == destination.y || moveVertical > moveHorizontal || moveVertical > moveDiagonal)) {
+		if (start.x != destination.x && (start.y == destination.y || moveVertical > moveHorizontal || moveVertical > moveDiagonal)) {
 			start.x += stepX;
 		}
 
-	if (start.x == destination.x && start.y == destination.y) {
+		if (start.x == destination.x && start.y == destination.y) {
 			break;
 		}
 
-	const auto &tile = getTile(start.x, start.y, start.z);
+		const auto &tile = getTile(start.x, start.y, start.z);
 		if (tile && tile->hasProperty(CONST_PROP_BLOCKPROJECTILE)) {
 			return false;
 		}
