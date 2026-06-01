@@ -890,9 +890,12 @@ void IOWeeklyTasks::checkWeeklyResetOnStartup() {
 	}
 
 	markAllPlayersForRewardDistribution();
-	// Store the actual current time so the recorded value is always a real
-	// wall-clock timestamp and never depends on the configured save time.
-	DatabaseManager::registerDatabaseConfig(WEEKLY_TASKS_LAST_RESET_CONFIG, static_cast<int32_t>(now));
+	// Store the SS boundary timestamp (not `now`) so the value is always
+	// deterministic and never drifts with late startups or delayed restarts.
+	// Storing `now` caused a 3h late startup to push the stored value past
+	// the next week's one_week_ago window, making the following Monday's
+	// reset silently skip.
+	DatabaseManager::registerDatabaseConfig(WEEKLY_TASKS_LAST_RESET_CONFIG, static_cast<int32_t>(currentResetTimestamp));
 	g_logger().info(
 		"Processed weekly reset boundary {} and marked active players",
 		currentResetTimestamp
