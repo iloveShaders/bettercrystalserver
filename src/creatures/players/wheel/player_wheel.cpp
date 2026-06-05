@@ -1174,9 +1174,9 @@ PlayerWheelGem &PlayerWheel::getGem(const std::string &uuid) {
 }
 
 uint16_t PlayerWheel::getGemIndex(const std::string &uuid) const {
-	for (uint16_t i = 0; i < m_revealedGems.size(); ++i) {
+	for (size_t i = 0; i < m_revealedGems.size(); ++i) {
 		if (m_revealedGems[i].uuid == uuid) {
-			return i;
+			return static_cast<uint16_t>(i);
 		}
 	}
 	g_logger().error("[{}] Failed to find gem with uuid {}", __FUNCTION__, uuid);
@@ -4135,7 +4135,7 @@ PlayerWheelGem PlayerWheelGem::deserialize(const std::string &uuid, const ValueW
 }
 
 bool PlayerWheel::hasMonkQuest() const {
-	const auto &kvScoped = m_player.kv()->scoped("the_way_of_the_monk_quest");
+	const auto &kvScoped = m_player.kv()->scoped("quests")->scoped("the_way_of_the_monk_quest");
 	if (!kvScoped) {
 		return false;
 	}
