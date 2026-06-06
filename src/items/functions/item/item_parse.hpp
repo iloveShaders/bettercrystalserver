@@ -151,7 +151,7 @@ const phmap::flat_hash_map<std::string, ItemParseAttributes_t> ItemParseAttribut
 	{ "deathmagiclevelpoints", ITEM_PARSE_DEATHMAGICLEVELPOINTS },
 	{ "energymagiclevelpoints", ITEM_PARSE_ENERGYMAGICLEVELPOINTS },
 	{ "earthmagiclevelpoints", ITEM_PARSE_EARTHMAGICLEVELPOINTS },
-	{ "firemagiclevelpoints", ITEM_PARSE_EARTHMAGICLEVELPOINTS },
+	{ "firemagiclevelpoints", ITEM_PARSE_FIREMAGICLEVELPOINTS },
 	{ "icemagiclevelpoints", ITEM_PARSE_ICEMAGICLEVELPOINTS },
 	{ "holymagiclevelpoints", ITEM_PARSE_HOLYMAGICLEVELPOINTS },
 	{ "healingmagiclevelpoints", ITEM_PARSE_HEALINGMAGICLEVELPOINTS },
