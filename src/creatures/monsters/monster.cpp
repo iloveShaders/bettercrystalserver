@@ -292,7 +292,7 @@ RespawnType Monster::getRespawnType() const {
 }
 
 void Monster::setSpawnMonster(const std::shared_ptr<SpawnMonster> &newSpawnMonster) {
-	this->spawnMonster = newSpawnMonster;
+	this->spawnMonster = newSpawnMonster; // stores as weak_ptr — no shared ownership
 }
 
 uint32_t Monster::getHealingCombatValue(CombatType_t healingType) const {
@@ -379,8 +379,8 @@ void Monster::onRemoveCreature(const std::shared_ptr<Creature> &creature, bool i
 	}
 
 	if (creature.get() == this) {
-		if (spawnMonster) {
-			spawnMonster->startSpawnMonsterCheck();
+		if (const auto &spawn = spawnMonster.lock()) {
+			spawn->startSpawnMonsterCheck();
 		}
 
 		setIdle(true);
@@ -1076,7 +1076,7 @@ bool Monster::getIdleStatus() const {
 }
 
 bool Monster::isInSpawnLocation() const {
-	if (!spawnMonster) {
+	if (spawnMonster.expired()) {
 		return true;
 	}
 	return position == masterPos || masterPos == Position();
@@ -2427,7 +2427,7 @@ std::shared_ptr<Item> Monster::getCorpse(const std::shared_ptr<Creature> &lastHi
 }
 
 bool Monster::isInSpawnRange(const Position &pos) const {
-	if (!spawnMonster) {
+	if (spawnMonster.expired()) {
 		return true;
 	}
 

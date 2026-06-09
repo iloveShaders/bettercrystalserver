@@ -40,7 +40,11 @@ void SaveManager::saveAll() {
 
 	for (const auto &[_, player] : players) {
 		player->loginPosition = player->getPosition();
-		doSavePlayer(player);
+		try {
+			doSavePlayer(player);
+		} catch (const std::exception &e) {
+			logger.error("Failed to save player {}: {}", player->getName(), e.what());
+		}
 	}
 
 	const auto &guilds = game.getGuilds();

@@ -477,5 +477,9 @@ bool DBInsert::execute() {
 		}
 	}
 
+	// Reset state so this DBInsert can be reused safely after execute()
+	values.clear();
+	length = this->query.length();
+
 	return true;
 }
