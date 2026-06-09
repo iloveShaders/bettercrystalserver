@@ -840,7 +840,7 @@ void Npc::loadPlayerSpectators() {
 }
 
 bool Npc::isInSpawnRange(const Position &pos) const {
-	if (!spawnNpc) {
+	if (spawnNpc.expired()) {
 		return true;
 	}
 
