@@ -1031,6 +1031,7 @@ bool IOLoginDataSave::savePlayerStorage(const std::shared_ptr<Player> &player) {
 	query.str("");
 
 	DBInsert storageQuery("INSERT INTO `player_storage` (`player_id`, `key`, `value`) VALUES ");
+	storageQuery.upsert({"value"});
 	player->genReservedStorageRange();
 
 	for (const auto &[key, value] : player->storageMap) {
