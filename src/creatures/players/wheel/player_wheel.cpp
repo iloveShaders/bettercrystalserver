@@ -1654,7 +1654,8 @@ void PlayerWheel::saveSlotPointsOnPressSaveButton(NetworkMessage &msg) {
 	}
 
 	// If there is still data in the retry vector after the error loop, an error message is sent to the player.
-	if (!sortedTableRetry.empty()) {
+	const bool slotSaveFailed = !sortedTableRetry.empty();
+	if (slotSaveFailed) {
 		// Restore the snapshot so the player's wheel is not left in a partial/corrupted state.
 		m_wheelSlots = slotSnapshot;
 		m_player.sendTextMessage(MESSAGE_TRADE, "Something went wrong, try relogging and try again");
@@ -1662,13 +1663,28 @@ void PlayerWheel::saveSlotPointsOnPressSaveButton(NetworkMessage &msg) {
 	}
 
 	// Gem Vessels
+	// IMPORTANT: only mutate active gems when the slot save SUCCEEDED. When the slot
+	// save failed (over-budget, e.g. after buying promotion scrolls/points from the
+	// weekly store that raised the budget at purchase time but later recompute leaves
+	// spent > available), we restored the slot snapshot above. The client's gem bytes
+	// for a failed save can be inconsistent and would wrongly trigger removeActiveGem(),
+	// permanently deleting the player's active gem via saveActiveGems(). We must read
+	// the gem bytes off the packet to keep the stream position correct, but discard
+	// the mutations and leave m_activeGems untouched.
 	for (const auto &affinity : magic_enum::enum_values<WheelGemAffinity_t>()) {
 		const bool hasGem = msg.getByte();
+		uint16_t gemIndex = 0;
+		if (hasGem) {
+			gemIndex = msg.get<uint16_t>();
+		}
+		if (slotSaveFailed) {
+			// Skip gem mutation entirely; active gems stay exactly as they were.
+			continue;
+		}
 		if (!hasGem) {
 			removeActiveGem(affinity);
 			continue;
 		}
-		const auto gemIndex = msg.get<uint16_t>();
 		setActiveGem(affinity, gemIndex);
 	}
 
