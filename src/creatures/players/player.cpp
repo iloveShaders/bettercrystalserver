@@ -9844,7 +9844,7 @@ const std::unique_ptr<TaskHuntingSlot> &Player::getTaskHuntingWithCreature(uint1
 	}
 
 	if (auto it = std::ranges::find_if(taskHunting, [raceId](const std::unique_ptr<TaskHuntingSlot> &itTask) {
-			return itTask->selectedRaceId == raceId;
+			return itTask->selectedRaceId == raceId && itTask->state == PreyTaskDataState_Active;
 		});
 	    it != taskHunting.end()) {
 		return *it;
