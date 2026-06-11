@@ -53,15 +53,23 @@ void IOWeeklyTasks::checkWeeklyRewardsOnLogin(const std::shared_ptr<Player> &pla
 	// Check if this player was flagged for reward distribution during server save
 	// The flag is set by markAllPlayersForRewardDistribution() in the SS globalevent on reset day
 	if (weeklyData.needsRewardDistribution) {
-		weeklyData.needsRewardDistribution = false;
-
-		// Do not gate on weeklyProgressFinished here. A player who was offline during
-		// last week's reset will have wpf=1 (set by the previous resetWeeklyTaskData call)
-		// still in their DB row. Requiring wpf==0 would permanently block their reward.
-		// The correct check is simply: do they have tasks with pending rewards?
-		if (!weeklyData.killTasks.empty() && weeklyData.rewardHuntingTasksPoints > 0) {
+		// Attempt distribution FIRST, and only clear the flag afterwards. Clearing the
+		// flag before confirming the distribution path actually ran could permanently
+		// strand a reward if the gate below short-circuited (e.g. rewardHuntingTasksPoints
+		// was stale/0 in memory even though completed tasks exist).
+		//
+		// Gate on the completed-task counts (the true source of truth), NOT on
+		// rewardHuntingTasksPoints which can be 0 in memory at this moment.
+		// distributeWeeklyRewards() is self-guarding: it returns early when
+		// totalCompleted == 0, so calling it unconditionally here is safe and correct,
+		// and it recomputes the HTP from the completed counts regardless of wpf.
+		const bool hadCompletedTasks = (weeklyData.completedKillTasks + weeklyData.completedDeliveryTasks) > 0;
+		if (hadCompletedTasks) {
 			distributeWeeklyRewards(player);
 		}
+
+		weeklyData.needsRewardDistribution = false;
+
 		// Always reset so they see the new-week difficulty selector.
 		resetWeeklyTaskData(player);
 	}
@@ -88,11 +96,11 @@ void IOWeeklyTasks::initializeWeeklyTasks(const std::shared_ptr<Player> &player)
 
 	// Check if flagged for reward distribution (same logic as login check)
 	if (weeklyData.needsRewardDistribution) {
-		weeklyData.needsRewardDistribution = false;
-
-		if (weeklyData.rewardHuntingTasksPoints > 0) {
+		const bool hadCompletedTasks = (weeklyData.completedKillTasks + weeklyData.completedDeliveryTasks) > 0;
+		if (hadCompletedTasks) {
 			distributeWeeklyRewards(player);
 		}
+		weeklyData.needsRewardDistribution = false;
 		resetWeeklyTaskData(player);
 	}
 }
@@ -684,6 +692,11 @@ void IOWeeklyTasks::buyShopOffer(const std::shared_ptr<Player> &player, uint8_t 
 		}
 		case HUNTING_SHOP_OFFER_BONUS_PROMOTION: {
 			player->wheel()->addExtraPointsFromHuntingTaskShop(1);
+			// Persist the purchased promotion point to KV immediately. Without this the
+			// new value lives only in memory until the next full savePlayer, so a crash,
+			// disconnect, or a save firing on another (partially-loaded) Player instance
+			// before then would silently lose the purchase. (Ref: upstream PR #757.)
+			player->wheel()->saveKVHuntingTaskShopExtraPoints();
 			player->sendTextMessage(MESSAGE_STATUS, "You have purchased an extra Wheel of Destiny promotion point.");
 			player->wheel()->sendOpenWheelWindow(player->getID());
 			break;
@@ -879,13 +892,25 @@ void IOWeeklyTasks::checkWeeklyResetOnStartup() {
 		lastProcessedReset = 0;
 	}
 
-	// Guard: skip if the last recorded reset is within the current week window.
-	// We compare against (now - WEEK_SECONDS) rather than currentResetTimestamp so
-	// that changing globalServerSaveTime in config does not shift the computed
-	// boundary and cause a spurious re-fire against a stale DB value.
-	// Any lastProcessedReset newer than one week ago means this week already ran.
-	const uint32_t oneWeekAgo = now - WEEK_SECONDS;
-	if (static_cast<uint32_t>(lastProcessedReset) > oneWeekAgo) {
+	// Guard: skip only if we have ALREADY processed the CURRENT reset boundary.
+	//
+	// We anchor the comparison to the computed boundary (currentResetTimestamp),
+	// NOT to a sliding (now - WEEK_SECONDS) window. The sliding-window form has a
+	// subtle failure: if globalServerSaveTime is changed (e.g. 10:50 -> 08:50),
+	// the stored boundary from the old config can sit on the wrong side of
+	// (now - WEEK) on the next reset day, making a genuinely NEW week look
+	// already-processed -> the reset silently SKIPS and nobody is marked for
+	// reward distribution. That is the exact class of bug that stranded players.
+	//
+	// A half-week tolerance makes the decision robust to save-time changes of up
+	// to a few hours in either direction: as long as the last processed reset is
+	// within the same week as the current boundary, we treat this week as done;
+	// once the boundary advances to a new week, lastProcessedReset falls more than
+	// HALF_WEEK behind it and the reset fires. It also cannot double-fire within a
+	// week, because right after firing we store currentResetTimestamp itself, so
+	// (stored + HALF_WEEK >= currentResetTimestamp) stays true until the next week.
+	constexpr uint32_t HALF_WEEK = WEEK_SECONDS / 2;
+	if (static_cast<uint32_t>(lastProcessedReset) + HALF_WEEK >= currentResetTimestamp) {
 		return;
 	}
 
