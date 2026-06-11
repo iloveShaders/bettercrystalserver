@@ -287,15 +287,26 @@ bool IOLoginData::savePlayerGuard(const std::shared_ptr<Player> &player) {
 		throw DatabaseException("[IOLoginDataSave::savePlayerBosstiary] - Failed to save player bosstiary: " + player->getName());
 	}
 
-	if (!player->wheel()->saveDBPlayerSlotPointsOnLogout()) {
-		throw DatabaseException("[PlayerWheel::saveDBPlayerSlotPointsOnLogout] - Failed to save player wheel info: " + player->getName());
-	}
+	// Guard: only persist wheel KV/DB state when the wheel was fully loaded for this
+	// Player instance. If a save fires on a partially-constructed wheel (e.g. a save
+	// path that did not run loadPlayerInitializeSystem, or an offline/preload Player),
+	// m_activeGems / m_extraPointsFromHuntingTaskShop / m_unlockedScrolls / grades are
+	// at their empty defaults. Writing those would overwrite good KV data and
+	// permanently destroy the player's active gems, promotion points, and scrolls.
+	// The slot points are likewise only valid after the login load.
+	if (player->wheel()->isWheelDataLoaded()) {
+		if (!player->wheel()->saveDBPlayerSlotPointsOnLogout()) {
+			throw DatabaseException("[PlayerWheel::saveDBPlayerSlotPointsOnLogout] - Failed to save player wheel info: " + player->getName());
+		}
 
-	player->wheel()->saveRevealedGems();
-	player->wheel()->saveActiveGems();
-	player->wheel()->saveKVModGrades();
-	player->wheel()->saveKVScrolls();
-	player->wheel()->saveKVHuntingTaskShopExtraPoints();
+		player->wheel()->saveRevealedGems();
+		player->wheel()->saveActiveGems();
+		player->wheel()->saveKVModGrades();
+		player->wheel()->saveKVScrolls();
+		player->wheel()->saveKVHuntingTaskShopExtraPoints();
+	} else {
+		g_logger().debug("[{}] Skipping wheel save for player '{}' — wheel data was not loaded for this instance (prevents overwriting good KV with defaults)", __FUNCTION__, player->getName());
+	}
 
 	if (!IOLoginDataSave::savePlayerStorage(player)) {
 		throw DatabaseException("[IOLoginDataSave::savePlayerStorage] - Failed to save player storage: " + player->getName());

@@ -484,6 +484,23 @@ private:
 	std::vector<PromotionScroll> m_unlockedScrolls;
 	uint16_t m_extraPointsFromHuntingTaskShop = 0;
 
+	// True only after the full login load sequence (loadDBPlayerSlotPointsOnLogin +
+	// gems + scrolls + hunting points + mod grades) has completed for this Player
+	// instance. The unconditional KV/DB saves on savePlayer must NOT run before
+	// this is set, otherwise a save firing on a partially-constructed wheel would
+	// overwrite good KV data (active gems, promo points, scrolls) with empty/default
+	// in-memory values — permanently destroying them.
+	bool m_wheelDataLoaded = false;
+
+public:
+	bool isWheelDataLoaded() const {
+		return m_wheelDataLoaded;
+	}
+	void setWheelDataLoaded(bool loaded) {
+		m_wheelDataLoaded = loaded;
+	}
+
+private:
 	std::array<PlayerWheelGem, 4> m_activeGems;
 	std::vector<PlayerWheelGem> m_revealedGems;
 	std::vector<PlayerWheelGem> m_destroyedGems;

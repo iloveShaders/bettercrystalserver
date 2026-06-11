@@ -1028,6 +1028,11 @@ void IOLoginDataLoad::loadPlayerInitializeSystem(const std::shared_ptr<Player> &
 	player->wheel()->loadKVScrolls();
 	player->wheel()->loadKVHuntingTaskShopExtraPoints();
 	player->wheel()->initializePlayerData();
+	// Mark wheel data as fully loaded for this Player instance. The unconditional
+	// wheel KV/DB saves on savePlayer are guarded on this flag so a save firing
+	// before this point cannot overwrite good KV data (active gems, promo points,
+	// scrolls, mod grades) with empty/default in-memory values.
+	player->wheel()->setWheelDataLoaded(true);
 
 	player->achiev()->loadUnlockedAchievements();
 	player->badge()->checkAndUpdateNewBadges();
