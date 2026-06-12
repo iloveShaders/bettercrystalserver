@@ -411,7 +411,7 @@ std::vector<VIPEntry> IOLoginData::getVIPEntries(uint32_t accountId) {
 }
 
 void IOLoginData::addVIPEntry(uint32_t accountId, uint32_t guid, const std::string &description, uint32_t icon, bool notify) {
-	std::string query = fmt::format("INSERT INTO `account_viplist` (`account_id`, `player_id`, `description`, `icon`, `notify`) VALUES ({}, {}, {}, {}, {})", accountId, guid, g_database().escapeString(description), icon, notify);
+	std::string query = fmt::format("INSERT INTO `account_viplist` (`account_id`, `player_id`, `description`, `icon`, `notify`) VALUES ({}, {}, {}, {}, {}) ON DUPLICATE KEY UPDATE `description` = VALUES(`description`), `icon` = VALUES(`icon`), `notify` = VALUES(`notify`)", accountId, guid, g_database().escapeString(description), icon, notify);
 	if (!g_database().executeQuery(query)) {
 		g_logger().error("Failed to add VIP entry for account {}. QUERY: {}", accountId, query.c_str());
 	}
