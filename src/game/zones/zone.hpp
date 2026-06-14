@@ -97,10 +97,11 @@ namespace weak {
 	template <typename T>
 	struct ThingHasher {
 		std::size_t operator()(std::weak_ptr<T> thing) const {
-			if (thing.expired()) {
+			const auto locked = thing.lock();
+			if (!locked) {
 				return 0;
 			}
-			return std::hash<void*> {}(thing.lock().get());
+			return std::hash<void*> {}(locked.get());
 		}
 	};
 
@@ -125,10 +126,15 @@ namespace weak {
 	template <>
 	struct ThingComparator<Creature> {
 		bool operator()(const std::weak_ptr<Creature> &lhs, const std::weak_ptr<Creature> &rhs) const {
-			if (lhs.expired() || rhs.expired()) {
+			// Lock once; calling expired() then lock() is a TOCTOU race: the
+			// object can be destroyed between the two calls, making lock()
+			// return null and the subsequent ->getID() dereference null.
+			const auto lockedLhs = lhs.lock();
+			const auto lockedRhs = rhs.lock();
+			if (!lockedLhs || !lockedRhs) {
 				return false;
 			}
-			return lhs.lock()->getID() == rhs.lock()->getID();
+			return lockedLhs->getID() == lockedRhs->getID();
 		}
 	};
 
