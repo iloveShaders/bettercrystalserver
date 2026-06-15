@@ -941,6 +941,13 @@ uint32_t IOWeeklyTasks::getLastResetBoundary() {
 	int32_t saveMin = timeParams.size() > 1 ? timeParams[1] : 0;
 	int32_t saveSec = timeParams.size() > 2 ? timeParams[2] : 0;
 
+	// globalServerSaveTime is when the save sequence is TRIGGERED, but the actual snapshot /
+	// shutdown (and thus markAllPlayersForRewardDistribution) happens notifyDuration minutes
+	// later, after the logout-warning countdown. Anchor the reset boundary on that real
+	// shutdown moment so it matches when player data is actually frozen, not when the warning
+	// starts. mktime() normalizes any minute overflow (e.g. 50 + 5 = 55, 58 + 5 -> +1h).
+	saveMin += g_configManager().getNumber(GLOBAL_SERVER_SAVE_NOTIFY_DURATION);
+
 	// Days since the most recent reset day (0..6). If today IS the reset day this is 0.
 	int daysSinceReset = (7 + tm_now->tm_wday - resetDay) % 7;
 
@@ -983,6 +990,12 @@ uint32_t IOWeeklyTasks::getNextResetTimestamp() {
 	int32_t saveHour = timeParams.size() > 0 ? timeParams[0] : 6;
 	int32_t saveMin = timeParams.size() > 1 ? timeParams[1] : 0;
 	int32_t saveSec = timeParams.size() > 2 ? timeParams[2] : 0;
+
+	// Account for the notify-warning countdown: the real shutdown (when data is frozen and
+	// the reset is applied) is notifyDuration minutes after the configured trigger time.
+	// Keep this in lockstep with getLastResetBoundary() so the displayed "next reset" matches
+	// the actual boundary. mktime() below normalizes any minute overflow into the hour.
+	saveMin += g_configManager().getNumber(GLOBAL_SERVER_SAVE_NOTIFY_DURATION);
 
 	// Calculate days until next reset day
 	// tm_wday: 0=Sunday, 1=Monday, ..., 6=Saturday
