@@ -147,6 +147,12 @@ public:
 
 	// Free reroll / daily claim timestamp (24hr cooldown)
 	int64_t freeRerollTimeStamp = 0;
+
+	// Set true only after loadPlayerBountyTasks() has populated this struct from the DB.
+	// savePlayerBountyTasks() refuses to write while this is false, so a save firing on a
+	// freshly-constructed Player (default/empty data) before its row is loaded cannot
+	// overwrite the good DB row with defaults (e.g. wiping talisman levels / bounty points).
+	bool dataLoaded = false;
 };
 
 class IOBountyTasks {

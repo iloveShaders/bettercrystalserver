@@ -874,13 +874,20 @@ void IOWeeklyTasks::checkWeeklyResetOnStartup() {
 	}
 
 	const auto now = static_cast<uint32_t>(std::time(nullptr));
-	const uint32_t nextResetTimestamp = getNextResetTimestamp();
-	if (nextResetTimestamp < WEEK_SECONDS) {
+
+	// Anchor on the most recent PAST reset boundary, computed directly from `now`.
+	// This replaces the old (getNextResetTimestamp() - WEEK_SECONDS) form, which
+	// flip-flopped by a full week depending on whether the process happened to read
+	// the clock a fraction of a second before vs. after the configured save time on
+	// the reset day. With globalServerSaveShutdown the restart lands right around the
+	// save second, so the old logic could compute currentReset = LAST week, see the
+	// stored timestamp already covering it, and SKIP the reset entirely - distributing
+	// no rewards while players' boards still got reset on login. That was the recurring
+	// weekly loss. getLastResetBoundary() is monotonic and immune to that timing.
+	const uint32_t currentResetTimestamp = getLastResetBoundary();
+	if (currentResetTimestamp < WEEK_SECONDS) {
 		return;
 	}
-
-	// "Current reset" is the most recent reset boundary already reached.
-	const uint32_t currentResetTimestamp = nextResetTimestamp - WEEK_SECONDS;
 
 	// If we've not reached this reset boundary yet, nothing to process.
 	if (now < currentResetTimestamp) {
@@ -892,34 +899,19 @@ void IOWeeklyTasks::checkWeeklyResetOnStartup() {
 		lastProcessedReset = 0;
 	}
 
-	// Guard: skip only if we have ALREADY processed the CURRENT reset boundary.
-	//
-	// We anchor the comparison to the computed boundary (currentResetTimestamp),
-	// NOT to a sliding (now - WEEK_SECONDS) window. The sliding-window form has a
-	// subtle failure: if globalServerSaveTime is changed (e.g. 10:50 -> 08:50),
-	// the stored boundary from the old config can sit on the wrong side of
-	// (now - WEEK) on the next reset day, making a genuinely NEW week look
-	// already-processed -> the reset silently SKIPS and nobody is marked for
-	// reward distribution. That is the exact class of bug that stranded players.
-	//
-	// A half-week tolerance makes the decision robust to save-time changes of up
-	// to a few hours in either direction: as long as the last processed reset is
-	// within the same week as the current boundary, we treat this week as done;
-	// once the boundary advances to a new week, lastProcessedReset falls more than
-	// HALF_WEEK behind it and the reset fires. It also cannot double-fire within a
-	// week, because right after firing we store currentResetTimestamp itself, so
-	// (stored + HALF_WEEK >= currentResetTimestamp) stays true until the next week.
-	constexpr uint32_t HALF_WEEK = WEEK_SECONDS / 2;
-	if (static_cast<uint32_t>(lastProcessedReset) + HALF_WEEK >= currentResetTimestamp) {
+	// Skip only if we have ALREADY processed the CURRENT reset boundary. Because the
+	// boundary is now derived directly from `now` (not from a future timestamp that can
+	// shift by a week), a simple "stored >= current boundary" comparison is exact: once a
+	// new week's boundary passes, lastProcessedReset is strictly less than it and the
+	// reset fires; right after firing we store currentResetTimestamp, so it cannot
+	// double-fire within the same week.
+	if (static_cast<uint32_t>(lastProcessedReset) >= currentResetTimestamp) {
 		return;
 	}
 
 	markAllPlayersForRewardDistribution();
-	// Store the SS boundary timestamp (not `now`) so the value is always
-	// deterministic and never drifts with late startups or delayed restarts.
-	// Storing `now` caused a 3h late startup to push the stored value past
-	// the next week's one_week_ago window, making the following Monday's
-	// reset silently skip.
+	// Store the boundary timestamp (not `now`) so the value is deterministic and never
+	// drifts with late startups or delayed restarts.
 	DatabaseManager::registerDatabaseConfig(WEEKLY_TASKS_LAST_RESET_CONFIG, static_cast<int32_t>(currentResetTimestamp));
 	g_logger().info(
 		"Processed weekly reset boundary {} and marked active players",
@@ -929,6 +921,47 @@ void IOWeeklyTasks::checkWeeklyResetOnStartup() {
 
 uint32_t IOWeeklyTasks::getResetTimestamp() const {
 	return globalResetTimestamp;
+}
+
+uint32_t IOWeeklyTasks::getLastResetBoundary() {
+	auto time_t_now = std::time(nullptr);
+	std::tm tm_buf {};
+#ifdef _WIN32
+	localtime_s(&tm_buf, &time_t_now);
+#else
+	localtime_r(&time_t_now, &tm_buf);
+#endif
+	std::tm* tm_now = &tm_buf;
+
+	int resetDay = parseDayOfWeek(g_configManager().getString(WEEKLY_TASKS_RESET_DAY));
+
+	const auto serverSaveTime = g_configManager().getString(GLOBAL_SERVER_SAVE_TIME);
+	std::vector<int32_t> timeParams = vectorAtoi(explodeString(serverSaveTime, ":"));
+	int32_t saveHour = timeParams.size() > 0 ? timeParams[0] : 6;
+	int32_t saveMin = timeParams.size() > 1 ? timeParams[1] : 0;
+	int32_t saveSec = timeParams.size() > 2 ? timeParams[2] : 0;
+
+	// Days since the most recent reset day (0..6). If today IS the reset day this is 0.
+	int daysSinceReset = (7 + tm_now->tm_wday - resetDay) % 7;
+
+	// Build the reset day at save time for the candidate boundary (this week's reset day).
+	std::tm boundary = *tm_now;
+	boundary.tm_mday -= daysSinceReset;
+	boundary.tm_hour = saveHour;
+	boundary.tm_min = saveMin;
+	boundary.tm_sec = saveSec;
+	boundary.tm_isdst = -1;
+	auto boundaryTimeT = std::mktime(&boundary);
+
+	// If that boundary is still in the future (today is the reset day but the save time
+	// hasn't been reached yet), step back a full week to the previous reset.
+	if (boundaryTimeT > time_t_now) {
+		boundary.tm_mday -= 7;
+		boundary.tm_isdst = -1;
+		boundaryTimeT = std::mktime(&boundary);
+	}
+
+	return static_cast<uint32_t>(boundaryTimeT);
 }
 
 uint32_t IOWeeklyTasks::getNextResetTimestamp() {

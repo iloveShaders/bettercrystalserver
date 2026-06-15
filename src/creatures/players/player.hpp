@@ -1874,6 +1874,15 @@ private:
 	// Bestiary
 	bool charmExpansion = false;
 
+	// Set true only after loadPlayerBestiaryCharms() + loadPlayerBosstiary() have populated
+	// the charm/bosstiary members from the DB. savePlayerBestiarySystem() and
+	// savePlayerBosstiary() refuse to write while this is false, so a save firing on a
+	// freshly-constructed Player (default/empty data) before load cannot overwrite the good
+	// DB row with zeros (wiping charm points, charm assignments, tracked boss slots/list).
+	// NOTE: this does not affect the daily boosted-boss / removeTimes reset, which runs in
+	// login.lua AFTER load completes on a fully-loaded Player.
+	bool bestiaryDataLoaded = false;
+
 	// outfits and mounts
 	bool mountsModified = false;
 	bool outfitsModified = false;

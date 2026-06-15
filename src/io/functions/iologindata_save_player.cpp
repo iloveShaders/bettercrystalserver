@@ -473,6 +473,14 @@ bool IOLoginDataSave::savePlayerBestiarySystem(const std::shared_ptr<Player> &pl
 		return false;
 	}
 
+	// Guard: never persist charm/bestiary data that was never loaded for this Player
+	// instance. A save firing during login before loadPlayerBestiaryCharms/loadPlayerBosstiary
+	// run would UPDATE the row with default zeros, wiping charm points, charm assignments and
+	// the tracked-creature list. Skipping is safe: the DB still holds the correct values.
+	if (!player->bestiaryDataLoaded) {
+		return true;
+	}
+
 	Database &db = Database::getInstance();
 
 	std::ostringstream query;
@@ -760,6 +768,16 @@ bool IOLoginDataSave::savePlayerBountyTasks(const std::shared_ptr<Player> &playe
 	Database &db = Database::getInstance();
 	const auto &bountyData = player->getBountyTaskData();
 
+	// Guard: never persist bounty data that was never loaded from the DB for this Player
+	// instance. Without this, a savePlayer firing during login (before loadPlayerBountyTasks
+	// runs) serializes the default-constructed struct and the ON DUPLICATE KEY UPDATE below
+	// overwrites the player's real row - wiping talisman levels, bounty points and the active
+	// task. Skipping the write here is safe: the correct values are still in the DB, and the
+	// next save after a proper load persists them.
+	if (!bountyData.dataLoaded) {
+		return true;
+	}
+
 	// Serialize list slots to blob
 	PropWriteStream propStream;
 	for (const auto &slot : bountyData.preferredLists) {
@@ -857,6 +875,16 @@ bool IOLoginDataSave::savePlayerWeeklyTasks(const std::shared_ptr<Player> &playe
 
 	Database &db = Database::getInstance();
 	const auto &weeklyData = player->getWeeklyTaskData();
+
+	// Guard: never persist weekly data that was never loaded from the DB for this Player
+	// instance. Without this, a savePlayer firing during login (before loadPlayerWeeklyTasks
+	// runs) serializes the default-constructed struct and the ON DUPLICATE KEY UPDATE below
+	// overwrites the player's real row — wiping has_expansion (the bought hunting-slot
+	// expansion), completed task counts and progress. Skipping the write here is safe: the
+	// correct values are still in the DB, and the next save after a proper load persists them.
+	if (!weeklyData.dataLoaded) {
+		return true;
+	}
 
 	// Serialize kill tasks
 	PropWriteStream killTasksStream;
@@ -975,6 +1003,16 @@ bool IOLoginDataSave::savePlayerBosstiary(const std::shared_ptr<Player> &player)
 	if (!player) {
 		g_logger().warn("[IOLoginData::savePlayer] - Player nullptr: {}", __FUNCTION__);
 		return false;
+	}
+
+	// Guard: never persist bosstiary data that was never loaded for this Player instance.
+	// A save firing during login before loadPlayerBosstiary runs would DELETE + re-INSERT the
+	// row from default/empty in-memory state, wiping the player's tracked boss slots and
+	// tracker list. This does NOT affect the daily boosted-boss / removeTimes reset: that is
+	// applied in login.lua during loadPlayerInitializeSystem, which runs AFTER the flag is
+	// set, so its legitimate change is saved normally.
+	if (!player->bestiaryDataLoaded) {
+		return true;
 	}
 
 	std::ostringstream query;

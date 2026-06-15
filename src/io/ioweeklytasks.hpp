@@ -150,6 +150,12 @@ public:
 	// Flag set by server save on reset day — indicates this player needs reward distribution on next login
 	bool needsRewardDistribution = false;
 
+	// Set true only after loadPlayerWeeklyTasks() has populated this struct from the DB.
+	// savePlayerWeeklyTasks() refuses to write while this is false, so a save firing on a
+	// freshly-constructed Player (default/empty data) before its row is loaded cannot
+	// overwrite the good DB row with defaults (e.g. wiping has_expansion / progress).
+	bool dataLoaded = false;
+
 	// Throttle for item notification sends (prevents burst sends during looting)
 	int64_t lastItemNotifySend = 0;
 };
@@ -229,6 +235,12 @@ public:
 
 	// Get next weekly reset timestamp (based on configured day of week)
 	static uint32_t getNextResetTimestamp();
+
+	// Get the most recent weekly reset boundary at or before `now` (reset day at server
+	// save time). Unlike getNextResetTimestamp()-WEEK, this is computed directly from the
+	// current time and never flip-flops based on sub-second restart timing around the save
+	// window, so the startup reset decision is deterministic.
+	static uint32_t getLastResetBoundary();
 
 	// Mark all players in DB for reward distribution (called during SS on reset day)
 	// Sets needs_reward = 1 for all players who have active tasks

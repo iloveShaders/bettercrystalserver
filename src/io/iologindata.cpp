@@ -188,6 +188,12 @@ bool IOLoginData::loadPlayer(const std::shared_ptr<Player> &player, const DBResu
 		// load bosstiary
 		IOLoginDataLoad::loadPlayerBosstiary(player, result);
 
+		// Both bestiary-charms (loaded above) and bosstiary are now populated from the DB for
+		// this fully-loaded Player. Authorize savePlayerBestiarySystem()/savePlayerBosstiary()
+		// to persist. Partial loads that returned early at `disableIrrelevantInfo` never reach
+		// here, so their default/empty charm + bosstiary data can never be saved over the row.
+		player->bestiaryDataLoaded = true;
+
 		IOLoginDataLoad::loadPlayerInitializeSystem(player);
 		IOLoginDataLoad::loadPlayerUpdateSystem(player);
 

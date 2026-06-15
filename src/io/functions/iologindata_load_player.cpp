@@ -1061,6 +1061,12 @@ void IOLoginDataLoad::loadPlayerBountyTasks(const std::shared_ptr<Player> &playe
 	query << "SELECT * FROM `player_bounty_tasks` WHERE `player_id` = " << player->getGUID();
 	result = db.storeQuery(query.str());
 
+	// Authorize savePlayerBountyTasks() to persist this Player instance as soon as the
+	// SELECT has run. A null result means no row yet (new character) - default data is
+	// correct and safe to save. The guard only blocks saves that fire BEFORE this function
+	// runs at all (mid-login on a freshly built Player), which would clobber a good row.
+	player->getBountyTaskData().dataLoaded = true;
+
 	if (!result) {
 		return;
 	}
@@ -1158,6 +1164,14 @@ void IOLoginDataLoad::loadPlayerWeeklyTasks(const std::shared_ptr<Player> &playe
 	std::ostringstream query;
 	query << "SELECT * FROM `player_weekly_tasks` WHERE `player_id` = " << player->getGUID();
 	result = db.storeQuery(query.str());
+
+	// Mark the in-memory weekly data as "load attempted" as soon as we have run the
+	// SELECT. This authorizes savePlayerWeeklyTasks() to persist this Player instance.
+	// A null result here means the player simply has no row yet (brand-new character):
+	// the default empty data is correct and safe to save. The guard exists only to block
+	// saves that fire BEFORE this function runs at all (mid-login on a freshly built
+	// Player), which would otherwise clobber an existing good DB row with defaults.
+	player->getWeeklyTaskData().dataLoaded = true;
 
 	if (!result) {
 		return;
