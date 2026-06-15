@@ -109,22 +109,22 @@ std::vector<Position> Zone::getPositions() const {
 
 std::vector<std::shared_ptr<Creature>> Zone::getCreatures() {
 	std::lock_guard<std::mutex> lock(cacheMutex);
-	return weak::lock(creaturesCache);
+	return weak::lockMap(creaturesCache);
 }
 
 std::vector<std::shared_ptr<Player>> Zone::getPlayers() {
 	std::lock_guard<std::mutex> lock(cacheMutex);
-	return weak::lock(playersCache);
+	return weak::lockMap(playersCache);
 }
 
 std::vector<std::shared_ptr<Monster>> Zone::getMonsters() {
 	std::lock_guard<std::mutex> lock(cacheMutex);
-	return weak::lock(monstersCache);
+	return weak::lockMap(monstersCache);
 }
 
 std::vector<std::shared_ptr<Npc>> Zone::getNpcs() {
 	std::lock_guard<std::mutex> lock(cacheMutex);
-	return weak::lock(npcsCache);
+	return weak::lockMap(npcsCache);
 }
 
 std::vector<std::shared_ptr<Item>> Zone::getItems() {
@@ -214,14 +214,14 @@ void Zone::creatureAdded(const std::shared_ptr<Creature> &creature) {
 
 	std::lock_guard<std::mutex> lock(cacheMutex);
 	if (const auto &player = creature->getPlayer()) {
-		playersCache.insert(player);
+		playersCache[player.get()] = player;
 	} else if (const auto &monster = creature->getMonster()) {
-		monstersCache.insert(monster);
+		monstersCache[monster.get()] = monster;
 	} else if (const auto &npc = creature->getNpc()) {
-		npcsCache.insert(npc);
+		npcsCache[npc.get()] = npc;
 	}
 
-	creaturesCache.insert(creature);
+	creaturesCache[creature.get()] = creature;
 }
 
 void Zone::creatureRemoved(const std::shared_ptr<Creature> &creature) {
@@ -229,10 +229,16 @@ void Zone::creatureRemoved(const std::shared_ptr<Creature> &creature) {
 		return;
 	}
 	std::lock_guard<std::mutex> lock(cacheMutex);
-	creaturesCache.erase(creature);
-	playersCache.erase(creature->getPlayer());
-	monstersCache.erase(creature->getMonster());
-	npcsCache.erase(creature->getNpc());
+	creaturesCache.erase(creature.get());
+	if (const auto &player = creature->getPlayer()) {
+		playersCache.erase(player.get());
+	}
+	if (const auto &monster = creature->getMonster()) {
+		monstersCache.erase(monster.get());
+	}
+	if (const auto &npc = creature->getNpc()) {
+		npcsCache.erase(npc.get());
+	}
 }
 
 void Zone::thingAdded(const std::shared_ptr<Thing> &thing) {

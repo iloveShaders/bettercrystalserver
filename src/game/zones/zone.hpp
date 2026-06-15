@@ -154,6 +154,30 @@ namespace weak {
 		}
 		return result;
 	}
+
+	// Pointer-keyed cache. Hashing/equality use the raw pointer key and never
+	// touch the weak_ptr control block, so insert/erase/rehash are safe even if
+	// the pointee is being destroyed on another thread. lock() (which reads the
+	// control block) happens only here, after the map operation, on a private
+	// copy. This mirrors Zone::itemsCache, which uses the same pattern and does
+	// not suffer the weak_ptr-in-hash use-after-free crash.
+	template <typename T>
+	using map = std::unordered_map<const T*, std::weak_ptr<T>>;
+
+	template <typename T>
+	std::vector<std::shared_ptr<T>> lockMap(map<T> &weakMap) {
+		std::vector<std::shared_ptr<T>> result;
+		result.reserve(weakMap.size());
+		for (auto it = weakMap.begin(); it != weakMap.end();) {
+			if (auto locked = it->second.lock()) {
+				result.push_back(std::move(locked));
+				++it;
+			} else {
+				it = weakMap.erase(it);
+			}
+		}
+		return result;
+	}
 }
 
 class Zone {
@@ -236,10 +260,10 @@ protected:
 
 	mutable std::mutex cacheMutex;
 	std::unordered_map<const Item*, std::weak_ptr<Item>> itemsCache;
-	weak::set<Creature> creaturesCache;
-	weak::set<Monster> monstersCache;
-	weak::set<Npc> npcsCache;
-	weak::set<Player> playersCache;
+	weak::map<Creature> creaturesCache;
+	weak::map<Monster> monstersCache;
+	weak::map<Npc> npcsCache;
+	weak::map<Player> playersCache;
 
 	static phmap::parallel_flat_hash_map<std::string, std::shared_ptr<Zone>> zones;
 	static phmap::parallel_flat_hash_map<uint32_t, std::shared_ptr<Zone>> zonesByID;
