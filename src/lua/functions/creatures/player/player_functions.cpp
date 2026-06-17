@@ -210,6 +210,7 @@ void PlayerFunctions::init(lua_State* L) {
 	Lua::registerMethod(L, "Player", "removeOfflineTrainingTime", PlayerFunctions::luaPlayerRemoveOfflineTrainingTime);
 
 	Lua::registerMethod(L, "Player", "addOfflineTrainingTries", PlayerFunctions::luaPlayerAddOfflineTrainingTries);
+	Lua::registerMethod(L, "Player", "sendMultiOfflineTrainingDialog", PlayerFunctions::luaPlayerSendMultiOfflineTrainingDialog);
 
 	Lua::registerMethod(L, "Player", "getOfflineTrainingSkill", PlayerFunctions::luaPlayerGetOfflineTrainingSkill);
 	Lua::registerMethod(L, "Player", "setOfflineTrainingSkill", PlayerFunctions::luaPlayerSetOfflineTrainingSkill);
@@ -2082,6 +2083,18 @@ int PlayerFunctions::luaPlayerSetOfflineTrainingSkill(lua_State* L) {
 	if (player) {
 		const int8_t skillId = Lua::getNumber<int8_t>(L, 2);
 		player->setOfflineTrainingSkill(skillId);
+		Lua::pushBoolean(L, true);
+	} else {
+		lua_pushnil(L);
+	}
+	return 1;
+}
+
+int PlayerFunctions::luaPlayerSendMultiOfflineTrainingDialog(lua_State* L) {
+	// player:sendMultiOfflineTrainingDialog()
+	const auto &player = Lua::getUserdataShared<Player>(L, 1);
+	if (player) {
+		player->sendMultiOfflineTrainingDialog();
 		Lua::pushBoolean(L, true);
 	} else {
 		lua_pushnil(L);
