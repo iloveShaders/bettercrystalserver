@@ -10491,6 +10491,40 @@ void Game::sendOfflineTrainingDialog(const std::shared_ptr<Player> &player) {
 	}
 }
 
+void Game::playerStartOfflineTraining(uint32_t playerId, skills_t skill) {
+	const auto &player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+
+	if (skill != SKILL_SWORD && skill != SKILL_AXE && skill != SKILL_CLUB && skill != SKILL_DISTANCE && skill != SKILL_MAGLEVEL && skill != SKILL_FIST) {
+		return;
+	}
+
+	const auto &bedItem = player->getBedItem();
+	if (bedItem) {
+		if (bedItem->sleep(player)) {
+			player->setOfflineTrainingSkill(static_cast<int8_t>(skill));
+			return;
+		}
+		player->sendTextMessage(MESSAGE_EVENT_ADVANCE, "Offline training aborted.");
+		player->setBedItem(nullptr);
+		return;
+	}
+
+	if (player->isPzLocked()) {
+		player->sendTextMessage(MESSAGE_EVENT_ADVANCE, "You can not start offline training while in a fight.");
+		return;
+	}
+
+	player->setOfflineTrainingSkill(static_cast<int8_t>(skill));
+	if (player->client) {
+		player->client->logout(false, false);
+	} else {
+		removeCreature(player);
+	}
+}
+
 void Game::playerAnswerModalWindow(uint32_t playerId, uint32_t modalWindowId, uint8_t button, uint8_t choice) {
 	const auto &player = getPlayerByID(playerId);
 	if (!player) {

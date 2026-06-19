@@ -217,6 +217,7 @@ private:
 
 	void parseTutorialChangeVocation(NetworkMessage &msg);
 	void parseTeleport(NetworkMessage &msg);
+	void parseStartOfflineTraining(NetworkMessage &msg);
 	void parseThrow(NetworkMessage &msg);
 	void parseUseItemEx(NetworkMessage &msg);
 	void parseUseWithCreature(NetworkMessage &msg);
@@ -483,6 +484,7 @@ private:
 
 	// messages
 	void sendModalWindow(const ModalWindow &modalWindow);
+	void sendMultiOfflineTrainingDialog();
 
 	// analyzers
 	void sendKillTrackerUpdate(const std::shared_ptr<Container> &corpse, const std::string &name, Outfit_t creatureOutfit);

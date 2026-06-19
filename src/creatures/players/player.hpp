@@ -954,6 +954,7 @@ public:
 	void sendUseItemCooldown(uint32_t time) const;
 	void reloadCreature(const std::shared_ptr<Creature> &creature) const;
 	void sendModalWindow(const ModalWindow &modalWindow);
+	void sendMultiOfflineTrainingDialog();
 
 	// container
 	void closeAllExternalContainers();

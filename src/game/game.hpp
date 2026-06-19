@@ -598,6 +598,7 @@ public:
 	}
 
 	void sendOfflineTrainingDialog(const std::shared_ptr<Player> &player);
+	void playerStartOfflineTraining(uint32_t playerId, skills_t skill);
 
 	const std::map<uint16_t, std::map<uint8_t, uint64_t>> &getItemsPrice() const {
 		return itemsPriceMap;
