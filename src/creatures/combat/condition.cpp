@@ -1452,7 +1452,12 @@ uint32_t ConditionRegeneration::getHealthTicks(const std::shared_ptr<Creature> &
 			playerHealthTicks = static_cast<uint32_t>(static_cast<double>(playerHealthTicks) / g_configManager().getFloat(RATE_SPELL_COOLDOWN));
 		}
 
-		return playerHealthTicks - healthTicks;
+		// NOTE: do NOT subtract the stored healthTicks member here. The regen
+		// interval is config-driven (base/food). Legacy/persisted conditions may
+		// carry a nonzero healthTicks (e.g. 1000 from older builds); subtracting it
+		// drove the interval toward 0, firing regen + sendStats() every tick and
+		// tanking client FPS with the skills tab open.
+		return playerHealthTicks;
 	}
 
 	return healthTicks;
@@ -1471,7 +1476,9 @@ uint32_t ConditionRegeneration::getManaTicks(const std::shared_ptr<Creature> &cr
 			playerManaTicks = static_cast<uint32_t>(static_cast<double>(playerManaTicks) / g_configManager().getFloat(RATE_SPELL_COOLDOWN));
 		}
 
-		return playerManaTicks - manaTicks;
+		// See getHealthTicks: interval is config-driven; never subtract the stored
+		// manaTicks member (legacy persisted value would zero the interval).
+		return playerManaTicks;
 	}
 
 	return manaTicks;
