@@ -735,16 +735,23 @@ void Combat::CombatHealthFunc(const std::shared_ptr<Creature> &caster, const std
 		if (const std::shared_ptr<Creature> &attackedCreature = attackerPlayer->getAttackedCreature()) {
 			if (attackedCreature && (attackedCreature == targetMonster || attackedCreature == targetPlayer)) {
 				for (const auto &[skillType, bonusPercent] : proficiencyPerk.skillPercentageAsExtraDamageForAutoAttack) {
-					const uint16_t skillLevel = attackerPlayer->getSkillLevel(skillType);
-					const int32_t bonus = static_cast<int32_t>(std::ceil(skillLevel * bonusPercent));
+					// Magic level is not exposed through getSkillLevel(SKILL_MAGLEVEL); use getMagicLevel().
+					const uint32_t statLevel = (skillType == SKILL_MAGLEVEL) ? attackerPlayer->getMagicLevel() : attackerPlayer->getSkillLevel(skillType);
+					const int32_t bonus = static_cast<int32_t>(std::ceil(statLevel * bonusPercent));
 
 					g_logger().debug("[{}] skillPercentageAsExtraDamageForAutoAttack before {} / {} bonus {} skill id {}", __FUNCTION__, damage.primary.value, damage.secondary.value, bonus, static_cast<uint8_t>(skillType));
 
+					// Weapon basic attacks reach this function with positive damage values,
+					// while spells arrive negative. Add to the magnitude regardless of sign.
 					if (damage.primary.value > 0) {
+						damage.primary.value += bonus;
+					} else if (damage.primary.value < 0) {
 						damage.primary.value -= bonus;
 					}
 
 					if (damage.secondary.value > 0) {
+						damage.secondary.value += bonus;
+					} else if (damage.secondary.value < 0) {
 						damage.secondary.value -= bonus;
 					}
 
