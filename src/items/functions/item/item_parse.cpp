@@ -91,6 +91,7 @@ void ItemParse::initParse(const std::string &stringValue, pugi::xml_node attribu
 	ItemParse::parseUnscriptedItems(stringValue, attributeNode, valueAttribute, itemType);
 	ItemParse::parseElementalBond(stringValue, valueAttribute, itemType);
 	ItemParse::parseMantra(stringValue, valueAttribute, itemType);
+	ItemParse::parseAmmoSaveChance(stringValue, valueAttribute, itemType);
 }
 
 void ItemParse::parseDummyRate(pugi::xml_node attributeNode, ItemType &itemType) {
@@ -1310,5 +1311,17 @@ void ItemParse::parseMantra(const std::string &stringValue, pugi::xml_attribute 
 		abilities.mantraAbsorbValue[combatTypeToIndex(COMBAT_EARTHDAMAGE)] += value;
 		abilities.mantraAbsorbValue[combatTypeToIndex(COMBAT_ICEDAMAGE)] += value;
 		itemType.mantra = value;
+	}
+}
+
+void ItemParse::parseAmmoSaveChance(const std::string &stringValue, pugi::xml_attribute valueAttribute, ItemType &itemType) {
+	if (stringValue == "ammosavechance") {
+		auto value = pugi::cast<int32_t>(valueAttribute.value());
+		if (value < 0) {
+			value = 0;
+		} else if (value > 100) {
+			value = 100;
+		}
+		itemType.ammoSaveChance = static_cast<uint8_t>(value);
 	}
 }

@@ -337,6 +337,7 @@ public:
 	uint8_t shootRange = 1;
 	uint8_t imbuementSlot = 0;
 	uint8_t stackSize = 100;
+	uint8_t ammoSaveChance = 0; // quiver: % chance to not consume ammo
 
 	int8_t hitChance = 0;
 

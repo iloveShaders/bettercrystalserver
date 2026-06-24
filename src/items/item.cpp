@@ -1481,6 +1481,23 @@ Item::getDescriptions(const ItemType &it, const std::shared_ptr<Item> &item /*= 
 				descriptions.emplace_back("Damage Reflection", ss.str());
 			}
 
+			{
+				int32_t reflectPercentShow = it.abilities->reflectPercent[0];
+				if (reflectPercentShow != 0) {
+					for (size_t i = 1; i < COMBAT_COUNT; ++i) {
+						if (it.abilities->reflectPercent[i] != reflectPercentShow) {
+							reflectPercentShow = 0;
+							break;
+						}
+					}
+				}
+				if (reflectPercentShow != 0) {
+					ss.str("");
+					ss << reflectPercentShow << "%";
+					descriptions.emplace_back("Damage Reflection", ss.str());
+				}
+			}
+
 			if (it.abilities->speed) {
 				ss.str("");
 				ss << std::showpos << it.abilities->speed << std::noshowpos;
@@ -1879,6 +1896,23 @@ Item::getDescriptions(const ItemType &it, const std::shared_ptr<Item> &item /*= 
 				ss.str("");
 				ss << it.abilities->reflectFlat[combatTypeToIndex(COMBAT_PHYSICALDAMAGE)];
 				descriptions.emplace_back("Damage Reflection", ss.str());
+			}
+
+			{
+				int32_t reflectPercentShow = it.abilities->reflectPercent[0];
+				if (reflectPercentShow != 0) {
+					for (size_t i = 1; i < COMBAT_COUNT; ++i) {
+						if (it.abilities->reflectPercent[i] != reflectPercentShow) {
+							reflectPercentShow = 0;
+							break;
+						}
+					}
+				}
+				if (reflectPercentShow != 0) {
+					ss.str("");
+					ss << reflectPercentShow << "%";
+					descriptions.emplace_back("Damage Reflection", ss.str());
+				}
 			}
 
 			if (it.abilities->cleavePercent) {
@@ -2392,6 +2426,28 @@ std::string Item::parseShowAttributesDescription(const std::shared_ptr<Item> &it
 				itemDescription << "damage reflection " << std::showpos << itemType.abilities->reflectFlat[0] << std::noshowpos;
 			}
 
+			{
+				int32_t reflectPercentShow = itemType.abilities->reflectPercent[0];
+				if (reflectPercentShow != 0) {
+					for (size_t i = 1; i < COMBAT_COUNT; ++i) {
+						if (itemType.abilities->reflectPercent[i] != reflectPercentShow) {
+							reflectPercentShow = 0;
+							break;
+						}
+					}
+				}
+				if (reflectPercentShow != 0) {
+					if (begin) {
+						begin = false;
+						itemDescription << " (";
+					} else {
+						itemDescription << ", ";
+					}
+
+					itemDescription << "damage reflection " << std::showpos << reflectPercentShow << std::noshowpos << "%";
+				}
+			}
+
 			int16_t show = itemType.abilities->absorbPercent[0];
 			if (show != 0) {
 				for (size_t i = 1; i < COMBAT_COUNT; ++i) {
@@ -2496,6 +2552,17 @@ std::string Item::parseShowAttributesDescription(const std::shared_ptr<Item> &it
 
 				itemDescription << "Cleave " << std::showpos << (itemType.abilities->cleavePercent) << std::noshowpos << "%";
 			}
+		}
+
+		if (itemType.ammoSaveChance > 0) {
+			if (begin) {
+				begin = false;
+				itemDescription << " (";
+			} else {
+				itemDescription << ", ";
+			}
+
+			itemDescription << "ammo save " << static_cast<int>(itemType.ammoSaveChance) << '%';
 		}
 
 		if (!begin) {
@@ -2688,6 +2755,28 @@ std::string Item::getDescription(const ItemType &it, int32_t lookDistance, const
 					}
 
 					s << "damage reflection " << std::showpos << it.abilities->reflectFlat[combatTypeToIndex(COMBAT_PHYSICALDAMAGE)] << std::noshowpos;
+				}
+
+				{
+					int32_t reflectPercentShow = it.abilities->reflectPercent[0];
+					if (reflectPercentShow != 0) {
+						for (size_t i = 1; i < COMBAT_COUNT; ++i) {
+							if (it.abilities->reflectPercent[i] != reflectPercentShow) {
+								reflectPercentShow = 0;
+								break;
+							}
+						}
+					}
+					if (reflectPercentShow != 0) {
+						if (begin) {
+							begin = false;
+							s << " (";
+						} else {
+							s << ", ";
+						}
+
+						s << "damage reflection " << std::showpos << reflectPercentShow << std::noshowpos << "%";
+					}
 				}
 
 				int16_t show = it.abilities->absorbPercent[0];
@@ -2971,6 +3060,28 @@ std::string Item::getDescription(const ItemType &it, int32_t lookDistance, const
 					}
 
 					s << "damage reflection " << std::showpos << it.abilities->reflectFlat[combatTypeToIndex(COMBAT_PHYSICALDAMAGE)] << std::noshowpos;
+				}
+
+				{
+					int32_t reflectPercentShow = it.abilities->reflectPercent[0];
+					if (reflectPercentShow != 0) {
+						for (size_t i = 1; i < COMBAT_COUNT; ++i) {
+							if (it.abilities->reflectPercent[i] != reflectPercentShow) {
+								reflectPercentShow = 0;
+								break;
+							}
+						}
+					}
+					if (reflectPercentShow != 0) {
+						if (begin) {
+							begin = false;
+							s << " (";
+						} else {
+							s << ", ";
+						}
+
+						s << "damage reflection " << std::showpos << reflectPercentShow << std::noshowpos << "%";
+					}
 				}
 
 				int16_t show = it.abilities->absorbPercent[0];

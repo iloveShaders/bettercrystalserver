@@ -432,6 +432,14 @@ void Weapon::onUsedWeapon(const std::shared_ptr<Player> &player, const std::shar
 	switch (action) {
 		case WEAPONACTION_REMOVECOUNT:
 			if (!skipRemoveBeginningWeaponAmmo && g_configManager().getBoolean(REMOVE_WEAPON_AMMO)) {
+				// Quiver ammo-save bonus: chance to not consume ammo
+				const auto &quiver = player->getInventoryItem(CONST_SLOT_RIGHT);
+				if (quiver && quiver->isQuiver()) {
+					const uint8_t saveChance = Item::items[quiver->getID()].ammoSaveChance;
+					if (saveChance != 0 && uniform_random(1, 100) <= saveChance) {
+						break;
+					}
+				}
 				Weapon::decrementItemCount(item);
 				player->updateSupplyTracker(item);
 			}
