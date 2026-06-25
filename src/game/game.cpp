@@ -10410,9 +10410,9 @@ void Game::playerAcceptMarketOffer(uint32_t playerId, uint32_t timestamp, uint16
 			if (!delivered) {
 				offerStatus << "Failed to deliver items to buyer inbox for buy offer from player " << player->getName();
 			}
-		}	
+		}
 
-			if (!delivered) {
+		if (!delivered) {
 			player->sendTextMessage(MESSAGE_MARKET, "There was an error delivering the item to the buyer's inbox. Please contact the administrator.");
 			player->sendMarketEnter(player->getLastDepotId());
 			g_logger().error("{} - Player {} failed to deliver buy offer items to buyer inbox", __FUNCTION__, player->getName());
@@ -10467,9 +10467,9 @@ void Game::playerAcceptMarketOffer(uint32_t playerId, uint32_t timestamp, uint16
 			if (!delivered) {
 				offerStatus << "Failed to add inbox item for sell offer for player " << player->getName();
 			}
-		}	
+		}
 
-			if (!delivered) {
+		if (!delivered) {
 			refundMarketPurchase(player, totalPrice);
 			player->sendTextMessage(MESSAGE_MARKET, "There was an error delivering the item to your inbox. Your money has been refunded.");
 			player->sendMarketEnter(player->getLastDepotId());
