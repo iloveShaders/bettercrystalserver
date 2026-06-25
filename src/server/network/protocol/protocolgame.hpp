@@ -21,6 +21,7 @@
 
 #include "server/network/protocol/protocol.hpp"
 #include "creatures/creatures_definitions.hpp"
+#include "enums/disconnect_client.hpp"
 #include "game/movement/position.hpp"
 #include "utils/utils_definitions.hpp"
 
@@ -132,7 +133,7 @@ private:
 		return std::static_pointer_cast<ProtocolGame>(shared_from_this());
 	}
 	void connect(const std::string &playerName, OperatingSystem_t operatingSystem);
-	void disconnectClient(const std::string &message) const;
+	void disconnectClient(const std::string &message, DisconnectClient_t reason = DisconnectClient_t::Default) const;
 	void writeToOutputBuffer(NetworkMessage &msg);
 
 	void release() override;
