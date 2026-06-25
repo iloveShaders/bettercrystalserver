@@ -170,6 +170,7 @@ const phmap::flat_hash_map<std::string, ItemParseAttributes_t> ItemParseAttribut
 	{ "elementalbond", ITEM_PARSE_ELEMENTALBOND },
 	{ "mantra", ITEM_PARSE_MANTRA },
 	{ "ammosavechance", ITEM_PARSE_AMMOSAVECHANCE },
+	{ "meleeattackeffect", ITEM_PARSE_MELEEATTACKEFFECT },
 };
 
 const phmap::flat_hash_map<std::string, ItemTypes_t> ItemTypesMap = {
@@ -340,6 +341,7 @@ private:
 	static void parseHouseRelated(std::string_view stringValue, pugi::xml_attribute valueAttribute, ItemType &itemType);
 	static void parseUnscriptedItems(std::string_view stringValue, pugi::xml_node attributeNode, pugi::xml_attribute valueAttribute, ItemType &itemType);
 	static void parseMantra(const std::string &stringValue, pugi::xml_attribute valueAttribute, ItemType &itemType);
+	static void parseMeleeAttackEffect(const std::string &stringValue, pugi::xml_attribute valueAttribute, ItemType &itemType);
 	static void parseElementalBond(const std::string &stringValue, pugi::xml_attribute valueAttribute, ItemType &itemType);
 	static void parseAmmoSaveChance(const std::string &stringValue, pugi::xml_attribute valueAttribute, ItemType &itemType);
 

@@ -92,6 +92,7 @@ void ItemParse::initParse(const std::string &stringValue, pugi::xml_node attribu
 	ItemParse::parseElementalBond(stringValue, valueAttribute, itemType);
 	ItemParse::parseMantra(stringValue, valueAttribute, itemType);
 	ItemParse::parseAmmoSaveChance(stringValue, valueAttribute, itemType);
+	ItemParse::parseMeleeAttackEffect(stringValue, valueAttribute, itemType);
 }
 
 void ItemParse::parseDummyRate(pugi::xml_node attributeNode, ItemType &itemType) {
@@ -1323,5 +1324,33 @@ void ItemParse::parseAmmoSaveChance(const std::string &stringValue, pugi::xml_at
 			value = 100;
 		}
 		itemType.ammoSaveChance = static_cast<uint8_t>(value);
+	}
+}
+
+void ItemParse::parseMeleeAttackEffect(const std::string &stringValue, pugi::xml_attribute valueAttribute, ItemType &itemType) {
+	if (stringValue != "meleeattackeffect") {
+		return;
+	}
+
+	static const phmap::flat_hash_map<std::string, MagicEffectClasses> meleeAttackEffects = {
+		{ "sword", CONST_ME_SWORD_ATTACK },
+		{ "swordattack", CONST_ME_SWORD_ATTACK },
+		{ "club", CONST_ME_CLUB_ATTACK },
+		{ "clubattack", CONST_ME_CLUB_ATTACK },
+		{ "axe", CONST_ME_AXE_ATTACK },
+		{ "axeattack", CONST_ME_AXE_ATTACK },
+		{ "fist", CONST_ME_FIST_ATTACK },
+		{ "fistattack", CONST_ME_FIST_ATTACK },
+		{ "monkstaff", CONST_ME_MONK_STAFF_ATTACK },
+		{ "monkstaffattack", CONST_ME_MONK_STAFF_ATTACK },
+		{ "monkdaggers", CONST_ME_MONK_DAGGERS_ATTACK },
+		{ "monkdaggersattack", CONST_ME_MONK_DAGGERS_ATTACK },
+	};
+
+	const auto effect = meleeAttackEffects.find(asLowerCaseString(valueAttribute.as_string()));
+	if (effect != meleeAttackEffects.end()) {
+		itemType.meleeAttackEffect = effect->second;
+	} else {
+		g_logger().warn("[Items::parseItemNode] - Unknown meleeAttackEffect {}", valueAttribute.as_string());
 	}
 }
