@@ -190,12 +190,18 @@ std::string Account::getPassword() {
 }
 
 void Account::addPremiumDays(const int32_t &days) {
-	auto timeLeft = std::max(0, static_cast<int>((m_account.premiumLastDay - getTimeNow()) % 86400));
-	setPremiumDays(m_account.premiumRemainingDays + days);
+	// Anchor to the existing expiry if it is still in the future, otherwise to now.
+	// This appends time to the END of the current premium window instead of
+	// re-anchoring lastday to "now" on every call, so rapid/repeated grants stack
+	// correctly instead of overwriting each other.
+	const time_t base = std::max<time_t>(m_account.premiumLastDay, getTimeNow());
+	m_account.premiumLastDay = base + static_cast<time_t>(days) * 86400;
+	m_account.premiumRemainingDays = static_cast<uint32_t>((m_account.premiumLastDay - getTimeNow()) / 86400);
 	m_account.premiumDaysPurchased += days;
 
-	if (timeLeft > 0) {
-		m_account.premiumLastDay += timeLeft;
+	if (days <= 0 && m_account.premiumLastDay <= getTimeNow()) {
+		m_account.premiumLastDay = 0;
+		m_account.premiumRemainingDays = 0;
 	}
 }
 
