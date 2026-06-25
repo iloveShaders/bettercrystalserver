@@ -97,6 +97,7 @@ class PlayerFunctions {
 	static int luaPlayerSetBountyRerollTokens(lua_State* L);
 	static int luaPlayerGenerateBountyCreatureList(lua_State* L);
 	static int luaPlayerIsBountyTalismanEquipped(lua_State* L);
+	static int luaPlayerGetBountyTalismanBonus(lua_State* L);
 
 	// Weekly Task data setters
 	static int luaPlayerSetWeeklyDifficulty(lua_State* L);

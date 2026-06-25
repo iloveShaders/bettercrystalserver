@@ -123,6 +123,7 @@ void PlayerFunctions::init(lua_State* L) {
 	Lua::registerMethod(L, "Player", "setBountyRerollTokens", PlayerFunctions::luaPlayerSetBountyRerollTokens);
 	Lua::registerMethod(L, "Player", "generateBountyCreatureList", PlayerFunctions::luaPlayerGenerateBountyCreatureList);
 	Lua::registerMethod(L, "Player", "isBountyTalismanEquipped", PlayerFunctions::luaPlayerIsBountyTalismanEquipped);
+	Lua::registerMethod(L, "Player", "getBountyTalismanBonus", PlayerFunctions::luaPlayerGetBountyTalismanBonus);
 
 	// Weekly Task data manipulation
 	Lua::registerMethod(L, "Player", "setWeeklyDifficulty", PlayerFunctions::luaPlayerSetWeeklyDifficulty);
@@ -6015,6 +6016,22 @@ int PlayerFunctions::luaPlayerIsBountyTalismanEquipped(lua_State* L) {
 	const auto &player = Lua::getUserdataShared<Player>(L, 1);
 	if (player) {
 		Lua::pushBoolean(L, player->isBountyTalismanEquipped());
+	} else {
+		lua_pushnil(L);
+	}
+	return 1;
+}
+
+int PlayerFunctions::luaPlayerGetBountyTalismanBonus(lua_State* L) {
+	// player:getBountyTalismanBonus(raceId, pathIndex)
+	// Returns the talisman bonus in hundredths of a percent (e.g. 250 = 2.50%),
+	// or 0 if the talisman is not equipped, there is no active task, the active
+	// task creature does not match raceId, or the path has no bonus.
+	const auto &player = Lua::getUserdataShared<Player>(L, 1);
+	if (player) {
+		auto raceId = Lua::getNumber<uint16_t>(L, 2);
+		auto pathIndex = Lua::getNumber<uint8_t>(L, 3);
+		lua_pushnumber(L, g_iobountytasks().getBountyTalismanBonus(player, raceId, pathIndex));
 	} else {
 		lua_pushnil(L);
 	}
