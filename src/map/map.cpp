@@ -33,8 +33,11 @@ void Map::load(const std::string &identifier, const Position &pos) {
 	try {
 		path = identifier;
 		IOMap::loadMap(this, pos);
+	} catch (const IOMapException &e) {
+		g_logger().error("[Map::load] - Failed to load map {}: {}", identifier, e.what());
+		throw;
 	} catch (const std::exception &e) {
-		g_logger().warn("[Map::load] - The map in folder {} is missing or corrupted", identifier);
+		g_logger().warn("[Map::load] - The map in folder {} is missing or corrupted: {}", identifier, e.what());
 	}
 }
 
@@ -118,6 +121,27 @@ void Map::loadMapCustom(const std::string &mapName, bool loadHouses, bool loadMo
 	monsterfile.clear();
 	housefile.clear();
 	npcfile.clear();
+}
+
+void Map::clearArea(uint16_t x1, uint16_t y1, uint8_t z1, uint16_t x2, uint16_t y2, uint8_t z2) {
+	for (uint16_t x = x1; x <= x2; x++) {
+		for (uint16_t y = y1; y <= y2; y++) {
+			for (uint8_t z = z1; z <= z2; z++) {
+				const auto sector = getMapSector(x, y);
+				if (!sector) {
+					continue;
+				}
+
+				const auto floor = sector->getFloor(z);
+				if (!floor) {
+					continue;
+				}
+
+				floor->setTile(x, y, nullptr);
+				floor->setTileCache(x, y, nullptr);
+			}
+		}
+	}
 }
 
 void Map::loadHouseInfo() {
