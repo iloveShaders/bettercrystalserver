@@ -2314,9 +2314,18 @@ void ProtocolGame::parseEditVip(NetworkMessage &msg) {
 	std::vector<uint8_t> vipGroupsId;
 	auto guid = msg.get<uint32_t>();
 	const std::string description = msg.getString();
+	// Guard: a malformed/desynced packet can make getString() read a garbage
+	// length; a real VIP description never approaches this size.
+	if (description.size() > 1000) {
+		return;
+	}
 	uint32_t icon = std::min<uint32_t>(10, msg.get<uint32_t>()); // 10 is max icon in 9.63
 	bool notify = msg.getByte() != 0;
 	uint8_t groupsAmount = msg.getByte();
+	// Guard: each group is 1 byte; bail if the packet can't actually contain them.
+	if (msg.getBufferPosition() + groupsAmount > msg.getLength()) {
+		return;
+	}
 	for (uint8_t i = 0; i < groupsAmount; ++i) {
 		uint8_t groupId = msg.getByte();
 		vipGroupsId.emplace_back(groupId);
