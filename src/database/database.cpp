@@ -99,10 +99,11 @@ bool Database::connect(const std::string* host, const std::string* user, const s
 	if (result) {
 		maxPacketSize = result->getNumber<uint64_t>("Value");
 	}
+
+	g_logger().info("MySQL connection pool initialized with {} connection(s).", poolSize);
+
 	return true;
 }
-
-g_logger().info("MySQL connection pool initialized with {} connection(s).", poolSize);
 
 void Database::createDatabaseBackup(bool compress) const {
 	if (!g_configManager().getBoolean(MYSQL_DB_BACKUP)) {
