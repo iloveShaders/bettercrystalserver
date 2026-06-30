@@ -38,7 +38,7 @@ Database &Database::getInstance() {
 }
 
 bool Database::connect() {
-uint32_t poolSize = g_configManager().getNumber(MYSQL_POOL_SIZE);
+	uint32_t poolSize = g_configManager().getNumber(MYSQL_POOL_SIZE);
 	if (poolSize < 1) {
 		poolSize = 1;
 	}
@@ -102,7 +102,7 @@ bool Database::connect(const std::string* host, const std::string* user, const s
 	return true;
 }
 
-	g_logger().info("MySQL connection pool initialized with {} connection(s).", poolSize);
+g_logger().info("MySQL connection pool initialized with {} connection(s).", poolSize);
 
 void Database::createDatabaseBackup(bool compress) const {
 	if (!g_configManager().getBoolean(MYSQL_DB_BACKUP)) {
