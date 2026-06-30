@@ -10125,7 +10125,7 @@ void Game::playerCreateMarketOffer(uint32_t playerId, uint8_t type, uint16_t ite
 		g_logger().error("{} - Player {} had an error on init offer on the market, error code: {}", __FUNCTION__, player->getName(), offerStatus.str());
 		return;
 	}
-	
+
 	// Check limit of own offers per side (buy/sell)
 	const uint32_t playerOfferCountPerSide = IOMarket::getPlayerOfferCountPerSide(player->getGUID(), static_cast<MarketAction_t>(type));
 	if (playerOfferCountPerSide >= IOMarket::MAX_MARKET_OWN_OFFERS_PER_SIDE) {
@@ -10141,7 +10141,6 @@ void Game::playerCreateMarketOffer(uint32_t playerId, uint8_t type, uint16_t ite
 		g_logger().warn("{} - Player {} reached item offers per side limit ({}) for item {}", __FUNCTION__, player->getName(), IOMarket::MAX_MARKET_OFFERS_PER_SIDE, it.id);
 		return;
 	}
-
 
 	if (!player->canDoMarketAction()) {
 		player->sendCancelMessage(RETURNVALUE_YOUAREEXHAUSTED);
