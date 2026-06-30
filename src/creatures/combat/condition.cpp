@@ -1442,7 +1442,7 @@ bool ConditionRegeneration::setParam(ConditionParam_t param, int32_t value) {
 uint32_t ConditionRegeneration::getHealthTicks(const std::shared_ptr<Creature> &creature) const {
 	const auto &player = creature->getPlayer();
 
-	if (player && id == CONDITIONID_DEFAULT) {
+	if (player) {
 		uint32_t playerHealthTicks = g_configManager().getNumber(BASE_HEALTH_REGEN_INTERVAL);
 		if (foodTicks > 0) {
 			playerHealthTicks = g_configManager().getNumber(FOOD_HEALTH_REGEN_INTERVAL);
@@ -1452,19 +1452,7 @@ uint32_t ConditionRegeneration::getHealthTicks(const std::shared_ptr<Creature> &
 			playerHealthTicks = static_cast<uint32_t>(static_cast<double>(playerHealthTicks) / g_configManager().getFloat(RATE_SPELL_COOLDOWN));
 		}
 
-		// NOTE: do NOT subtract the stored healthTicks member here. The regen
-		// interval is config-driven (base/food). Legacy/persisted conditions may
-		// carry a nonzero healthTicks (e.g. 1000 from older builds); subtracting it
-		// drove the interval toward 0, firing regen + sendStats() every tick and
-		// tanking client FPS with the skills tab open.
-		return playerHealthTicks;
-	}
-
-	// Equipment/mount/outfit regen (Ring of Healing, etc.) is created with a slot
-	// conditionId and carries its OWN interval in healthTicks. Honor it (upstream
-	// behavior) so those items actually work.
-	if (isBuff) {
-		return static_cast<uint32_t>(static_cast<double>(healthTicks) / g_configManager().getFloat(RATE_SPELL_COOLDOWN));
+		return playerHealthTicks - healthTicks;
 	}
 
 	return healthTicks;
@@ -1473,7 +1461,7 @@ uint32_t ConditionRegeneration::getHealthTicks(const std::shared_ptr<Creature> &
 uint32_t ConditionRegeneration::getManaTicks(const std::shared_ptr<Creature> &creature) const {
 	const auto &player = creature->getPlayer();
 
-	if (player && id == CONDITIONID_DEFAULT) {
+	if (player) {
 		uint32_t playerManaTicks = g_configManager().getNumber(BASE_MANA_REGEN_INTERVAL);
 		if (foodTicks > 0) {
 			playerManaTicks = g_configManager().getNumber(FOOD_MANA_REGEN_INTERVAL);
@@ -1483,14 +1471,7 @@ uint32_t ConditionRegeneration::getManaTicks(const std::shared_ptr<Creature> &cr
 			playerManaTicks = static_cast<uint32_t>(static_cast<double>(playerManaTicks) / g_configManager().getFloat(RATE_SPELL_COOLDOWN));
 		}
 
-		// See getHealthTicks: interval is config-driven; never subtract the stored
-		// manaTicks member (legacy persisted value would zero the interval).
-		return playerManaTicks;
-	}
-
-	// Equipment/mount/outfit regen carries its own interval in manaTicks.
-	if (isBuff) {
-		return static_cast<uint32_t>(static_cast<double>(manaTicks) / g_configManager().getFloat(RATE_SPELL_COOLDOWN));
+		return playerManaTicks - manaTicks;
 	}
 
 	return manaTicks;
