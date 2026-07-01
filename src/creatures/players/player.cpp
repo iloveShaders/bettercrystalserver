@@ -10213,10 +10213,17 @@ bool Player::saySpell(SpeakClasses type, const std::string &text, bool isGhostMo
 	}
 
 	// Send to client
+	// Per-player opt-in emote spells: caster with STORAGEVALUE_EMOTE set to 1 broadcasts
+	// spell words as orange floating text (TALKTYPE_MONSTER_SAY). Default keeps TALKTYPE_SPELL_USE
+	// so the client "Show Spells" / "Show Spells of Others" options work as on global Tibia.
+	SpeakClasses spellType = TALKTYPE_SPELL_USE;
+	if (getStorageValue(STORAGEVALUE_EMOTE) == 1) {
+		spellType = TALKTYPE_MONSTER_SAY;
+	}
 	for (const auto &spectator : spectators) {
 		if (const auto &tmpPlayer = spectator->getPlayer()) {
 			if (!isGhostMode || tmpPlayer->canSeeCreature(static_self_cast<Player>())) {
-				tmpPlayer->sendCreatureSay(static_self_cast<Player>(), TALKTYPE_SPELL_USE, text, pos);
+				tmpPlayer->sendCreatureSay(static_self_cast<Player>(), spellType, text, pos);
 			}
 		}
 	}

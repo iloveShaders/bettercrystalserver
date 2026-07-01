@@ -40,6 +40,9 @@ static constexpr int32_t STORAGEVALUE_BESTIARYKILLCOUNT = 61305000; // Can get u
 // Hazard system storage
 static constexpr int32_t STORAGEVALUE_HAZARDCOUNT = 112550;
 
+// Emote spells (per-player opt-in). Keep in sync with data/talkactions emote command.
+static constexpr int32_t STORAGEVALUE_EMOTE = 112560;
+
 // Wheel of destiny
 static constexpr int32_t STORAGEVALUE_GIFT_OF_LIFE_COOLDOWN_WOD = 43200;
 
