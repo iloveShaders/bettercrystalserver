@@ -1442,7 +1442,7 @@ bool ConditionRegeneration::setParam(ConditionParam_t param, int32_t value) {
 uint32_t ConditionRegeneration::getHealthTicks(const std::shared_ptr<Creature> &creature) const {
 	const auto &player = creature->getPlayer();
 
-	if (player) {
+	if (player && id == CONDITIONID_DEFAULT) {
 		uint32_t playerHealthTicks = g_configManager().getNumber(BASE_HEALTH_REGEN_INTERVAL);
 		if (foodTicks > 0) {
 			playerHealthTicks = g_configManager().getNumber(FOOD_HEALTH_REGEN_INTERVAL);
@@ -1452,7 +1452,17 @@ uint32_t ConditionRegeneration::getHealthTicks(const std::shared_ptr<Creature> &
 			playerHealthTicks = static_cast<uint32_t>(static_cast<double>(playerHealthTicks) / g_configManager().getFloat(RATE_SPELL_COOLDOWN));
 		}
 
-		return playerHealthTicks - healthTicks;
+		// Base/food regen (CONDITIONID_DEFAULT) uses the config-driven interval.
+		return playerHealthTicks;
+	}
+
+	// Equipment/mount/outfit/spell regen uses a non-DEFAULT conditionId and carries
+	// its OWN interval in healthTicks (e.g. Ring of Healing = 6000). Return it
+	// directly. The old 'config - healthTicks' subtraction underflowed whenever
+	// healthTicks exceeded the config interval (6000 > 3000/1000), so those items
+	// added no regen at all.
+	if (isBuff) {
+		return static_cast<uint32_t>(static_cast<double>(healthTicks) / g_configManager().getFloat(RATE_SPELL_COOLDOWN));
 	}
 
 	return healthTicks;
@@ -1461,7 +1471,7 @@ uint32_t ConditionRegeneration::getHealthTicks(const std::shared_ptr<Creature> &
 uint32_t ConditionRegeneration::getManaTicks(const std::shared_ptr<Creature> &creature) const {
 	const auto &player = creature->getPlayer();
 
-	if (player) {
+	if (player && id == CONDITIONID_DEFAULT) {
 		uint32_t playerManaTicks = g_configManager().getNumber(BASE_MANA_REGEN_INTERVAL);
 		if (foodTicks > 0) {
 			playerManaTicks = g_configManager().getNumber(FOOD_MANA_REGEN_INTERVAL);
@@ -1471,7 +1481,15 @@ uint32_t ConditionRegeneration::getManaTicks(const std::shared_ptr<Creature> &cr
 			playerManaTicks = static_cast<uint32_t>(static_cast<double>(playerManaTicks) / g_configManager().getFloat(RATE_SPELL_COOLDOWN));
 		}
 
-		return playerManaTicks - manaTicks;
+		// Base/food regen (CONDITIONID_DEFAULT) uses the config-driven interval.
+		return playerManaTicks;
+	}
+
+	// Equipment/mount/outfit/spell regen carries its own interval in manaTicks
+	// (e.g. Ring of Healing = 6000). Return it directly; the old subtraction
+	// underflowed and added no mana.
+	if (isBuff) {
+		return static_cast<uint32_t>(static_cast<double>(manaTicks) / g_configManager().getFloat(RATE_SPELL_COOLDOWN));
 	}
 
 	return manaTicks;
