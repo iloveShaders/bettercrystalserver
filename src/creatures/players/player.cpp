@@ -309,7 +309,23 @@ void Player::addConditionSuppressions(const std::array<ConditionType_t, Conditio
 }
 
 void Player::removeConditionSuppressions() {
+	// Rebuild from all still-equipped items instead of blindly wiping everything.
+	// A plain reset() here dropped suppressions granted by OTHER worn items
+	// (e.g. dwarven ring drunk-suppress) whenever any single slot was deequipped,
+	// and nothing restored them until that item was physically re-equipped.
+	// The deequipped item is already out of inventory[] at this point, so it is
+	// correctly excluded from the rebuild.
 	m_conditionSuppressions.reset();
+	for (int i = CONST_SLOT_FIRST; i <= CONST_SLOT_LAST; ++i) {
+		const auto &item = inventory[i];
+		if (!item) {
+			continue;
+		}
+		const ItemType &it = Item::items[item->getID()];
+		if (it.abilities) {
+			addConditionSuppressions(it.abilities->conditionSuppressions);
+		}
+	}
 }
 
 std::shared_ptr<Item> Player::getWeapon(Slots_t slot, bool ignoreAmmo) const {
