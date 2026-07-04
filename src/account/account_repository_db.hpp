@@ -34,6 +34,7 @@ public:
 
 	bool getCoins(const uint32_t &id, const uint8_t &type, uint32_t &coins) override;
 	bool setCoins(const uint32_t &id, const uint8_t &type, const uint32_t &amount) override;
+	bool applyPremiumDelta(const uint32_t &id, const int32_t &days, const int64_t &now) override;
 	bool registerCoinsTransaction(
 		const uint32_t &id,
 		uint8_t type,

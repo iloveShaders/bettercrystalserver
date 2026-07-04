@@ -41,6 +41,9 @@ public:
 
 	virtual bool getCoins(const uint32_t &id, const uint8_t &type, uint32_t &coins) = 0;
 	virtual bool setCoins(const uint32_t &id, const uint8_t &type, const uint32_t &amount) = 0;
+	// Atomic premium mutation performed directly on the accounts row (never via the cached
+	// snapshot), so a stale Account object of another online character cannot revert it.
+	virtual bool applyPremiumDelta(const uint32_t &id, const int32_t &days, const int64_t &now) = 0;
 	virtual bool registerCoinsTransaction(
 		const uint32_t &id,
 		uint8_t type,

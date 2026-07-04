@@ -50,14 +50,18 @@ bool AccountRepositoryDB::loadBySession(const std::string &sessionKey, AccountIn
 };
 
 bool AccountRepositoryDB::save(const AccountInfo &accInfo) {
+	// Premium fields (`premdays`, `lastday`, `premdays_purchased`) are intentionally NOT
+	// written here. They are persisted only by the dedicated atomic applyPremiumDelta()
+	// path. This generic save() is called from coin operations (e.g. every XP Boost buy)
+	// and admin actions, and because each online character owns its own Account object,
+	// writing premium from this cached snapshot would let a sibling character's save revert
+	// a premium grant made on another character. Keeping premium out of this UPDATE makes
+	// premium behave like coin balances, which are already immune for the same reason.
 	bool successful = g_database().executeQuery(
 		fmt::format(
-			"UPDATE `accounts` SET `type` = {}, `premdays` = {}, `lastday` = {}, `creation` = {}, `premdays_purchased` = {}, `house_bid_id` = {} WHERE `id` = {}",
+			"UPDATE `accounts` SET `type` = {}, `creation` = {}, `house_bid_id` = {} WHERE `id` = {}",
 			accInfo.accountType,
-			accInfo.premiumRemainingDays,
-			accInfo.premiumLastDay,
 			accInfo.creationTime,
-			accInfo.premiumDaysPurchased,
 			accInfo.houseBidId,
 			accInfo.id
 		)
@@ -65,6 +69,34 @@ bool AccountRepositoryDB::save(const AccountInfo &accInfo) {
 
 	if (!successful) {
 		g_logger().error("Failed to save account:[{}]", accInfo.id);
+	}
+
+	return successful;
+};
+
+bool AccountRepositoryDB::applyPremiumDelta(const uint32_t &id, const int32_t &days, const int64_t &now) {
+	// Atomic read-modify-write on the accounts row. The new `lastday` is derived from the
+	// row's OWN current value (append to the end of the current window, or now if expired),
+	// so InnoDB row locking serialises concurrent/rapid grants and they stack instead of
+	// overwriting each other, and no stale in-memory snapshot can revert the change.
+	// `premdays_purchased` is a lifetime counter; `premdays` (display column) is kept in
+	// sync with the resulting `lastday`. `days` may be negative (removePremiumDays).
+	bool successful = g_database().executeQuery(
+		fmt::format(
+			"UPDATE `accounts` SET "
+			"`lastday` = CASE WHEN GREATEST(`lastday`, {0}) + ({1} * 86400) > {0} "
+			"THEN GREATEST(`lastday`, {0}) + ({1} * 86400) ELSE 0 END, "
+			"`premdays_purchased` = GREATEST(0, CAST(`premdays_purchased` AS SIGNED) + ({1})), "
+			"`premdays` = CASE WHEN `lastday` > {0} THEN FLOOR((`lastday` - {0}) / 86400) ELSE 0 END "
+			"WHERE `id` = {2}",
+			now,
+			days,
+			id
+		)
+	);
+
+	if (!successful) {
+		g_logger().error("Failed to apply premium delta for account:[{}]", id);
 	}
 
 	return successful;

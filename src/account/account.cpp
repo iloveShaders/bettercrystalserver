@@ -190,19 +190,24 @@ std::string Account::getPassword() {
 }
 
 void Account::addPremiumDays(const int32_t &days) {
-	// Anchor to the existing expiry if it is still in the future, otherwise to now.
-	// This appends time to the END of the current premium window instead of
-	// re-anchoring lastday to "now" on every call, so rapid/repeated grants stack
-	// correctly instead of overwriting each other.
-	const time_t base = std::max<time_t>(m_account.premiumLastDay, getTimeNow());
-	m_account.premiumLastDay = base + static_cast<time_t>(days) * 86400;
-	m_account.premiumRemainingDays = static_cast<uint32_t>((m_account.premiumLastDay - getTimeNow()) / 86400);
-	m_account.premiumDaysPurchased += days;
-
-	if (days <= 0 && m_account.premiumLastDay <= getTimeNow()) {
-		m_account.premiumLastDay = 0;
-		m_account.premiumRemainingDays = 0;
+	if (days == 0) {
+		return;
 	}
+
+	// Persist premium through a dedicated ATOMIC read-modify-write on the accounts row
+	// (the same model coin balances use) rather than mutating the cached m_account snapshot
+	// and leaning on the generic Account::save(). Each online character owns its own Account
+	// object, so a save() from a stale sibling object (e.g. an XP Boost purchase on another
+	// character, or an x-logged offline trainer) used to revert grants. Going straight to the
+	// DB makes the grant authoritative and lets InnoDB serialise rapid/concurrent grants so
+	// they stack instead of overwriting each other.
+	if (!g_accountRepository().applyPremiumDelta(m_account.id, days, static_cast<int64_t>(getTimeNow()))) {
+		return;
+	}
+
+	// Refresh the cached snapshot from the DB so in-session reads (and any later generic
+	// save()) reflect the granted value instead of the pre-grant one.
+	reload();
 }
 
 void Account::setPremiumDays(const int32_t &days) {
