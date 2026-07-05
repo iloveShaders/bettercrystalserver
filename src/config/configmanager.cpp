@@ -145,6 +145,7 @@ bool ConfigManager::load() {
 	loadBoolConfig(L, STAMINA_SYSTEM, "staminaSystem", true);
 	loadBoolConfig(L, STAMINA_TRAINER, "staminaTrainer", false);
 	loadBoolConfig(L, STASH_MOVING, "stashMoving", false);
+	loadBoolConfig(L, STORE_COMBINED_COINS, "storeCombinedCoins", true);
 	loadBoolConfig(L, TASK_HUNTING_ENABLED, "taskHuntingSystemEnabled", true);
 	loadBoolConfig(L, TASK_HUNTING_FREE_THIRD_SLOT, "taskHuntingFreeThirdSlot", false);
 	loadBoolConfig(L, TELEPORT_PLAYER_TO_VOCATION_ROOM, "teleportPlayerToVocationRoom", true);
@@ -366,6 +367,7 @@ bool ConfigManager::load() {
 	loadIntConfig(L, START_STREAK_LEVEL, "startStreakLevel", 0);
 	loadIntConfig(L, STATUSQUERY_TIMEOUT, "statusTimeout", 5000);
 	loadIntConfig(L, STORE_COIN_PACKET, "coinPacketSize", 25);
+	loadIntConfig(L, STORE_COIN_TYPE, "storeCoinType", 0);
 	loadIntConfig(L, STOREINBOX_MAXLIMIT, "storeInboxMaxLimit", 2000);
 	loadIntConfig(L, T_CONST, "temporaryConst", 2);
 	loadIntConfig(L, BOUNTY_TASKS_EXP_MULTIPLIER, "bountyTasksExpMultiplier", 1);
