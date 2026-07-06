@@ -71,6 +71,10 @@ std::optional<ValueWrapper> KVStore::get(const std::string &key, bool forceLoad 
 		auto value = load(key);
 		if (value) {
 			setLocked(key, *value);
+		} else {
+			// Cache negative lookups so repeated get() of an absent key does not
+			// re-run a synchronous MySQL SELECT on the dispatcher thread every call.
+			setLocked(key, ValueWrapper::deleted());
 		}
 		return value;
 	}
