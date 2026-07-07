@@ -324,8 +324,7 @@ void PlayerFunctions::init(lua_State* L) {
 	Lua::registerMethod(L, "Player", "getTransferableCoins", PlayerFunctions::luaPlayerGetTransferableCoins);
 	Lua::registerMethod(L, "Player", "addTransferableCoins", PlayerFunctions::luaPlayerAddTransferableCoins);
 	Lua::registerMethod(L, "Player", "removeTransferableCoins", PlayerFunctions::luaPlayerRemoveTransferableCoins);
-	Lua::registerMethod(L, "Player", "removeTransferableAndTibiaCoins", PlayerFunctions::luaPlayerRemoveTransferableAndTibiaCoins);
-
+	
 	Lua::registerMethod(L, "Player", "sendBlessStatus", PlayerFunctions::luaPlayerSendBlessStatus);
 	Lua::registerMethod(L, "Player", "hasBlessing", PlayerFunctions::luaPlayerHasBlessing);
 	Lua::registerMethod(L, "Player", "addBlessing", PlayerFunctions::luaPlayerAddBlessing);
