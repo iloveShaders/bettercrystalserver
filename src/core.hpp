@@ -26,7 +26,7 @@ static constexpr auto AUTHENTICATOR_PERIOD = 30U;
 
 // SERVER_MAJOR_VERSION is the actual full version of the server, including minor and patch numbers.
 // This is intended for internal use to identify the exact state of the server (release) software.
-static constexpr auto CLIENT_VERSION = 1523;
+static constexpr auto CLIENT_VERSION = 1524;
 
 // Accepted client build range. Login is gated on this range instead of an exact
 // match, so both 15.23 and 15.24 clients are allowed (same protocol structure).
