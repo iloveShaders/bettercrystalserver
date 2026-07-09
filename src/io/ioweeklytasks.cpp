@@ -357,7 +357,7 @@ void IOWeeklyTasks::deliverWeeklyTask(const std::shared_ptr<Player> &player, uin
 	task.delivered = 1;
 	weeklyData.completedDeliveryTasks++;
 
-	player->addExperience(nullptr, weeklyData.deliveryTaskRewardExp, false);
+	player->addExperience(nullptr, weeklyData.deliveryTaskRewardExp, true);
 	player->sendTextMessage(MESSAGE_STATUS, "You have completed a weekly delivery task!");
 	recalculateWeeklyRewardValues(player);
 
