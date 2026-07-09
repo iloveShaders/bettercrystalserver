@@ -241,7 +241,7 @@ void IOWeeklyTasks::onCreatureKill(const std::shared_ptr<Player> &player, uint16
 	auto &weeklyData = player->getWeeklyTaskData();
 	bool updated = false;
 
-	uint32_t kills = 1;
+	uint32_t kills = 2;
 
 	// Update "any creature" counter
 	const auto mtype = g_monsters().getMonsterTypeByRaceId(raceId);
@@ -270,7 +270,7 @@ void IOWeeklyTasks::onCreatureKill(const std::shared_ptr<Player> &player, uint16
 	// Update specific creature tasks
 	for (auto &task : weeklyData.killTasks) {
 		if (task.raceId == raceId && task.currentKills < task.totalKills) {
-			task.currentKills++;
+			task.currentKills = std::min<uint16_t>(task.currentKills + kills, task.totalKills);
 			updated = true;
 			if (task.currentKills >= task.totalKills) {
 				weeklyData.completedKillTasks++;
