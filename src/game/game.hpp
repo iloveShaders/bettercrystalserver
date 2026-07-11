@@ -1030,6 +1030,7 @@ private:
 	std::string generateHighscoreOrGetCachedQueryForOurRank(const std::string &categoryName, uint8_t entriesPerPage, uint32_t playerGUID, uint32_t vocation);
 
 	bool hasPartyMembersNearby(const std::shared_ptr<Player> &player);
+	void projectMonkVirtueAura(const std::shared_ptr<Player> &monk);
 	bool isPlayerNoBoxed(const std::shared_ptr<Player> &player);
 };
 

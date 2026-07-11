@@ -563,7 +563,7 @@ private:
 
 	void sendHarmonyProtocol(const uint8_t harmonyValue);
 	void sendSereneProtocol(const bool isSerene = true);
-	void sendVirtueProtocol(const uint8_t virtueValue);
+	void sendStanceProtocol(const std::vector<uint16_t> &spellIds);
 	void parseSelectSpellAimProtocol(NetworkMessage &msg);
 
 	void parseImbuementWindow(NetworkMessage &msg);
@@ -621,6 +621,9 @@ private:
 	void sendScreenshotAndBannerProgressRace(uint16_t raceId, uint8_t progressLevel, bool isBoss);
 	void sendScreenshotAndBannerProgressQuest(const std::string &questName, bool isCompleted);
 	void sendScreenshotAndBannerProficiencyProgress(uint16_t itemId, const std::string &message);
+	void sendScreenshotAndBannerUnlockedSpell(uint16_t spellId);
+	void sendScreenshotAndBannerBountyTaskFinished(uint16_t raceId);
+	void sendScreenshotAndBannerWeeklyTaskSpecificFinished(uint16_t raceId);
 
 	void sendDisableLoginMusic();
 

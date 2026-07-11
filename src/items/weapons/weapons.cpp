@@ -411,11 +411,10 @@ void Weapon::onUsedWeapon(const std::shared_ptr<Player> &player, const std::shar
 
 	const uint32_t manaCost = getManaCost(player);
 	if (manaCost != 0) {
+		// Vocation Adjustment: wand/rod attacks GENERATE mana instead of consuming it -- the per-shot
+		// mana cost (the only weapons with one are wands/rods) is added back to the caster's mana pool.
 		player->addManaSpent(manaCost);
-		player->changeMana(-static_cast<int32_t>(manaCost));
-
-		if (g_configManager().getBoolean(REFUND_BEGINNING_WEAPON_MANA) && (item->getName() == "wand of vortex" || item->getName() == "snakebite rod")) {
-			player->changeMana(static_cast<int32_t>(manaCost));
+		player->changeMana(static_cast<int32_t>(manaCost));
 		}
 	}
 
