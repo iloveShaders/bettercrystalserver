@@ -3902,6 +3902,21 @@ WheelSpellGrade_t PlayerWheel::getSpellUpgrade(const std::string &name) const {
 			return grade_it;
 		}
 	}
+
+	// Grouped "Vocation Adjustment" augments (e.g. Forked Spells) are stored in
+	// m_spellsSelected under a placeholder name, while the wheel boost data is
+	// registered on the concrete spells (see IOWheel::registerWheelSpellTable).
+	// Map the concrete spell back to its placeholder so the grade resolves at cast
+	// time; without this the spell's isUpgraded gate stays false and its grade
+	// boosts (e.g. the -2s cooldown) are silently skipped.
+	if (name == "Forked Glacier" || name == "Forked Thorns") {
+		for (const auto &[name_it, grade_it] : m_spellsSelected) {
+			if (name_it == "Any_Forked_Spell") {
+				return grade_it;
+			}
+		}
+	}
+
 	return WheelSpellGrade_t::NONE;
 }
 
