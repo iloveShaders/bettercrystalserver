@@ -416,7 +416,6 @@ void Weapon::onUsedWeapon(const std::shared_ptr<Player> &player, const std::shar
 		player->addManaSpent(manaCost);
 		player->changeMana(static_cast<int32_t>(manaCost));
 	}
-}
 
 const uint32_t healthCost = getHealthCost(player);
 if (healthCost != 0) {
