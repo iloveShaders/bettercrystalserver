@@ -415,55 +415,55 @@ void Weapon::onUsedWeapon(const std::shared_ptr<Player> &player, const std::shar
 		// mana cost (the only weapons with one are wands/rods) is added back to the caster's mana pool.
 		player->addManaSpent(manaCost);
 		player->changeMana(static_cast<int32_t>(manaCost));
-		}
 	}
+}
 
-	const uint32_t healthCost = getHealthCost(player);
-	if (healthCost != 0) {
-		player->changeHealth(-static_cast<int32_t>(healthCost));
-	}
+const uint32_t healthCost = getHealthCost(player);
+if (healthCost != 0) {
+	player->changeHealth(-static_cast<int32_t>(healthCost));
+}
 
-	if (!player->hasFlag(PlayerFlags_t::HasInfiniteSoul) && soul > 0) {
-		player->changeSoul(-static_cast<int32_t>(soul));
-	}
+if (!player->hasFlag(PlayerFlags_t::HasInfiniteSoul) && soul > 0) {
+	player->changeSoul(-static_cast<int32_t>(soul));
+}
 
-	bool skipRemoveBeginningWeaponAmmo = !g_configManager().getBoolean(REMOVE_BEGINNING_WEAPON_AMMO) && (item->getName() == "arrow" || item->getName() == "bolt" || item->getName() == "spear");
-	if (!skipRemoveBeginningWeaponAmmo && breakChance != 0 && uniform_random(1, 100) <= breakChance) {
-		Weapon::decrementItemCount(item);
-		player->updateSupplyTracker(item);
-		return;
-	}
+bool skipRemoveBeginningWeaponAmmo = !g_configManager().getBoolean(REMOVE_BEGINNING_WEAPON_AMMO) && (item->getName() == "arrow" || item->getName() == "bolt" || item->getName() == "spear");
+if (!skipRemoveBeginningWeaponAmmo && breakChance != 0 && uniform_random(1, 100) <= breakChance) {
+	Weapon::decrementItemCount(item);
+	player->updateSupplyTracker(item);
+	return;
+}
 
-	switch (action) {
-		case WEAPONACTION_REMOVECOUNT:
-			if (!skipRemoveBeginningWeaponAmmo && g_configManager().getBoolean(REMOVE_WEAPON_AMMO)) {
-				// Quiver ammo-save bonus: chance to not consume ammo
-				const auto &quiver = player->getInventoryItem(CONST_SLOT_RIGHT);
-				if (quiver && quiver->isQuiver()) {
-					const uint8_t saveChance = Item::items[quiver->getID()].ammoSaveChance;
-					if (saveChance != 0 && uniform_random(1, 100) <= saveChance) {
-						break;
-					}
+switch (action) {
+	case WEAPONACTION_REMOVECOUNT:
+		if (!skipRemoveBeginningWeaponAmmo && g_configManager().getBoolean(REMOVE_WEAPON_AMMO)) {
+			// Quiver ammo-save bonus: chance to not consume ammo
+			const auto &quiver = player->getInventoryItem(CONST_SLOT_RIGHT);
+			if (quiver && quiver->isQuiver()) {
+				const uint8_t saveChance = Item::items[quiver->getID()].ammoSaveChance;
+				if (saveChance != 0 && uniform_random(1, 100) <= saveChance) {
+					break;
 				}
-				Weapon::decrementItemCount(item);
-				player->updateSupplyTracker(item);
 			}
-			break;
-
-		case WEAPONACTION_REMOVECHARGE: {
-			if (uint16_t charges = item->getCharges() != 0 && g_configManager().getBoolean(REMOVE_WEAPON_CHARGES)) {
-				g_game().transformItem(item, item->getID(), charges - 1);
-			}
-			break;
+			Weapon::decrementItemCount(item);
+			player->updateSupplyTracker(item);
 		}
+		break;
 
-		case WEAPONACTION_MOVE:
-			g_game().internalMoveItem(item->getParent(), destTile, INDEX_WHEREEVER, item, 1, nullptr, FLAG_NOLIMIT);
-			break;
-
-		default:
-			break;
+	case WEAPONACTION_REMOVECHARGE: {
+		if (uint16_t charges = item->getCharges() != 0 && g_configManager().getBoolean(REMOVE_WEAPON_CHARGES)) {
+			g_game().transformItem(item, item->getID(), charges - 1);
+		}
+		break;
 	}
+
+	case WEAPONACTION_MOVE:
+		g_game().internalMoveItem(item->getParent(), destTile, INDEX_WHEREEVER, item, 1, nullptr, FLAG_NOLIMIT);
+		break;
+
+	default:
+		break;
+}
 }
 
 uint32_t Weapon::getManaCost(const std::shared_ptr<Player> &player) const {
