@@ -1610,6 +1610,11 @@ void PlayerWheel::sendOpenWheelWindow(NetworkMessage &msg, uint32_t ownerId) {
 		return;
 	}
 
+	// Normalize any wheel whose spent points exceed the player's current budget
+	// (e.g. a bonus point source lost across a client/engine upgrade) so the wheel
+	// is always in a saveable state when the window opens. No-ops if within budget.
+	reclaimExcessPoints();
+
 	addInitialGems();
 	msg.addByte(getOptions(ownerId)); // Options
 	msg.addByte(m_player.getPlayerVocationEnum()); // Vocation id
