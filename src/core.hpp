@@ -28,5 +28,10 @@ static constexpr auto AUTHENTICATOR_PERIOD = 30U;
 // This is intended for internal use to identify the exact state of the server (release) software.
 static constexpr auto CLIENT_VERSION = 1525;
 
+// Accepted client build range. Login is gated on this range instead of an exact
+// match, so allowing older or newer protocol to join (same protocol structure).
+static constexpr auto CLIENT_VERSION_MIN = 1525;
+static constexpr auto CLIENT_VERSION_MAX = 1525;
+
 #define CLIENT_VERSION_UPPER (CLIENT_VERSION / 100)
 #define CLIENT_VERSION_LOWER (CLIENT_VERSION % 100)
