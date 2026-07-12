@@ -159,6 +159,9 @@ bool IOBestiary::parseDefensiveCharmCombat(const std::shared_ptr<Charm> &charm, 
 			target->addCondition(numb);
 			break;
 		}
+		case CHARM_MINOR_CLEANSE:
+			// Handled separately in Combat::CombatConditionFunc.
+			break;
 
 		default:
 			g_logger().warn("[{}] - No handler found for defensive charm id {}.", __FUNCTION__, charm->id);

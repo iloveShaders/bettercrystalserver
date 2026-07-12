@@ -8009,7 +8009,9 @@ bool Game::combatChangeHealth(const std::shared_ptr<Creature> &attacker, const s
 				}
 
 				// Minor Charm Rune (target as player)
-				if (activeMinorCharm == CHARM_MINOR_ADRENALINEBURST || activeMinorCharm == CHARM_MINOR_NUMB || activeMinorCharm == CHARM_MINOR_CLEANSE) {
+				// Note: CHARM_MINOR_CLEANSE is intentionally excluded here; it is applied in
+				// Combat::CombatConditionFunc when the monster tries to inflict a condition.
+				if (activeMinorCharm == CHARM_MINOR_ADRENALINEBURST || activeMinorCharm == CHARM_MINOR_NUMB) {
 					if (const auto &charm = g_iobestiary().getBestiaryCharm(activeMinorCharm)) {
 						const auto charmTier = targetPlayer->getTierByCharmsArray(activeMinorCharm);
 						if (charm->chance[charmTier] >= uniform_random(1, 100) / 1.0) {
