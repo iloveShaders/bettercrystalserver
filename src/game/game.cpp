@@ -8482,7 +8482,8 @@ void Game::applyManaLeech(
 		if (playerCharmVoidRaceId != 0 && playerCharmVoidRaceId == targetMonster->getRaceId()) {
 			if (const auto &charmVoid = g_iobestiary().getBestiaryCharm(CHARM_MINOR_VOIDSCALL)) {
 				const auto charmTier = attackerPlayer->getTierByCharmsArray(CHARM_MINOR_VOIDSCALL);
-				manaSkill += static_cast<uint16_t>(manaSkill * (charmVoid->chance[charmTier] / 100.0));
+				// Charm chance is a flat percentage; leech skills are stored in hundredths of a percent (x/10000).
+				manaSkill += static_cast<uint16_t>(std::lround(charmVoid->getChance(charmTier) * 100.0));
 			}
 		}
 	}
@@ -8516,7 +8517,8 @@ void Game::applyLifeLeech(
 		if (playerCharmVampRaceId != 0 && playerCharmVampRaceId == targetMonster->getRaceId()) {
 			if (const auto &charmVamp = g_iobestiary().getBestiaryCharm(CHARM_MINOR_VAMPIRIC)) {
 				const auto charmTier = attackerPlayer->getTierByCharmsArray(CHARM_MINOR_VAMPIRIC);
-				lifeSkill += charmVamp->chance[charmTier];
+				// Charm chance is a flat percentage; leech skills are stored in hundredths of a percent (x/10000).
+				lifeSkill += static_cast<uint16_t>(std::lround(charmVamp->getChance(charmTier) * 100.0));
 			}
 		}
 	}
