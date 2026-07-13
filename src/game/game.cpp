@@ -3721,10 +3721,8 @@ void Game::playerEquipItem(uint32_t playerId, uint16_t itemId, bool hasTier /* =
 	}
 	if (slot == CONST_SLOT_NECKLACE) {
 		player->setNextNecklaceAction(OTSYS_TIME() + g_configManager().getNumber(NECKLACE_DELAY_INTERVAL));
-		player->sendCancelMessage("You cannot use objects that fast.");
 	} else if (slot == CONST_SLOT_RING) {
 		player->setNextRingAction(OTSYS_TIME() + g_configManager().getNumber(RING_DELAY_INTERVAL));
-		player->sendCancelMessage("You cannot use objects that fast.");
 	} else {
 		player->setNextAction(OTSYS_TIME() + g_configManager().getNumber(ACTIONS_DELAY_INTERVAL));
 	}
