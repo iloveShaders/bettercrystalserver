@@ -73,7 +73,8 @@ enum BountyTalismanPath_t : uint8_t {
 static constexpr uint8_t TALISMAN_PATH_COUNT = 4;
 static constexpr uint8_t BOUNTY_MAX_CREATURES = 3;
 static constexpr uint8_t BOUNTY_MAX_LIST_SLOTS = 5;
-static constexpr uint8_t BOUNTY_MAX_REROLL_TASKS = 10;
+static constexpr uint8_t BOUNTY_MAX_REROLL_TASKS = 20;
+static constexpr uint8_t BOUNTY_PREFERRED_BIAS_CHANCE = 50; // % chance per task slot to pull from your preferred list (weighted, matches global)
 
 // Talisman tier data as sent in protocol
 struct BountyTalismanTier {

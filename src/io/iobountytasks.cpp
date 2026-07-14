@@ -87,7 +87,23 @@ void IOBountyTasks::generateCreatureList(const std::shared_ptr<Player> &player, 
 	uint8_t creaturesGenerated = 0;
 	uint8_t tries = 0;
 	while (creaturesGenerated < BOUNTY_MAX_CREATURES && tries < 1000) {
-		uint16_t raceId = (*(std::next(bestiaryList.begin(), uniform_random(0, maxIndex)))).first;
+		// Bias toward preferred creatures so they are more likely to appear (matches global Tibia)
+		uint16_t raceId;
+		if (!preferredRaceIds.empty() && uniform_random(1, 100) <= BOUNTY_PREFERRED_BIAS_CHANCE) {
+			std::vector<uint16_t> availablePreferred;
+			for (const uint16_t prefRace : preferredRaceIds) {
+				if (std::count(blackList.begin(), blackList.end(), prefRace) == 0) {
+					availablePreferred.push_back(prefRace);
+				}
+			}
+			if (!availablePreferred.empty()) {
+				raceId = availablePreferred[uniform_random(0, static_cast<int32_t>(availablePreferred.size() - 1))];
+			} else {
+				raceId = (*(std::next(bestiaryList.begin(), uniform_random(0, maxIndex)))).first;
+			}
+		} else {
+			raceId = (*(std::next(bestiaryList.begin(), uniform_random(0, maxIndex)))).first;
+		}
 		tries++;
 
 		if (std::count(blackList.begin(), blackList.end(), raceId) != 0) {
@@ -205,7 +221,23 @@ void IOBountyTasks::fillMissingCreatures(const std::shared_ptr<Player> &player) 
 	uint8_t creaturesGenerated = static_cast<uint8_t>(bountyData.currentCreaturesList.size());
 	uint8_t tries = 0;
 	while (creaturesGenerated < BOUNTY_MAX_CREATURES && tries < 1000) {
-		uint16_t raceId = (*(std::next(bestiaryList.begin(), uniform_random(0, maxIndex)))).first;
+		// Bias toward preferred creatures so they are more likely to appear (matches global Tibia)
+		uint16_t raceId;
+		if (!preferredRaceIds.empty() && uniform_random(1, 100) <= BOUNTY_PREFERRED_BIAS_CHANCE) {
+			std::vector<uint16_t> availablePreferred;
+			for (const uint16_t prefRace : preferredRaceIds) {
+				if (std::count(blackList.begin(), blackList.end(), prefRace) == 0) {
+					availablePreferred.push_back(prefRace);
+				}
+			}
+			if (!availablePreferred.empty()) {
+				raceId = availablePreferred[uniform_random(0, static_cast<int32_t>(availablePreferred.size() - 1))];
+			} else {
+				raceId = (*(std::next(bestiaryList.begin(), uniform_random(0, maxIndex)))).first;
+			}
+		} else {
+			raceId = (*(std::next(bestiaryList.begin(), uniform_random(0, maxIndex)))).first;
+		}
 		tries++;
 
 		if (std::count(blackList.begin(), blackList.end(), raceId) != 0) {
