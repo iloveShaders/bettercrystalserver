@@ -8947,10 +8947,11 @@ void Game::checkImbuementsAndSereneStatus() {
 		bool hasNearbyPartyMembers = party ? hasPartyMembersNearby(mapPlayer) : false;
 		bool hasLessThanSixMonsters = isPlayerNoBoxed(mapPlayer);
 
-		bool condition1 = !party || !hasNearbyPartyMembers;
-		bool condition2 = hasLessThanSixMonsters;
-
-		mapPlayer->setSerene(condition1 && condition2);
+		// Serene is lost ONLY when both conditions hold at once: a party member is
+		// adjacent AND 6+ monsters are adjacent. A monk without nearby party members
+		// (i.e. solo) is always serene, regardless of how many monsters box them in.
+		// hasPartyMembersNearby() already returns false when there is no party.
+		mapPlayer->setSerene(!hasNearbyPartyMembers || hasLessThanSixMonsters);
 		projectMonkVirtueAura(mapPlayer);
 	}
 }
