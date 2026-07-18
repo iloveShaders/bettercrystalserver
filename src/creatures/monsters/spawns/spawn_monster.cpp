@@ -227,6 +227,26 @@ bool SpawnMonster::isInSpawnMonsterZone(const Position &pos) const {
 	return SpawnsMonster::isInZone(centerPos, radius, pos);
 }
 
+bool SpawnMonster::canAddForgeMonster(uint32_t percent) const {
+	// Per-spawn share of forge monsters, proportional to the spawn size (min 1),
+	// so the global influenced/fiendish budget spreads instead of piling up in
+	// one heavily-farmed spawn while quiet spawns stay at zero.
+	uint32_t limit = static_cast<uint32_t>(spawnMonsterMap.size()) * percent / 100;
+	if (limit < 1) {
+		limit = 1;
+	}
+
+	uint32_t current = 0;
+	for (const auto &[spawnMonsterId, monster] : spawnedMonsterMap) {
+		if (monster && monster->getForgeStack() > 0) {
+			if (++current >= limit) {
+				return false;
+			}
+		}
+	}
+	return true;
+}
+
 bool SpawnMonster::spawnMonster(uint32_t spawnMonsterId, spawnBlock_t &sb, const std::shared_ptr<MonsterType> &monsterType, bool startup /*= false*/) {
 	if (spawnedMonsterMap.contains(spawnMonsterId)) {
 		return false;

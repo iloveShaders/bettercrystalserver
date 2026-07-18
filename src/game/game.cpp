@@ -26,6 +26,7 @@
 #include "creatures/interactions/chat.hpp"
 #include "creatures/monsters/monster.hpp"
 #include "creatures/monsters/monsters.hpp"
+#include "creatures/monsters/spawns/spawn_monster.hpp"
 #include "creatures/npcs/npc.hpp"
 #include "creatures/players/achievement/player_achievement.hpp"
 #include "creatures/players/cyclopedia/player_badge.hpp"
@@ -11460,6 +11461,12 @@ void Game::sendUpdateCreature(const std::shared_ptr<Creature> &creature) {
 	}
 }
 
+// Percentage of each spawn's slots that may be forge (influenced/fiendish)
+// monsters at once. Caps forge monsters per spawn so the global budget spreads
+// evenly across the map instead of concentrating in farmed spawns, while quiet
+// spawns sit at zero. Tunable (recompile). 25 = up to a quarter of a spawn.
+static constexpr uint32_t FORGE_PER_SPAWN_PERCENT = 25;
+
 uint32_t Game::makeInfluencedMonster() {
 	if (auto influencedLimit = g_configManager().getNumber(FORGE_INFLUENCED_CREATURES_LIMIT);
 	    // Condition
@@ -11481,6 +11488,14 @@ uint32_t Game::makeInfluencedMonster() {
 		auto monsterId = forgeableMonsters.at(random);
 		monster = getMonsterByID(monsterId);
 		if (monster == nullptr) {
+			continue;
+		}
+
+		// Keep forge monsters spread out: skip this candidate if its spawn is
+		// already holding its per-spawn share of forge monsters.
+		if (const auto &monsterSpawn = monster->getSpawnMonster();
+		    monsterSpawn && !monsterSpawn->canAddForgeMonster(FORGE_PER_SPAWN_PERCENT)) {
+			monster = nullptr;
 			continue;
 		}
 
@@ -11567,6 +11582,14 @@ uint32_t Game::makeFiendishMonster(uint32_t forgeableMonsterId /* = 0*/, bool cr
 		}
 		monster = getMonsterByID(fiendishMonsterId);
 		if (monster == nullptr) {
+			continue;
+		}
+
+		// Keep forge monsters spread out: skip this candidate if its spawn is
+		// already holding its per-spawn share of forge monsters.
+		if (const auto &monsterSpawn = monster->getSpawnMonster();
+		    monsterSpawn && !monsterSpawn->canAddForgeMonster(FORGE_PER_SPAWN_PERCENT)) {
+			monster = nullptr;
 			continue;
 		}
 
@@ -11789,6 +11812,11 @@ bool Game::addInfluencedMonster(const std::shared_ptr<Monster> &monster) {
 		if (auto maxInfluencedMonsters = static_cast<uint32_t>(getInfluencedLimit());
 		    // If condition
 		    (influencedMonsters.size() + 1) > maxInfluencedMonsters) {
+			return false;
+		}
+
+		if (const auto &monsterSpawn = monster->getSpawnMonster();
+		    monsterSpawn && !monsterSpawn->canAddForgeMonster(FORGE_PER_SPAWN_PERCENT)) {
 			return false;
 		}
 

@@ -20,6 +20,7 @@
 #include "config/configmanager.hpp"
 #include "creatures/combat/spells.hpp"
 #include "creatures/monsters/monsters.hpp"
+#include "creatures/monsters/spawns/spawn_monster.hpp"
 #include "creatures/players/player.hpp"
 #include "creatures/players/wheel/player_wheel.hpp"
 #include "game/game.hpp"
@@ -293,6 +294,10 @@ RespawnType Monster::getRespawnType() const {
 
 void Monster::setSpawnMonster(const std::shared_ptr<SpawnMonster> &newSpawnMonster) {
 	this->spawnMonster = newSpawnMonster; // stores as weak_ptr — no shared ownership
+}
+
+std::shared_ptr<SpawnMonster> Monster::getSpawnMonster() const {
+	return spawnMonster.lock();
 }
 
 uint32_t Monster::getHealingCombatValue(CombatType_t healingType) const {

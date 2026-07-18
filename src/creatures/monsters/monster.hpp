@@ -85,6 +85,7 @@ public:
 	uint32_t getManaCost() const;
 	RespawnType getRespawnType() const;
 	void setSpawnMonster(const std::shared_ptr<SpawnMonster> &newSpawnMonster);
+	std::shared_ptr<SpawnMonster> getSpawnMonster() const;
 
 	double_t getReflectPercent(CombatType_t combatType, bool useCharges = false) const override;
 	uint32_t getHealingCombatValue(CombatType_t healingType) const;

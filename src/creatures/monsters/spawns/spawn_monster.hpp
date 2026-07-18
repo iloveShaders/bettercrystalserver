@@ -69,6 +69,11 @@ public:
 
 	void setMonsterVariant(const std::string &variant);
 
+	// Returns false once this spawn already holds its per-spawn share of forge
+	// (influenced/fiendish) monsters. Keeps them spread evenly across the map
+	// instead of letting one spawn/area hoard the global forge budget.
+	bool canAddForgeMonster(uint32_t percent) const;
+
 private:
 	// The map of the spawned creatures
 	std::map<uint32_t, std::shared_ptr<Monster>> spawnedMonsterMap;
