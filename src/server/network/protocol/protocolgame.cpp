@@ -1064,10 +1064,6 @@ void ProtocolGame::disconnectClient(const std::string &message, DisconnectClient
 	output->addByte(0x14);
 	output->addString(message);
 	output->addByte(static_cast<uint8_t>(reason));
-	if (!oldProtocol) {
-		// 15.x client reads one trailing byte after the disconnect message
-		output->addByte(0x00);
-	}
 	send(output);
 	disconnect();
 }
