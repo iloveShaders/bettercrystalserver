@@ -1777,6 +1777,10 @@ private:
 	std::map<uint32_t, std::shared_ptr<DepotChest>> depotChests;
 	std::map<uint8_t, int64_t> moduleDelayMap;
 	std::map<uint32_t, int32_t> storageMap;
+	// Mirror of the rows currently in `player_storage` for this player: filled from the DB
+	// at login, refreshed after every successful save. savePlayerStorage() diffs storageMap
+	// against this to write only what actually changed.
+	phmap::flat_hash_map<uint32_t, int32_t> m_persistedStorage;
 	std::map<uint16_t, uint64_t> itemPriceMap;
 
 	std::map<uint64_t, std::shared_ptr<Reward>> rewardMap;

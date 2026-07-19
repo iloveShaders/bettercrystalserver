@@ -1060,19 +1060,54 @@ bool IOLoginDataSave::savePlayerStorage(const std::shared_ptr<Player> &player) {
 	}
 
 	Database &db = Database::getInstance();
-	std::ostringstream query;
-	query << "DELETE FROM `player_storage` WHERE `player_id` = " << player->getGUID();
-	if (!db.executeQuery(query.str())) {
-		return false;
+	player->genReservedStorageRange();
+
+	// The old code deleted every row for this player and re-inserted the whole storage map on
+	// every save - 400 to 1600 rows for a normal character, mostly static bestiary kill counts,
+	// rewritten every autosave and on every logout. Instead, diff the map against what we know
+	// is already in the DB (m_persistedStorage, filled at login and refreshed after each save)
+	// and write only the difference. PRIMARY KEY (player_id, key) makes the upsert exact.
+	//
+	// The diff is computed from storageMap itself, so it does not matter how or where a value
+	// was changed - there is no per-write bookkeeping in the setters that could miss an update.
+	std::vector<uint32_t> removedKeys;
+	for (const auto &[key, value] : player->m_persistedStorage) {
+		if (!player->storageMap.contains(key)) {
+			removedKeys.emplace_back(key);
+		}
 	}
 
-	query.str("");
+	if (!removedKeys.empty()) {
+		std::ostringstream deleteQuery;
+		for (size_t i = 0; i < removedKeys.size(); ++i) {
+			if (i % 512 == 0) {
+				deleteQuery.str("");
+				deleteQuery << "DELETE FROM `player_storage` WHERE `player_id` = " << player->getGUID() << " AND `key` IN (" << removedKeys[i];
+			} else {
+				deleteQuery << ',' << removedKeys[i];
+			}
+
+			const bool lastOfBatch = (i + 1 == removedKeys.size()) || ((i + 1) % 512 == 0);
+			if (lastOfBatch) {
+				deleteQuery << ')';
+				if (!db.executeQuery(deleteQuery.str())) {
+					return false;
+				}
+			}
+		}
+	}
 
 	DBInsert storageQuery("INSERT INTO `player_storage` (`player_id`, `key`, `value`) VALUES ");
 	storageQuery.upsert({ "value" });
-	player->genReservedStorageRange();
 
+	std::ostringstream query;
 	for (const auto &[key, value] : player->storageMap) {
+		const auto it = player->m_persistedStorage.find(key);
+		if (it != player->m_persistedStorage.end() && it->second == value) {
+			// Row already in the DB with this exact value - nothing to write.
+			continue;
+		}
+
 		query << player->getGUID() << ',' << key << ',' << value;
 		if (!storageQuery.addRow(query)) {
 			return false;
@@ -1082,6 +1117,12 @@ bool IOLoginDataSave::savePlayerStorage(const std::shared_ptr<Player> &player) {
 	if (!storageQuery.execute()) {
 		return false;
 	}
+
+	// Every write succeeded, so the DB now holds exactly what storageMap holds. If anything
+	// above failed we returned early and left m_persistedStorage untouched, so the next save
+	// simply recomputes the same difference and retries it.
+	player->m_persistedStorage.clear();
+	player->m_persistedStorage.insert(player->storageMap.begin(), player->storageMap.end());
 	return true;
 }
 

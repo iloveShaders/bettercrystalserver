@@ -772,7 +772,14 @@ void IOLoginDataLoad::loadPlayerStorageMap(const std::shared_ptr<Player> &player
 	query << "SELECT `key`, `value` FROM `player_storage` WHERE `player_id` = " << player->getGUID();
 	if ((result = db.storeQuery(query.str()))) {
 		do {
-			player->addStorageValue(result->getNumber<uint32_t>("key"), result->getNumber<int32_t>("value"), true);
+			const uint32_t key = result->getNumber<uint32_t>("key");
+			const int32_t value = result->getNumber<int32_t>("value");
+			player->addStorageValue(key, value, true);
+			// Record what the DB actually holds. savePlayerStorage() diffs against this so it
+			// only writes the rows that changed. This is the raw row set, not storageMap:
+			// reserved-range familiar keys never enter storageMap, and must still be tracked
+			// here so a familiar that disappears gets its row deleted.
+			player->m_persistedStorage[key] = value;
 		} while (result->next());
 	}
 }
