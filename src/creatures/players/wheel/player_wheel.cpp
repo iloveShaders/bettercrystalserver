@@ -3416,11 +3416,17 @@ void PlayerWheel::onThink(bool force /* = false*/) {
 			for (int i = 0; i < static_cast<int>(WheelMajor_t::TOTAL_COUNT); i++) {
 				setMajorStat(static_cast<WheelMajor_t>(i), 0);
 			}
-			m_player.sendSkills();
-			m_player.sendStats();
-			g_game().reloadCreature(m_player.getPlayer());
+			m_pendingClientUpdate = true;
 		}
 		if (!force) {
+			// Flush any pending notification before returning, otherwise a reset queued
+			// above would never reach the client on this early-out path.
+			if (m_pendingClientUpdate && m_lastClientUpdate + 2000 <= OTSYS_TIME()) {
+				m_pendingClientUpdate = false;
+				m_lastClientUpdate = OTSYS_TIME();
+				m_player.sendSkills();
+				m_player.sendStats();
+			}
 			return;
 		}
 	}
@@ -3445,6 +3451,16 @@ void PlayerWheel::onThink(bool force /* = false*/) {
 		updateClient = true;
 	}
 	if (updateClient) {
+		m_pendingClientUpdate = true;
+	}
+
+	// Coalesce the client notification. Wheel major stats are applied above and are
+	// always exact; this only limits how often the heavy skills packet is pushed, so
+	// the panel stays accurate within the throttle window instead of being rebuilt on
+	// every single adjacent-creature fluctuation inside a pack.
+	if (m_pendingClientUpdate && (force || m_lastClientUpdate + 2000 <= OTSYS_TIME())) {
+		m_pendingClientUpdate = false;
+		m_lastClientUpdate = OTSYS_TIME();
 		m_player.sendSkills();
 		m_player.sendStats();
 	}

@@ -1360,7 +1360,7 @@ bool ConditionRegeneration::executeCondition(const std::shared_ptr<Creature> &cr
 	}
 
 	bool inProtectionZone = creature->getZoneType() == ZONE_PROTECTION;
-	if (internalHealthTicks >= getHealthTicks(creature)) {
+	if (internalHealthTicks >= getHealthTicks(creature) && creature->getHealth() < creature->getMaxHealth()) {
 		internalHealthTicks = 0;
 
 		int32_t realHealthGain = creature->getHealth();
@@ -1396,7 +1396,7 @@ bool ConditionRegeneration::executeCondition(const std::shared_ptr<Creature> &cr
 	}
 
 	if (creature->getZoneType() != ZONE_PROTECTION || dailyStreak >= DAILY_REWARD_MP_REGENERATION) {
-		if (internalManaTicks >= getManaTicks(creature)) {
+		if (internalManaTicks >= getManaTicks(creature) && creature->getMana() < creature->getMaxMana()) {
 			internalManaTicks = 0;
 			if (creature->getZoneType() == ZONE_PROTECTION && dailyStreak >= DAILY_REWARD_DOUBLE_MP_REGENERATION) {
 				creature->changeMana(manaGain * 2); // Double regen from daily reward
