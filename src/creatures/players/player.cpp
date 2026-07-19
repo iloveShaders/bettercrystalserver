@@ -10041,7 +10041,7 @@ void Player::requestDepotItems() {
 		auto itemMap_it = itemMap.find(itemId);
 		// Stackable items not have upgrade classification
 		if (Item::items[itemId].upgradeClassification > 0) {
-			g_logger().error("{} - Player {} have wrong item with id {} on stash with upgrade classification", __FUNCTION__, getName(), itemId);
+			g_logger().trace("{} - Player {} have wrong item with id {} on stash with upgrade classification", __FUNCTION__, getName(), itemId);
 			continue;
 		}
 
@@ -10158,7 +10158,7 @@ void Player::retrieveAllItemsFromDepotSearch(uint16_t itemId, uint8_t tier, bool
 		}
 
 		sendCancelMessage(ret);
-		return;
+		break;
 	}
 
 	requestDepotSearchItem(itemId, tier);
