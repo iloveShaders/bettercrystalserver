@@ -26,6 +26,7 @@
 #include "game/scheduling/dispatcher.hpp"
 #include "game/scheduling/events_scheduler.hpp"
 #include "game/zones/zone.hpp"
+#include "items/tile.hpp"
 #include "lua/callbacks/event_callback.hpp"
 #include "lua/callbacks/events_callbacks.hpp"
 #include "lua/creature/events.hpp"
@@ -247,6 +248,13 @@ bool SpawnMonster::canAddForgeMonster(uint32_t percent) const {
 	return true;
 }
 
+// Chance (1-100) that a monster becomes influenced at the moment it respawns.
+// Respawns only happen where monsters are being killed, so this is what keeps
+// forge monsters showing up in areas players actively hunt. The global limit,
+// the per-spawn cap below and the reserve left by FORGE_BASE_FILL_PERCENT all
+// still apply on top of this roll.
+static constexpr uint32_t FORGE_RESPAWN_INFLUENCED_CHANCE = 10;
+
 bool SpawnMonster::spawnMonster(uint32_t spawnMonsterId, spawnBlock_t &sb, const std::shared_ptr<MonsterType> &monsterType, bool startup /*= false*/) {
 	if (spawnedMonsterMap.contains(spawnMonsterId)) {
 		return false;
@@ -270,6 +278,16 @@ bool SpawnMonster::spawnMonster(uint32_t spawnMonsterId, spawnBlock_t &sb, const
 
 	spawnedMonsterMap[spawnMonsterId] = monster;
 	sb.lastSpawn = OTSYS_TIME();
+
+	// Skipped during startup: there are no players yet, so tagging then would just
+	// scatter the reserve across the map before anyone can hunt it.
+	if (!startup && uniform_random(1, 100) <= FORGE_RESPAWN_INFLUENCED_CHANCE) {
+		const auto &monsterTile = monster->getTile();
+		if (monsterTile && !monsterTile->hasFlag(TILESTATE_NOLOGOUT)) {
+			g_game().addInfluencedMonster(monster);
+		}
+	}
+
 	monster->onSpawn(sb.pos);
 	return true;
 }

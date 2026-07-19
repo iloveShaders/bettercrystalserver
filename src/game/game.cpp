@@ -11784,10 +11784,19 @@ void Game::createFiendishMonsters() {
 	}
 }
 
+// Percentage of the influenced limit that the background top-up is allowed to
+// fill. The remaining headroom is deliberately left free for monsters tagged as
+// they respawn (see SpawnMonster::spawnMonster). Without this reserve the limit
+// sits permanently full and, since only a killed influenced monster frees a slot,
+// every kill in a hunted area exports its slot to a random untouched spawn that
+// never gives it back - draining active hunting grounds over time.
+static constexpr uint32_t FORGE_BASE_FILL_PERCENT = 70;
+
 void Game::createInfluencedMonsters(bool scheduleEvent /* = true */) {
 	uint32_t influencedLimit = getInfluencedLimit();
-	if (influencedMonsters.size() < influencedLimit) {
-		uint32_t toCreate = influencedLimit - static_cast<uint32_t>(influencedMonsters.size());
+	uint32_t baseTarget = influencedLimit * FORGE_BASE_FILL_PERCENT / 100;
+	if (influencedMonsters.size() < baseTarget) {
+		uint32_t toCreate = baseTarget - static_cast<uint32_t>(influencedMonsters.size());
 		for (uint32_t i = 0; i < toCreate; ++i) {
 			if (makeInfluencedMonster() == 0) {
 				break;
