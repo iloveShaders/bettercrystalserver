@@ -1751,15 +1751,40 @@ void Player::updateSupplyTracker(const std::shared_ptr<Item> &item) {
 }
 
 void Player::updateImpactTracker(CombatType_t type, int32_t amount) const {
-	if (client) {
-		client->sendUpdateImpactTracker(type, amount);
+	if (!client) {
+		return;
 	}
+	// Coalesce analyzer updates: dense AoE combat produces one of these per creature
+	// hit, per damage type. The analyzer shows cumulative totals, so batching per
+	// second is invisible while collapsing dozens of packets into a handful.
+	m_impactTrackerBuffer[type] += amount;
 }
 
 void Player::updateInputAnalyzer(CombatType_t type, int32_t amount, const std::string &target) const {
-	if (client) {
-		client->sendUpdateInputAnalyzer(type, amount, target);
+	if (!client) {
+		return;
 	}
+	m_inputAnalyzerBuffer[std::make_pair(type, target)] += amount;
+}
+
+void Player::flushAnalyzerBuffers() const {
+	if (!client) {
+		m_impactTrackerBuffer.clear();
+		m_inputAnalyzerBuffer.clear();
+		return;
+	}
+	for (const auto &[type, amount] : m_impactTrackerBuffer) {
+		if (amount != 0) {
+			client->sendUpdateImpactTracker(type, static_cast<int32_t>(amount));
+		}
+	}
+	m_impactTrackerBuffer.clear();
+	for (const auto &[key, amount] : m_inputAnalyzerBuffer) {
+		if (amount != 0) {
+			client->sendUpdateInputAnalyzer(key.first, amount, key.second);
+		}
+	}
+	m_inputAnalyzerBuffer.clear();
 }
 
 void Player::createLeaderTeamFinder(NetworkMessage &msg) const {
@@ -2978,6 +3003,13 @@ bool Player::closeShopWindow() {
 }
 
 void Player::onWalk(Direction &dir) {
+	if (hasCondition(CONDITION_PARALYZE)) {
+		uint32_t delay = g_configManager().getNumber(PARALYZE_DELAY_INTERVAL);
+		setNextAction(OTSYS_TIME() + delay);
+		lastWalking = OTSYS_TIME() + delay;
+		return;
+	}
+
 	if (hasCondition(CONDITION_FEARED)) {
 		const Position pos = getNextPosition(dir, getPosition());
 
@@ -8537,6 +8569,9 @@ void Player::onThink(uint32_t interval) {
 
 	sendPing();
 
+	// Flush coalesced analyzer (impact/input tracker) updates once per think.
+	flushAnalyzerBuffers();
+
 	MessageBufferTicks += interval;
 	if (MessageBufferTicks >= 1500) {
 		MessageBufferTicks = 0;
@@ -12927,7 +12962,7 @@ void Player::applyEquippedWeaponProficiency(const uint16_t itemId) {
 				continue;
 			}
 
-			if (perk.perkValue < 0.0f && perk.perkType != PROFICIENCY_PERK_AUGMENT_TYPE) {
+			if (perk.perkValue < 0.0f) {
 				continue;
 			}
 

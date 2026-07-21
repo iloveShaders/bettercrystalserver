@@ -478,14 +478,6 @@ private:
 	std::array<int32_t, COMBAT_COUNT> m_specializedMagic = { 0 };
 
 	int32_t m_creaturesNearby = 0;
-
-	// Client-notification throttle for wheel stat changes. The stats themselves are
-	// always applied immediately; only the sendSkills()/sendStats() notification is
-	// coalesced. Without this, a player standing in a dense monster pack re-sends the
-	// heavy skills packet every time the adjacent-creature count shifts by one, which
-	// forces the client to rebuild the skills panel and tanks FPS while it is open.
-	int64_t m_lastClientUpdate = 0;
-	bool m_pendingClientUpdate = false;
 	std::map<std::string, WheelSpellGrade_t> m_spellsSelected;
 	std::vector<std::string> m_learnedSpellsSelected;
 	std::unordered_map<std::string, WheelSpells::Bonus> m_spellsBonuses;

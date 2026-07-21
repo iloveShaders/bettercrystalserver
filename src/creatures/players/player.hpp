@@ -1295,6 +1295,7 @@ public:
 	void sendLootStats(const std::shared_ptr<Item> &item, uint8_t count);
 	void updateSupplyTracker(const std::shared_ptr<Item> &item);
 	void updateImpactTracker(CombatType_t type, int32_t amount) const;
+	void flushAnalyzerBuffers() const;
 
 	void updateInputAnalyzer(CombatType_t type, int32_t amount, const std::string &target) const;
 
@@ -1860,6 +1861,10 @@ private:
 	int64_t nextRingAction = 0;
 	int64_t nextMarketAction = 0;
 	int64_t lastQuickLootNotification = 0;
+
+	// Per-think coalescing buffers for analyzer packets (see flushAnalyzerBuffers).
+	mutable std::map<CombatType_t, int64_t> m_impactTrackerBuffer;
+	mutable std::map<std::pair<CombatType_t, std::string>, int32_t> m_inputAnalyzerBuffer;
 	int64_t lastWalking = 0;
 	uint64_t asyncOngoingTasks = 0;
 
