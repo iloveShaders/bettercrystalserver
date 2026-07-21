@@ -3003,13 +3003,6 @@ bool Player::closeShopWindow() {
 }
 
 void Player::onWalk(Direction &dir) {
-	if (hasCondition(CONDITION_PARALYZE)) {
-		uint32_t delay = g_configManager().getNumber(PARALYZE_DELAY_INTERVAL);
-		setNextAction(OTSYS_TIME() + delay);
-		lastWalking = OTSYS_TIME() + delay;
-		return;
-	}
-
 	if (hasCondition(CONDITION_FEARED)) {
 		const Position pos = getNextPosition(dir, getPosition());
 
@@ -12962,7 +12955,7 @@ void Player::applyEquippedWeaponProficiency(const uint16_t itemId) {
 				continue;
 			}
 
-			if (perk.perkValue < 0.0f) {
+			if (perk.perkValue < 0.0f && perk.perkType != PROFICIENCY_PERK_AUGMENT_TYPE) {
 				continue;
 			}
 
