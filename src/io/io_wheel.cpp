@@ -590,7 +590,7 @@ void IOWheel::slotGreenBottom150(const std::shared_ptr<Player> &player, uint16_t
 // SLOT_GREEN_MIDDLE_100 = 8
 void IOWheel::slotGreenMiddle100(const std::shared_ptr<Player> &player, uint16_t points, uint8_t vocationCipId, PlayerWheelMethodsBonusData &bonusData) const {
 	if (isKnight(vocationCipId)) {
-		addSpellAugmented(player, bonusData, WheelSlots_t::SLOT_GREEN_MIDDLE_100, points, "Groundshaker");
+		addSpellAugmented(player, bonusData, WheelSlots_t::SLOT_GREEN_MIDDLE_100, points, "Shield Slam"); // 15.25: Groundshaker/Shield Slam augment positions switched
 		bonusData.stats.health += 3 * points;
 	} else if (isPaladin(vocationCipId)) {
 		addSpellAugmented(player, bonusData, WheelSlots_t::SLOT_GREEN_MIDDLE_100, points, "Strong Ethereal Spear");
@@ -639,7 +639,7 @@ void IOWheel::slotRedTop75(const std::shared_ptr<Player> &player, uint16_t point
 // SLOT_RED_MIDDLE_100 = 11
 void IOWheel::slotRedMiddle100(const std::shared_ptr<Player> &player, uint16_t points, uint8_t vocationCipId, PlayerWheelMethodsBonusData &bonusData) const {
 	if (isKnight(vocationCipId)) {
-		addSpellAugmented(player, bonusData, WheelSlots_t::SLOT_RED_MIDDLE_100, points, "Shield Slam");
+		addSpellAugmented(player, bonusData, WheelSlots_t::SLOT_RED_MIDDLE_100, points, "Groundshaker"); // 15.25: Groundshaker/Shield Slam augment positions switched
 		bonusData.stats.mana += 1 * points;
 	} else if (isPaladin(vocationCipId)) {
 		addSpellAugmented(player, bonusData, WheelSlots_t::SLOT_RED_MIDDLE_100, points, "Divine Dazzle");
@@ -855,7 +855,7 @@ void IOWheel::slotPurpleTop75(const std::shared_ptr<Player> &player, uint16_t po
 // SLOT_PURPLE_TOP_100 = 24
 void IOWheel::slotPurpleTop100(const std::shared_ptr<Player> &player, uint16_t points, uint8_t vocationCipId, PlayerWheelMethodsBonusData &bonusData) const {
 	if (isKnight(vocationCipId)) {
-		addSpellAugmented(player, bonusData, WheelSlots_t::SLOT_PURPLE_TOP_100, points, "Groundshaker");
+		addSpellAugmented(player, bonusData, WheelSlots_t::SLOT_PURPLE_TOP_100, points, "Shield Slam"); // 15.25: Groundshaker/Shield Slam augment positions switched
 		bonusData.stats.capacity += 5 * points;
 	} else if (isPaladin(vocationCipId)) {
 		addSpellAugmented(player, bonusData, WheelSlots_t::SLOT_PURPLE_TOP_100, points, "Strong Ethereal Spear");
@@ -891,7 +891,7 @@ void IOWheel::slotBlueTop150(const std::shared_ptr<Player> &player, uint16_t poi
 void IOWheel::slotBlueMiddle100(const std::shared_ptr<Player> &player, uint16_t points, uint8_t vocationCipId, PlayerWheelMethodsBonusData &bonusData) const {
 	bonusData.mitigation += MITIGATION_INCREASE * points;
 	if (isKnight(vocationCipId)) {
-		addSpellAugmented(player, bonusData, WheelSlots_t::SLOT_BLUE_MIDDLE_100, points, "Shield Slam");
+		addSpellAugmented(player, bonusData, WheelSlots_t::SLOT_BLUE_MIDDLE_100, points, "Groundshaker"); // 15.25: Groundshaker/Shield Slam augment positions switched
 	} else if (isPaladin(vocationCipId)) {
 		addSpellAugmented(player, bonusData, WheelSlots_t::SLOT_BLUE_MIDDLE_100, points, "Divine Dazzle");
 	} else if (isMonk(vocationCipId)) {
