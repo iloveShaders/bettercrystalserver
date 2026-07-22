@@ -908,7 +908,7 @@ void Combat::CombatHealthFunc(const std::shared_ptr<Creature> &caster, const std
 
 		// Proficiency Perk: lifeGainOnHit
 		const uint8_t addLifeGainOnHit = proficiencyPerk.lifeGainOnHit;
-		if (addLifeGainOnHit > 0) {
+		if (addLifeGainOnHit > 0 && attackerPlayer->getHealth() < attackerPlayer->getMaxHealth()) {
 			CombatDamage proficiencyLifeOnHit;
 			proficiencyLifeOnHit.primary.value = addLifeGainOnHit;
 			proficiencyLifeOnHit.primary.type = COMBAT_HEALING;
@@ -919,7 +919,7 @@ void Combat::CombatHealthFunc(const std::shared_ptr<Creature> &caster, const std
 
 		// Proficiency Perk: manaGainOnHit
 		const uint8_t addManaGainOnHit = proficiencyPerk.manaGainOnHit;
-		if (addManaGainOnHit > 0) {
+		if (addManaGainOnHit > 0 && attackerPlayer->getMana() < attackerPlayer->getMaxMana()) {
 			CombatDamage proficiencyManaOnHit;
 			proficiencyManaOnHit.primary.value = addManaGainOnHit;
 			proficiencyManaOnHit.origin = ORIGIN_NONE;
