@@ -1499,10 +1499,10 @@ bool Combat::doCombatChain(const std::shared_ptr<Creature> &caster, const std::s
 				delay, [combat, caster, origin = from, nextTarget, affected]() {
 					if (combat && caster && nextTarget) {
 						// Chain hops call CombatHealthFunc() directly and so never reach
-						// doCombatHealth(), which is what normally emits a spell's visuals.
-						// Without this the chain is invisible between targets: doChainEffect()
-						// paints the impact effect along the ground path from the previous hop
-						// and on the target itself.
+					    // doCombatHealth(), which is what normally emits a spell's visuals.
+					    // Without this the chain is invisible between targets: doChainEffect()
+					    // paints the impact effect along the ground path from the previous hop
+					    // and on the target itself.
 						if (combat->params.impactEffect != CONST_ME_NONE) {
 							Combat::doChainEffect(origin, nextTarget->getPosition(), combat->params.impactEffect);
 						}
