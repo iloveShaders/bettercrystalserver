@@ -372,7 +372,11 @@ void IOWheel::initializeMonkSpells() {
 
 	m_wheelBonusData.spells.monk[2].name = "Chained Penance";
 	m_wheelBonusData.spells.monk[2].grade[1].increase.aditionalTarget = 1;
-	m_wheelBonusData.spells.monk[2].grade[2].increase.aditionalTarget = 1;
+	// Official: Augment II changed from +1 chain target to +18% base damage (base
+	// targets also went 4 -> 5, handled in chained_penance.lua). The Grade I extra
+	// target still applies at Grade II because wheel grades are cumulative -- see
+	// checkSpellAdditionalTarget() in player_wheel.cpp.
+	m_wheelBonusData.spells.monk[2].grade[2].increase.damage = 18;
 
 	m_wheelBonusData.spells.monk[3].name = "Flurry of Blows";
 	m_wheelBonusData.spells.monk[3].grade[1].increase.area = true; // Vocation Adjustment: I enlarges area (was +5% life leech)

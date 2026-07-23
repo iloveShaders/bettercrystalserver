@@ -1353,7 +1353,7 @@ void Combat::addDistanceEffect(const std::shared_ptr<Creature> &caster, const Po
 	}
 }
 
-void Combat::doChainEffect(const Position &origin, const Position &dest, uint8_t effect) {
+void Combat::doChainEffect(const Position &origin, const Position &dest, uint16_t effect) {
 	if (effect > 0) {
 		std::vector<Direction> dirList;
 
@@ -1496,8 +1496,20 @@ bool Combat::doCombatChain(const std::shared_ptr<Creature> &caster, const std::s
 				continue;
 			}
 			g_dispatcher().scheduleEvent(
-				delay, [combat, caster, nextTarget, affected]() {
+				delay, [combat, caster, origin = from, nextTarget, affected]() {
 					if (combat && caster && nextTarget) {
+						// Chain hops call CombatHealthFunc() directly and so never reach
+						// doCombatHealth(), which is what normally emits a spell's visuals.
+						// Without this the chain is invisible between targets: doChainEffect()
+						// paints the impact effect along the ground path from the previous hop
+						// and on the target itself.
+						if (combat->params.impactEffect != CONST_ME_NONE) {
+							Combat::doChainEffect(origin, nextTarget->getPosition(), combat->params.impactEffect);
+						}
+						if (combat->params.distanceEffect != CONST_ANI_NONE) {
+							Combat::addDistanceEffect(caster, origin, nextTarget->getPosition(), combat->params.distanceEffect);
+						}
+
 						CombatDamage damage = combat->getCombatDamage(caster, nextTarget);
 						damage.affected = affected;
 						Combat::CombatHealthFunc(caster, nextTarget, combat->params, &damage);
