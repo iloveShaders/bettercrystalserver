@@ -299,9 +299,17 @@ namespace {
 		for (const auto &spellTable : spellsTable) {
 			auto size = std::ssize(spellTable.grade);
 			g_logger().debug("spell area stage {}, grade {}", stage, size);
-			if (spellTable.name == spellName && stage < static_cast<uint8_t>(size)) {
-				const auto &spellData = spellTable.grade[stage];
-				if (spellData.increase.area) {
+			if (spellTable.name != spellName) {
+				continue;
+			}
+
+			// Wheel spell grades are cumulative: reaching Grade II means Grade I was
+			// bought as well, so a Grade I area upgrade must persist at Grade II.
+			// Reading only grade[stage] silently dropped it for any spell that grants
+			// the area at Grade I and something else at Grade II (Flurry of Blows,
+			// Energy Wave), so investing further in the wheel removed the bigger area.
+			for (uint8_t currentGrade = 1; currentGrade <= stage && currentGrade < static_cast<uint8_t>(size); ++currentGrade) {
+				if (spellTable.grade[currentGrade].increase.area) {
 					g_logger().debug("[{}] spell with name {}, and stage {} has increase area", __FUNCTION__, spellName, stage);
 
 					return true;
@@ -317,11 +325,25 @@ namespace {
 		for (const auto &spellTable : spellsTable) {
 			auto size = std::ssize(spellTable.grade);
 			g_logger().debug("spell target stage {}, grade {}", stage, size);
-			if (spellTable.name == spellName && stage < static_cast<uint8_t>(size)) {
-				const auto &spellData = spellTable.grade[stage];
-				if (spellData.increase.aditionalTarget) {
-					return spellData.increase.aditionalTarget;
+			if (spellTable.name != spellName) {
+				continue;
+			}
+
+			// Same cumulative rule as checkSpellArea: keep the best value granted by any
+			// grade up to the one reached, so a Grade I bonus is not lost on reaching
+			// Grade II (e.g. Divine Dazzle grants its extra targets at Grade I only).
+			// Values are not summed, so spells that repeat the bonus on both grades
+			// (Chained Penance) keep their current strength.
+			int bestValue = 0;
+			for (uint8_t currentGrade = 1; currentGrade <= stage && currentGrade < static_cast<uint8_t>(size); ++currentGrade) {
+				const int gradeValue = static_cast<int>(spellTable.grade[currentGrade].increase.aditionalTarget);
+				if (gradeValue > bestValue) {
+					bestValue = gradeValue;
 				}
+			}
+
+			if (bestValue > 0) {
+				return bestValue;
 			}
 		}
 
