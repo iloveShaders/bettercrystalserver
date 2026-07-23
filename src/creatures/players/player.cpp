@@ -2242,10 +2242,10 @@ void Player::sendIcons() {
 	client->sendIcons(iconSet, iconBakragore);
 }
 
-void Player::sendIconBakragore(IconBakragore icon) const {
-	if (client) {
-		client->sendIconBakragore(icon);
-	}
+void Player::sendIconBakragore(IconBakragore icon) {
+	// sendIcons() reads both normal conditions and Bakragore
+	// condition to send the correct combined 0xA2 packet.
+	sendIcons();
 }
 
 void Player::removeBakragoreIcons() {
@@ -2257,8 +2257,9 @@ void Player::removeBakragoreIcons() {
 }
 
 void Player::removeBakragoreIcon(const IconBakragore icon) {
-	if (hasCondition(CONDITION_BAKRAGORE, enumToValue(icon))) {
-		removeCondition(CONDITION_BAKRAGORE, CONDITIONID_DEFAULT, true);
+	const auto &condition = getCondition(CONDITION_BAKRAGORE, CONDITIONID_DEFAULT, enumToValue(icon));
+	if (condition) {
+		removeCondition(condition);
 	}
 }
 
