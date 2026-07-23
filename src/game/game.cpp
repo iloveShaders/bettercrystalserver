@@ -1157,7 +1157,7 @@ std::shared_ptr<Player> Game::getPlayerByGUID(const uint32_t &guid, bool allowOf
 	if (guid == 0) {
 		return nullptr;
 	}
-	
+
 	auto it = playersByGUID.find(guid);
 	if (it != playersByGUID.end()) {
 		return it->second;
