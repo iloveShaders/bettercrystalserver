@@ -1256,6 +1256,7 @@ void Player::closeContainer(uint8_t cid) {
 
 	if (container && container->isAnyKindOfRewardChest() && !hasOtherRewardContainerOpen(container)) {
 		removeEmptyRewards();
+		removeExpiredRewards();
 	}
 	openContainers.erase(it);
 }
@@ -1268,6 +1269,26 @@ void Player::removeEmptyRewards() {
 			return true;
 		}
 		return false;
+	});
+}
+
+void Player::removeExpiredRewards() {
+	const auto expirationDays = g_configManager().getNumber(REWARD_CHEST_EXPIRATION_DAYS);
+	if (expirationDays <= 0) {
+		return;
+	}
+
+	const int64_t maxAge = static_cast<int64_t>(expirationDays) * 24 * 60 * 60 * 1000;
+	const int64_t now = getTimeMsNow();
+	std::erase_if(rewardMap, [this, now, maxAge](const auto &rewardBag) {
+		auto [id, reward] = rewardBag;
+		if (now - static_cast<int64_t>(id) <= maxAge) {
+			return false;
+		}
+
+		g_logger().debug("[{}] - Removing expired reward bag {} from player {}", __FUNCTION__, id, getName());
+		getRewardChest()->removeItem(reward);
+		return true;
 	});
 }
 
@@ -2071,7 +2092,13 @@ std::shared_ptr<Reward> Player::getReward(const uint64_t rewardId, const bool au
 }
 
 void Player::removeReward(uint64_t rewardId) {
-	rewardMap.erase(rewardId);
+	const auto it = rewardMap.find(rewardId);
+	if (it == rewardMap.end()) {
+		return;
+	}
+
+	getRewardChest()->removeItem(it->second);
+	rewardMap.erase(it);
 }
 
 void Player::getRewardList(std::vector<uint64_t> &rewards) const {

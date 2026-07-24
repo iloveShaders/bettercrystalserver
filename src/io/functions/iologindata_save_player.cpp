@@ -605,11 +605,21 @@ bool IOLoginDataSave::saveRewardItems(const std::shared_ptr<Player> &player) {
 
 	ItemRewardList rewardListItems;
 	if (!rewardList.empty()) {
+		const auto expirationDays = g_configManager().getNumber(REWARD_CHEST_EXPIRATION_DAYS);
+		const bool rewardsExpire = expirationDays > 0;
+		const int64_t maxAge = static_cast<int64_t>(expirationDays) * 24 * 60 * 60 * 1000;
+		const int64_t now = getTimeMsNow();
 		for (const auto &rewardId : rewardList) {
-			auto reward = player->getReward(rewardId, false);
-			if (!reward->empty() && (getTimeMsNow() - rewardId <= 1000 * 60 * 60 * 24 * 7)) {
-				rewardListItems.emplace_back(0, reward);
+			const auto &reward = player->getReward(rewardId, false);
+			if (!reward || reward->empty()) {
+				continue;
 			}
+
+			if (rewardsExpire && (now - static_cast<int64_t>(rewardId)) > maxAge) {
+				continue;
+			}
+
+			rewardListItems.emplace_back(0, reward);
 		}
 
 		DBInsert rewardQuery("INSERT INTO `player_rewards` (`player_id`, `pid`, `sid`, `itemtype`, `count`, `attributes`) VALUES ");

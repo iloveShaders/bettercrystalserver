@@ -1491,7 +1491,7 @@ int PlayerFunctions::luaPlayerRemoveReward(lua_State* L) {
 		return 1;
 	}
 
-	const uint32_t rewardId = Lua::getNumber<uint32_t>(L, 2);
+	const uint64_t rewardId = Lua::getNumber<uint64_t>(L, 2);
 	player->removeReward(rewardId);
 	Lua::pushBoolean(L, true);
 	return 1;

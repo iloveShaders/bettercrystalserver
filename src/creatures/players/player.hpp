@@ -2121,6 +2121,7 @@ private:
 	double_t calculateDamageReduction(double_t currentTotal, int16_t resistance) const;
 
 	void removeEmptyRewards();
+	void removeExpiredRewards();
 	bool hasOtherRewardContainerOpen(const std::shared_ptr<Container> &container) const;
 
 	void checkAndShowBlessingMessage();

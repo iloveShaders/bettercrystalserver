@@ -661,6 +661,7 @@ void IOLoginDataLoad::loadRewardItems(const std::shared_ptr<Player> &player) {
 		loadItems(rewardItems, result, player);
 		bindRewardBag(player, rewardItems);
 		insertItemsIntoRewardBag(rewardItems);
+		player->removeExpiredRewards();
 	}
 }
 
