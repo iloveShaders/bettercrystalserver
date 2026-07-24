@@ -8466,6 +8466,12 @@ void Game::applyOffensiveCharmRune(
 void Game::applyManaLeech(
 	const std::shared_ptr<Player> &attackerPlayer, const std::shared_ptr<Monster> &targetMonster, const std::shared_ptr<Creature> &target, const CombatDamage &damage, const int32_t &realDamage
 ) const {
+	// Nothing to leech into at full mana: skip the wheel/charm lookups and the
+	// resulting sendStats() entirely. Saves per-hit work on every creature struck.
+	if (attackerPlayer->getMana() >= attackerPlayer->getMaxMana()) {
+		return;
+	}
+
 	// Wheel of destiny bonus - mana leech chance and amount
 	auto wheelLeechChance = attackerPlayer->wheel()->checkDrainBodyLeech(target, SKILL_MANA_LEECH_CHANCE);
 	auto wheelLeechAmount = attackerPlayer->wheel()->checkDrainBodyLeech(target, SKILL_MANA_LEECH_AMOUNT);
@@ -8496,13 +8502,24 @@ void Game::applyManaLeech(
 	tmpDamage.primary.type = COMBAT_MANADRAIN;
 	tmpDamage.primary.value = calculateLeechAmount(realDamage, manaSkill, affected);
 
-	Combat::doCombatMana(nullptr, attackerPlayer, tmpDamage, tmpParams);
+	// Leeching into a full mana pool heals nothing but still ran doCombatMana ->
+	// changeMana -> sendStats() on every creature hit, flooding the client with
+	// redundant stat packets and rebuilding the open skills panel each time.
+	if (tmpDamage.primary.value > 0 && attackerPlayer->getMana() < attackerPlayer->getMaxMana()) {
+		Combat::doCombatMana(nullptr, attackerPlayer, tmpDamage, tmpParams);
+	}
 }
 
 // Life leech
 void Game::applyLifeLeech(
 	const std::shared_ptr<Player> &attackerPlayer, const std::shared_ptr<Monster> &targetMonster, const std::shared_ptr<Creature> &target, const CombatDamage &damage, const int32_t &realDamage
 ) const {
+	// Nothing to leech into at full health: skip the wheel/charm/bounty lookups and
+	// the resulting sendStats() entirely. Saves per-hit work on every creature struck.
+	if (attackerPlayer->getHealth() >= attackerPlayer->getMaxHealth()) {
+		return;
+	}
+
 	// Wheel of destiny bonus - life leech chance and amount
 	auto wheelLeechChance = attackerPlayer->wheel()->checkDrainBodyLeech(target, SKILL_LIFE_LEECH_CHANCE);
 	auto wheelLeechAmount = attackerPlayer->wheel()->checkDrainBodyLeech(target, SKILL_LIFE_LEECH_AMOUNT);
@@ -8539,7 +8556,7 @@ void Game::applyLifeLeech(
 		}
 	}
 
-	if (tmpDamage.primary.value > 0) {
+	if (tmpDamage.primary.value > 0 && attackerPlayer->getHealth() < attackerPlayer->getMaxHealth()) {
 		Combat::doCombatHealth(nullptr, attackerPlayer, tmpDamage, tmpParams);
 	}
 }
