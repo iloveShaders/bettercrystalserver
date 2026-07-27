@@ -54,7 +54,7 @@ void Protocol::onSendMessage(const OutputMessage_ptr &msg) {
 
 bool Protocol::sendRecvMessageCallback(NetworkMessage &msg) {
 	if (encryptionEnabled && !XTEA_decrypt(msg)) {
-		g_logger().error("[Protocol::onRecvMessage] - XTEA_decrypt Failed");
+		g_logger().error("[Protocol::onRecvMessage] - XTEA_decrypt Failed from IP {}", convertIPToString(getIP()));
 		return false;
 	}
 
@@ -214,7 +214,7 @@ bool Protocol::XTEA_decrypt(NetworkMessage &msg) const {
 	uint16_t msgLength = msg.getLength() - (checksumMethod == CHECKSUM_METHOD_NONE ? 2 : 6);
 	uint8_t* buffer = msg.getBuffer() + msg.getBufferPosition();
 	if ((msgLength % 8) != 0) {
-		g_logger().error("XTEA_decrypt Failed - invalid block size: {}", msgLength);
+		g_logger().error("XTEA_decrypt Failed - invalid block size: {} from IP {}", msgLength, convertIPToString(getIP()));
 		for (int i = 0; i < msgLength; ++i) {
 			fmt::print("{:02X} ", buffer[i]);
 		}
@@ -229,7 +229,7 @@ bool Protocol::XTEA_decrypt(NetworkMessage &msg) const {
 	uint8_t paddingSize = msg.getByte();
 	uint16_t innerLength = messageLength - paddingSize;
 	if (innerLength + paddingSize > msgLength) {
-		g_logger().error("XTEA_decrypt Failed - invalid inner length: {} + {} > {}", innerLength, paddingSize, msgLength);
+		g_logger().error("XTEA_decrypt Failed - invalid inner length: {} + {} > {} from IP {}", innerLength, paddingSize, msgLength, convertIPToString(getIP()));
 		return false;
 	}
 
