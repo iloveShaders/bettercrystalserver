@@ -11934,8 +11934,15 @@ bool Game::addItemStoreInbox(const std::shared_ptr<Player> &player, uint32_t ite
 }
 
 void Game::playerCheckActivity(const std::string &playerName, int interval) {
-	const auto &player = getPlayerByName(playerName);
+	auto player = getPlayerByName(playerName);
 	if (!player) {
+		// A player disconnected on the death screen is no longer in the online
+		// list; fall back to the dead-player cache so this watchdog keeps running
+		// and can reach the getIP() == 0 cleanup below.
+		player = getDeadPlayer(playerName);
+	}
+	if (!player) {
+		removeDeadPlayer(playerName);
 		return;
 	}
 
