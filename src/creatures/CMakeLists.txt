@@ -33,4 +33,5 @@ target_sources(${PROJECT_NAME}_lib PRIVATE
     players/vocations/vocation.cpp
     players/vip/player_vip.cpp
     players/proficiencies/proficiencies.cpp
+    players/autoassist/player_autoassist.cpp
 )
