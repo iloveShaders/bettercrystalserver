@@ -51,20 +51,23 @@ namespace {
 	// GATE ONLY (id / level / vocation / relative tier). Amounts and formulas live in
 	// data/scripts/actions/items/potions.lua and must NOT be duplicated here. Keep this
 	// table aligned with that script when a client bump introduces new potion tiers.
-	constexpr std::array<PotionEntry, 12> POTIONS { {
-		//  id     hp     mp    lvl  vocMask                                                tier
+	constexpr std::array<PotionEntry, 15> POTIONS { {
+		//  id      hp     mp    lvl  vocMask                                                    tier
 		{ 7876, true, false, 0, 0, 1 }, // small health potion
 		{ 266, true, false, 0, 0, 2 }, // health potion
-		{ 268, false, true, 0, 0, 2 }, // mana potion
-		{ 237, false, true, 50, 0, 3 }, // strong mana potion
-		{ 236, true, false, 50, VOC_PALADIN | VOC_KNIGHT | VOC_MONK, 4 }, // strong health potion
-		{ 238, false, true, 80, VOC_SORCERER | VOC_DRUID | VOC_PALADIN | VOC_MONK, 5 }, // great mana potion
+		{ 268, false, true, 0, 0, 1 }, // mana potion
+		{ 237, false, true, 50, 0, 2 }, // strong mana potion
+		{ 236, true, false, 50, VOC_PALADIN | VOC_KNIGHT | VOC_MONK, 3 }, // strong health potion
+		{ 238, false, true, 80, 0, 3 }, // great mana potion (any vocation on this server)
 		{ 239, true, false, 80, VOC_KNIGHT, 5 }, // great health potion
-		{ 7642, true, true, 80, VOC_PALADIN | VOC_MONK, 5 }, // great spirit potion
-		{ 23373, false, true, 130, VOC_SORCERER | VOC_DRUID, 7 }, // ultimate mana potion
+		{ 7642, true, true, 80, VOC_PALADIN | VOC_MONK, 3 }, // great spirit potion
+		{ 53162, false, true, 100, VOC_PALADIN | VOC_SORCERER | VOC_DRUID | VOC_MONK, 4 }, // mana potion (voc. adjustment)
+		{ 23373, false, true, 130, VOC_SORCERER | VOC_DRUID, 6 }, // ultimate mana potion
 		{ 7643, true, false, 130, VOC_KNIGHT, 7 }, // ultimate health potion
-		{ 23374, true, true, 130, VOC_PALADIN | VOC_MONK, 7 }, // ultimate spirit potion
+		{ 23374, true, true, 130, VOC_PALADIN | VOC_MONK, 5 }, // ultimate spirit potion
+		{ 53163, false, true, 130, 0, 5 }, // strong mana potion (voc. adjustment, any vocation)
 		{ 23375, true, false, 200, VOC_KNIGHT, 9 }, // supreme health potion
+		{ 53164, false, true, 200, 0, 9 }, // supreme mana potion (voc. adjustment, any vocation)
 	} };
 
 	uint8_t baseVocToMask(uint8_t baseId) {
@@ -115,30 +118,40 @@ namespace {
 		return cache;
 	}
 
-	// Silent eligibility check that mirrors Spell::playerSpellCheck WITHOUT emitting the
-	// cancel messages ("You are exhausted." etc.) that would otherwise spam every tick.
+	// Silent eligibility check that mirrors EVERY path in Spell::playerSpellCheck that would
+	// emit a cancel message + poff effect, so auto-cast never spams "You are feared." /
+	// "You are exhausted." / "Not enough mana." once per tick. canCast() already covers the
+	// CannotUseSpells flag and the learned / vocation checks (all of them silently).
 	bool canSilentlyCast(const std::shared_ptr<Player> &player, const std::shared_ptr<InstantSpell> &spell) {
-		if (!spell->canCast(player)) { // vocation / learned
+		if (player->hasCondition(CONDITION_FEARED)) {
+			return false;
+		}
+		if (!spell->canCast(player)) { // CannotUseSpells flag / learned / vocation
+			return false;
+		}
+		const auto group = spell->getGroup();
+		const auto secondary = spell->getSecondaryGroup();
+		if (player->hasCondition(CONDITION_SPELLGROUPCOOLDOWN, group)
+		    || player->hasCondition(CONDITION_SPELLCOOLDOWN, spell->getSpellId())
+		    || (secondary != SPELLGROUP_NONE && player->hasCondition(CONDITION_SPELLGROUPCOOLDOWN, secondary))) {
 			return false;
 		}
 		if (player->getLevel() < spell->getLevel()) {
 			return false;
 		}
+		if (player->getMagicLevel() < spell->getMagicLevel()) {
+			return false;
+		}
+		if (player->getMana() < spell->getManaCost(player) && !player->hasFlag(PlayerFlags_t::HasInfiniteMana)) {
+			return false;
+		}
+		if (player->getSoul() < spell->getSoulCost() && !player->hasFlag(PlayerFlags_t::HasInfiniteSoul)) {
+			return false;
+		}
+		if (spell->getHarmonyCost() && player->getHarmony() == 0 && !player->hasFlag(PlayerFlags_t::HasInfiniteHarmony)) {
+			return false;
+		}
 		if (spell->isPremium() && !player->isPremium()) {
-			return false;
-		}
-		if (player->getMana() < spell->getManaCost(player)) {
-			return false;
-		}
-		const auto group = spell->getGroup();
-		const auto secondary = spell->getSecondaryGroup();
-		if (player->hasCondition(CONDITION_SPELLGROUPCOOLDOWN, group)) {
-			return false;
-		}
-		if (player->hasCondition(CONDITION_SPELLCOOLDOWN, spell->getSpellId())) {
-			return false;
-		}
-		if (secondary != SPELLGROUP_NONE && player->hasCondition(CONDITION_SPELLGROUPCOOLDOWN, secondary)) {
 			return false;
 		}
 		return true;
@@ -196,6 +209,7 @@ namespace {
 		// Highest-tier potion the player qualifies for AND actually owns, matching a predicate.
 		const auto pickBest = [&](auto &&pred) -> std::shared_ptr<Item> {
 			const PotionEntry* chosen = nullptr;
+			std::shared_ptr<Item> chosenItem;
 			for (const auto &p : POTIONS) {
 				if (level < p.minLevel) {
 					continue;
@@ -209,11 +223,12 @@ namespace {
 				if (chosen && p.tier <= chosen->tier) {
 					continue;
 				}
-				if (g_game().findItemOfType(player, p.id, true)) {
+				if (const auto &found = g_game().findItemOfType(player, p.id, true)) {
 					chosen = &p;
+					chosenItem = found;
 				}
 			}
-			return chosen ? g_game().findItemOfType(player, chosen->id, true) : nullptr;
+			return chosenItem;
 		};
 
 		std::shared_ptr<Item> item;
