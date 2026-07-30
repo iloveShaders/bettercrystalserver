@@ -31,6 +31,7 @@
 #include "creatures/monsters/monsters.hpp"
 #include "creatures/npcs/npc.hpp"
 #include "creatures/players/animus_mastery/animus_mastery.hpp"
+#include "creatures/players/autoassist/player_autoassist.hpp"
 #include "creatures/players/wheel/player_wheel.hpp"
 #include "creatures/players/wheel/wheel_gems.hpp"
 #include "creatures/players/achievement/player_achievement.hpp"
@@ -8628,6 +8629,9 @@ void Player::onThink(uint32_t interval) {
 
 	// Wheel of destiny major spells
 	wheel()->onThink();
+
+	// Auto-heal / auto-potion (bot-like; casts the real spell / drinks the real potion)
+	AutoAssist::check(getPlayer());
 
 	g_callbacks().executeCallback(EventCallback_t::playerOnThink, &EventCallback::playerOnThink, getPlayer(), interval);
 }
