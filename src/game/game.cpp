@@ -719,6 +719,24 @@ void Game::setGameState(GameState_t newState) {
 				it = players.begin();
 			}
 
+			// Remove players still lingering on the death screen after a disconnect.
+			// They are absent from `players`, so the loop above skips them. If left
+			// in m_deadPlayers their teardown is deferred to a +CONNECTION_WRITE_TIMEOUT
+			// protocol->release() event that races thread-pool shutdown and hangs the
+			// dispatcher at join time. Drain them here so onLogout/decay-clear and
+			// removeCreature run synchronously before shutdown() proceeds.
+			std::vector<std::shared_ptr<Player>> deadPlayersSnapshot;
+			deadPlayersSnapshot.reserve(m_deadPlayers.size());
+			for (const auto &[deadName, weakDead] : m_deadPlayers) {
+				if (const auto &deadPlayer = weakDead.lock()) {
+					deadPlayersSnapshot.emplace_back(deadPlayer);
+				}
+			}
+			m_deadPlayers.clear();
+			for (const auto &deadPlayer : deadPlayersSnapshot) {
+				deadPlayer->removePlayer(true);
+			}
+
 			g_dispatcher().addEvent([this] { shutdown(); }, __FUNCTION__);
 
 			break;
