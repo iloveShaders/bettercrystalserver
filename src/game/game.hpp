@@ -808,9 +808,10 @@ public:
 	 *
 	 * @param player Pointer to the player object.
 	 * @param maxMoveItems Maximum number of items to move (default is 0, which means no limit).
+	 * @param specificRewardBag If set, only that reward bag is collected instead of the whole chest.
 	 * @return Return value indicating success or error.
 	 */
-	ReturnValue collectRewardChestItems(const std::shared_ptr<Player> &player, uint32_t maxMoveItems = 0);
+	ReturnValue collectRewardChestItems(const std::shared_ptr<Player> &player, uint32_t maxMoveItems = 0, const std::shared_ptr<Container> &specificRewardBag = nullptr);
 
 private:
 	std::map<uint16_t, Achievement> m_achievements;

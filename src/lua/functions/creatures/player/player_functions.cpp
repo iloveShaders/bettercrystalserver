@@ -1518,14 +1518,23 @@ int PlayerFunctions::luaPlayerGetRewardList(lua_State* L) {
 }
 
 int PlayerFunctions::luaPlayerCollectRewardChestItems(lua_State* L) {
-	// player:collectRewardChestItems()
+	// player:collectRewardChestItems([rewardBag])
 	const auto &player = Lua::getUserdataShared<Player>(L, 1);
 	if (!player) {
 		lua_pushnil(L);
 		return 1;
 	}
 
-	ReturnValue ret = g_game().collectRewardChestItems(player);
+	// Optional: a single reward bag (Container) to collect instead of the whole chest.
+	std::shared_ptr<Container> specificRewardBag = nullptr;
+	if (Lua::isUserdata(L, 2)) {
+		const auto &item = Lua::getUserdataShared<Item>(L, 2);
+		if (item) {
+			specificRewardBag = item->getContainer();
+		}
+	}
+
+	ReturnValue ret = g_game().collectRewardChestItems(player, 0, specificRewardBag);
 	Lua::pushBoolean(L, ret == RETURNVALUE_NOERROR);
 	return 1;
 }

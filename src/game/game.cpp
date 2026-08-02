@@ -3445,7 +3445,7 @@ ReturnValue Game::internalCollectManagedItems(const std::shared_ptr<Player> &pla
 	return processLootItems(player, lootContainer, item, fallbackConsumed);
 }
 
-ReturnValue Game::collectRewardChestItems(const std::shared_ptr<Player> &player, uint32_t maxMoveItems /* = 0*/) {
+ReturnValue Game::collectRewardChestItems(const std::shared_ptr<Player> &player, uint32_t maxMoveItems /* = 0*/, const std::shared_ptr<Container> &specificRewardBag /* = nullptr*/) {
 	// Check if have item on player reward chest
 	std::shared_ptr<RewardChest> rewardChest = player->getRewardChest();
 	if (rewardChest->empty()) {
@@ -3453,7 +3453,14 @@ ReturnValue Game::collectRewardChestItems(const std::shared_ptr<Player> &player,
 		return RETURNVALUE_REWARDCHESTISEMPTY;
 	}
 
-	auto rewardItemsVector = player->getRewardsFromContainer(rewardChest->getContainer());
+	// If a specific bag is given (e.g. auto-collect the bag that just dropped), only that
+	// bag is swept - otherwise older bags still sitting in the chest would be pulled too.
+	const auto &sourceContainer = specificRewardBag ? specificRewardBag : rewardChest->getContainer();
+	if (!sourceContainer) {
+		return RETURNVALUE_NOTPOSSIBLE;
+	}
+
+	auto rewardItemsVector = player->getRewardsFromContainer(sourceContainer);
 	auto rewardCount = rewardItemsVector.size();
 	uint32_t movedRewardItems = 0;
 	std::string lootedItemsMessage;
