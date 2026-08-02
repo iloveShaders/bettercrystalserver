@@ -1278,11 +1278,15 @@ void Combat::combatTileEffects(const CreatureVector &spectators, const std::shar
 		Game::addMagicEffect(spectators, tile->getPosition(), params.impactEffect, caster);
 	}
 
-	if (params.soundImpactEffect != SoundEffect_t::SILENCE) {
-		g_game().sendDoubleSoundEffect(tile->getPosition(), params.soundCastEffect, params.soundImpactEffect, caster);
-	} else if (params.soundCastEffect != SoundEffect_t::SILENCE) {
-		g_game().sendSingleSoundEffect(tile->getPosition(), params.soundCastEffect, caster);
-	}
+	// NOTE: the cast/impact SOUND is intentionally NOT sent here per tile. For an area
+	// spell this loop runs once per affected tile (~17-25 for radius 3-4), so sending a
+	// sound on every tile made a pack of AoE monsters emit dozens-to-hundreds of
+	// near-simultaneous sound packets. The client then tried to play them all at once,
+	// overloading its audio mixer and causing FPS/ping spikes (tiny packets, so the
+	// network stayed quiet - which is why this looked like a client-only issue).
+	// postCombatEffects() already plays the sound ONCE at the target/center position,
+	// which is the correct single "boom" per cast. The per-tile visual effect above is
+	// kept so the explosion still covers the whole area.
 }
 
 void Combat::postCombatEffects(const std::shared_ptr<Creature> &caster, const Position &origin, const Position &pos, const CombatParams &params) {
