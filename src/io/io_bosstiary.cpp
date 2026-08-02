@@ -202,8 +202,14 @@ void IOBosstiary::addBosstiaryKill(const std::shared_ptr<Player> &player, const 
 	auto bossRace = mtype->info.bosstiaryRace;
 	const std::vector<LevelInfo> &infoForCurrentRace = levelInfos.at(bossRace);
 
-	auto pointsForCurrentLevel = infoForCurrentRace[newBossLevel - 1].points;
-	player->addBossPoints(pointsForCurrentLevel);
+	// Award points for every progress stage crossed in this increment, not just the
+	// final one, so multi-level jumps (boosted boss, double-bosstiary event, high
+	// kill multiplier, or Lua-granted amounts) don't skip intermediate stage points.
+	uint32_t pointsToAdd = 0;
+	for (uint8_t crossedLevel = oldBossLevel; crossedLevel < newBossLevel; ++crossedLevel) {
+		pointsToAdd += infoForCurrentRace[crossedLevel].points;
+	}
+	player->addBossPoints(pointsToAdd);
 
 	int32_t value = player->getStorageValue(STORAGEVALUE_PODIUM);
 	if (value != 1 && newBossLevel == 2) {
