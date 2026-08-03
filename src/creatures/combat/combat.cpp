@@ -944,8 +944,12 @@ void Combat::CombatHealthFunc(const std::shared_ptr<Creature> &caster, const std
 		// Bounty Talisman damage bonus (value in hundredths of percent)
 		uint16_t bountyDamageBonus = g_iobountytasks().getBountyTalismanBonus(attackerPlayer, targetMonster->getRaceId(), BOUNTY_TALISMAN_DAMAGE);
 		if (bountyDamageBonus > 0) {
-			damage.primary.value += static_cast<int32_t>(std::ceil((damage.primary.value * bountyDamageBonus) / 10000.0));
-			damage.secondary.value += static_cast<int32_t>(std::ceil((damage.secondary.value * bountyDamageBonus) / 10000.0));
+			const int32_t bountyPrimaryAdd = static_cast<int32_t>(std::ceil((damage.primary.value * bountyDamageBonus) / 10000.0));
+			const int32_t bountySecondaryAdd = static_cast<int32_t>(std::ceil((damage.secondary.value * bountyDamageBonus) / 10000.0));
+			damage.primary.value += bountyPrimaryAdd;
+			damage.secondary.value += bountySecondaryAdd;
+			const int32_t bountyTotalAdd = std::abs(bountyPrimaryAdd) + std::abs(bountySecondaryAdd);
+			attackerPlayer->sendTextMessage(MESSAGE_LOOT, fmt::format("Bounty talisman: +{} damage (+{:.2f}%).", bountyTotalAdd, bountyDamageBonus / 100.0));
 		}
 
 		// Monster type onPlayerAttack event

@@ -702,33 +702,27 @@ uint16_t IOBountyTasks::getTalismanUpgradeCost(uint8_t currentLevel) {
 }
 
 uint32_t IOBountyTasks::getTalismanBonusHundredths(uint8_t level, uint8_t pathIndex) {
-	// Calculate the actual bonus in hundredths of a percent for a given talisman level
+	// Calculate the actual bonus in hundredths of a percent for a given talisman level.
+	// Level is 0-indexed (= number of upgrades purchased), matching getTalismanUpgradeCost,
+	// the client's on-board display, and global Tibia.
 	//
 	// Paths 0-2 (Damage, Life Leech, Loot):
-	//   Level 1 = 2.5%, then +0.5% per level until 15.0% (level 26)
-	//   After 15%: +0.25% per level until max 50% (level 166)
-	//   Examples: L1=2.5%, L2=3.0%, L3=3.5%, ..., L26=15.0%, L27=15.25%, ..., L166=50.0%
+	//   Level 0 (talisman active, no upgrades) = 2.5% base, then +0.5% per upgrade until
+	//   15.0% (level 25), then +0.25% per upgrade until max 50% (level 165).
+	//   Examples: L0=2.5%, L1=3.0%, L2=3.5%, ..., L25=15.0%, L26=15.25%, ..., L165=50.0%
 	//
-	// Path 3 (Bestiary):
-	//   +1% per level until 20% (level 20)
-	//   After 20%: +0.5% per level until max 100% (level 180)
-	//   Examples: L1=1%, L2=2%, ..., L20=20%, L21=20.5%, ..., L180=100%
-	if (level == 0) {
-		return 0;
-	}
-
+	// Path 3 (Bestiary): unchanged fork curve.
+	//   +1% per level until 20% (level 20), then +0.5% per level until max 100% (level 180).
 	switch (pathIndex) {
 		case BOUNTY_TALISMAN_DAMAGE:
 		case BOUNTY_TALISMAN_LIFELEECH:
 		case BOUNTY_TALISMAN_LOOT: {
-			// Level 1 = 250 (2.5%), then +50 (0.5%) per level until 1500 (15.0%) at level 26
-			// After level 26: +25 (0.25%) per level until 5000 (50%) at level 166
-			if (level <= 26) {
-				// 250 + (level - 1) * 50
-				return 250 + (level - 1) * 50;
+			// 0-indexed: level 0 = 250 (2.5%) base, +50 (0.5%) per upgrade to 1500 (15.0%)
+			// at level 25, then +25 (0.25%) per upgrade, capped at 5000 (50%) at level 165.
+			if (level <= 25) {
+				return 250 + level * 50;
 			}
-			// 1500 + (level - 26) * 25, capped at 5000 (50%)
-			return std::min<uint32_t>(1500 + (level - 26) * 25, 5000);
+			return std::min<uint32_t>(1500 + (level - 25) * 25, 5000);
 		}
 		case BOUNTY_TALISMAN_BESTIARY: {
 			// Level 1 = 100 (1%), +100 (1%) per level until 2000 (20%) at level 20
@@ -745,38 +739,31 @@ uint32_t IOBountyTasks::getTalismanBonusHundredths(uint8_t level, uint8_t pathIn
 }
 
 void IOBountyTasks::recalculateTalismanBonuses(BountyTalismanTier &tier, uint8_t pathIndex) {
-	if (tier.level == 0) {
-		tier.multiplier1 = 0;
-		tier.multiplier2 = 0;
-		tier.isActivedUpgrade = 1;
-		tier.bonusHundredths = 0;
-		tier.bountyPointsToUpgrade = getTalismanUpgradeCost(0);
-		return;
-	}
-
-	// Protocol sends the LEVEL in multiplier1 (client calculates display percentage)
-	// multiplier2 is unused (always 0)
+	// Protocol sends the LEVEL in multiplier1 (client calculates display percentage).
+	// multiplier2 is unused (always 0). Level 0 is a valid state (talisman active, no
+	// upgrades) and for paths 0-2 already carries the 2.5% base bonus, so it flows through
+	// the normal path below rather than being short-circuited to 0.
 	tier.multiplier1 = tier.level;
 	tier.multiplier2 = 0;
 
 	// Cache the bonus percentage so we don't recalculate every hit
 	tier.bonusHundredths = getTalismanBonusHundredths(tier.level, pathIndex);
 
-	// Max levels based on reaching max bonus:
-	// Paths 0-2: 50% = 2.5% + 25*0.5% = 15% (level 26) + 140*0.25% = 35% → level 166
+	// Max levels based on reaching max bonus (0-indexed):
+	// Paths 0-2: 50% = 2.5% base + 25*0.5% = 15% (level 25) + 140*0.25% = 35% → level 165
 	// Path 3:   100% = 20*1% = 20% (level 20) + 160*0.5% = 80% → level 180
 	uint8_t maxLevel;
 	switch (pathIndex) {
 		case BOUNTY_TALISMAN_DAMAGE:
 		case BOUNTY_TALISMAN_LIFELEECH:
 		case BOUNTY_TALISMAN_LOOT:
-			maxLevel = 166;
+			maxLevel = 165;
 			break;
 		case BOUNTY_TALISMAN_BESTIARY:
 			maxLevel = 180;
 			break;
 		default:
-			maxLevel = 166;
+			maxLevel = 165;
 			break;
 	}
 
