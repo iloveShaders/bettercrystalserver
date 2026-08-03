@@ -3303,7 +3303,7 @@ void Game::playerQuickLootCorpse(const std::shared_ptr<Player> &player, const st
 
 std::shared_ptr<Container> Game::findManagedContainer(const std::shared_ptr<Player> &player, bool &fallbackConsumed, ObjectCategory_t category, bool isLootContainer) {
 	auto lootContainer = player->getManagedContainer(category, isLootContainer);
-	if (!lootContainer && player->quickLootFallbackToMainContainer && !fallbackConsumed) {
+	if (!lootContainer && player->quickLootFallbackToMainContainer && !fallbackConsumed && isLootContainer) {
 		auto fallbackItem = player->getInventoryItem(CONST_SLOT_BACKPACK);
 		auto mainBackpack = fallbackItem ? fallbackItem->getContainer() : nullptr;
 
@@ -3342,8 +3342,8 @@ std::shared_ptr<Container> Game::findNextAvailableContainer(ContainerIterator &c
 	return nullptr;
 }
 
-bool Game::handleFallbackLogic(const std::shared_ptr<Player> &player, std::shared_ptr<Container> &lootContainer, ContainerIterator &containerIterator, const bool &fallbackConsumed) {
-	if (fallbackConsumed || !player->quickLootFallbackToMainContainer) {
+bool Game::handleFallbackLogic(const std::shared_ptr<Player> &player, std::shared_ptr<Container> &lootContainer, ContainerIterator &containerIterator, const bool &fallbackConsumed, bool isLootContainer) {
+	if (fallbackConsumed || !player->quickLootFallbackToMainContainer || !isLootContainer) {
 		return false;
 	}
 
@@ -3372,7 +3372,7 @@ ReturnValue Game::processMoveOrAddItemToLootContainer(const std::shared_ptr<Item
 	return ret;
 }
 
-ReturnValue Game::processLootItems(const std::shared_ptr<Player> &player, std::shared_ptr<Container> lootContainer, const std::shared_ptr<Item> &item, bool &fallbackConsumed) {
+ReturnValue Game::processLootItems(const std::shared_ptr<Player> &player, std::shared_ptr<Container> lootContainer, const std::shared_ptr<Item> &item, bool &fallbackConsumed, bool isLootContainer) {
 	std::shared_ptr<Container> lastSubContainer = nullptr;
 	uint32_t remainderCount = item->getItemCount();
 	ContainerIterator containerIterator = lootContainer->iterator();
@@ -3385,7 +3385,7 @@ ReturnValue Game::processLootItems(const std::shared_ptr<Player> &player, std::s
 		}
 
 		std::shared_ptr<Container> nextContainer = findNextAvailableContainer(containerIterator, lootContainer, lastSubContainer);
-		if (!nextContainer && !handleFallbackLogic(player, lootContainer, containerIterator, fallbackConsumed)) {
+		if (!nextContainer && !handleFallbackLogic(player, lootContainer, containerIterator, fallbackConsumed, isLootContainer)) {
 			break;
 		}
 		fallbackConsumed = fallbackConsumed || (nextContainer == nullptr);
@@ -3442,7 +3442,7 @@ ReturnValue Game::internalCollectManagedItems(const std::shared_ptr<Player> &pla
 		return RETURNVALUE_NOTPOSSIBLE;
 	}
 
-	return processLootItems(player, lootContainer, item, fallbackConsumed);
+	return processLootItems(player, lootContainer, item, fallbackConsumed, isLootContainer);
 }
 
 ReturnValue Game::collectRewardChestItems(const std::shared_ptr<Player> &player, uint32_t maxMoveItems /* = 0*/, const std::shared_ptr<Container> &specificRewardBag /* = nullptr*/) {
