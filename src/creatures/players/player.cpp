@@ -1176,7 +1176,11 @@ void Player::addSkillAdvance(skills_t skill, uint64_t count) {
 	}
 
 	if (sendUpdateSkills) {
-		sendSkills();
+		// Coalesce the heavy skills packet (0xA1). addSkillAdvance fires on every weapon-skill
+		// tick (effectively per hit while hunting); pushing sendSkills() here rebuilt the client
+		// skills panel dozens of times per second, tanking FPS with the tab open. Flag it and
+		// flush once per onThink instead. sendStats() stays immediate so HP/mana never lag.
+		m_skillsDirty = true;
 		sendStats();
 	}
 }
@@ -3647,7 +3651,9 @@ void Player::addManaSpent(uint64_t amount) {
 
 	if (sendUpdateStats) {
 		sendStats();
-		sendSkills();
+		// See addSkillAdvance: coalesce sendSkills() to once per onThink. addManaSpent fires on
+		// every spell cast, so the same per-action skills-packet flood applies here.
+		m_skillsDirty = true;
 	}
 }
 
@@ -8593,6 +8599,12 @@ void Player::onThink(uint32_t interval) {
 
 	// Flush coalesced analyzer (impact/input tracker) updates once per think.
 	flushAnalyzerBuffers();
+
+	// Flush the coalesced skills packet (see addSkillAdvance / addManaSpent).
+	if (m_skillsDirty) {
+		m_skillsDirty = false;
+		sendSkills();
+	}
 
 	MessageBufferTicks += interval;
 	if (MessageBufferTicks >= 1500) {

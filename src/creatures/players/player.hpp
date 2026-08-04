@@ -1865,6 +1865,11 @@ private:
 	// Per-think coalescing buffers for analyzer packets (see flushAnalyzerBuffers).
 	mutable std::map<CombatType_t, int64_t> m_impactTrackerBuffer;
 	mutable std::map<std::pair<CombatType_t, std::string>, int32_t> m_inputAnalyzerBuffer;
+
+	// Coalesced skills-packet flag: addSkillAdvance/addManaSpent set this instead of calling
+	// sendSkills() per action; Player::onThink flushes it once per think. Prevents the 0xA1
+	// skills-panel rebuild storm that tanked client FPS with the skills tab open while hunting.
+	bool m_skillsDirty = false;
 	int64_t lastWalking = 0;
 	uint64_t asyncOngoingTasks = 0;
 
