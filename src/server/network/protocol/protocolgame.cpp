@@ -5021,7 +5021,7 @@ void ProtocolGame::sendCyclopediaCharacterMiscStats() {
 	msg.addDouble(0.00);
 
 	msg.addDouble(getForgeSkillStat(CONST_SLOT_LEGS));
-	msg.addDouble(getForgeSkillStat(CONST_SLOT_LEGS), false);
+	msg.addDouble(getForgeSkillStat(CONST_SLOT_LEGS, false));
 	msg.addDouble(getForgeSkillStat(CONST_SLOT_LEGS) - getForgeSkillStat(CONST_SLOT_LEGS, false));
 	msg.addDouble(0.09);
 
