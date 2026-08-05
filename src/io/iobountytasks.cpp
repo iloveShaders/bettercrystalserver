@@ -708,8 +708,10 @@ uint32_t IOBountyTasks::getTalismanBonusHundredths(uint8_t level, uint8_t pathIn
 	//
 	// Paths 0-2 (Damage, Life Leech, Loot):
 	//   Level 0 (talisman active, no upgrades) = 2.5% base, then +0.5% per upgrade until
-	//   15.0% (level 25), then +0.25% per upgrade until max 50% (level 165).
-	//   Examples: L0=2.5%, L1=3.0%, L2=3.5%, ..., L25=15.0%, L26=15.25%, ..., L165=50.0%
+	//   10.0% (level 15), then +0.25% per upgrade until max 50% (level 175).
+	//   Breakpoints match what the client renders on the board (verified in-game:
+	//   level 16 = 10.25%, level 50 = 18.75%).
+	//   Examples: L0=2.5%, L15=10.0%, L16=10.25%, ..., L55=20.0%, ..., L175=50.0%
 	//
 	// Path 3 (Bestiary): unchanged fork curve.
 	//   +1% per level until 20% (level 20), then +0.5% per level until max 100% (level 180).
@@ -717,12 +719,12 @@ uint32_t IOBountyTasks::getTalismanBonusHundredths(uint8_t level, uint8_t pathIn
 		case BOUNTY_TALISMAN_DAMAGE:
 		case BOUNTY_TALISMAN_LIFELEECH:
 		case BOUNTY_TALISMAN_LOOT: {
-			// 0-indexed: level 0 = 250 (2.5%) base, +50 (0.5%) per upgrade to 1500 (15.0%)
-			// at level 25, then +25 (0.25%) per upgrade, capped at 5000 (50%) at level 165.
-			if (level <= 25) {
+			// 0-indexed: level 0 = 250 (2.5%) base, +50 (0.5%) per upgrade to 1000 (10.0%)
+			// at level 15, then +25 (0.25%) per upgrade, capped at 5000 (50%) at level 175.
+			if (level <= 15) {
 				return 250 + level * 50;
 			}
-			return std::min<uint32_t>(1500 + (level - 25) * 25, 5000);
+			return std::min<uint32_t>(1000 + (level - 15) * 25, 5000);
 		}
 		case BOUNTY_TALISMAN_BESTIARY: {
 			// Level 1 = 100 (1%), +100 (1%) per level until 2000 (20%) at level 20
@@ -750,20 +752,20 @@ void IOBountyTasks::recalculateTalismanBonuses(BountyTalismanTier &tier, uint8_t
 	tier.bonusHundredths = getTalismanBonusHundredths(tier.level, pathIndex);
 
 	// Max levels based on reaching max bonus (0-indexed):
-	// Paths 0-2: 50% = 2.5% base + 25*0.5% = 15% (level 25) + 140*0.25% = 35% → level 165
+	// Paths 0-2: 50% = 2.5% base + 15*0.5% = 10% (level 15) + 160*0.25% = 40% → level 175
 	// Path 3:   100% = 20*1% = 20% (level 20) + 160*0.5% = 80% → level 180
 	uint8_t maxLevel;
 	switch (pathIndex) {
 		case BOUNTY_TALISMAN_DAMAGE:
 		case BOUNTY_TALISMAN_LIFELEECH:
 		case BOUNTY_TALISMAN_LOOT:
-			maxLevel = 165;
+			maxLevel = 175;
 			break;
 		case BOUNTY_TALISMAN_BESTIARY:
 			maxLevel = 180;
 			break;
 		default:
-			maxLevel = 165;
+			maxLevel = 175;
 			break;
 	}
 

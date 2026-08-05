@@ -949,7 +949,16 @@ void Combat::CombatHealthFunc(const std::shared_ptr<Creature> &caster, const std
 			damage.primary.value += bountyPrimaryAdd;
 			damage.secondary.value += bountySecondaryAdd;
 			const int32_t bountyTotalAdd = std::abs(bountyPrimaryAdd) + std::abs(bountySecondaryAdd);
-			attackerPlayer->sendTextMessage(MESSAGE_LOOT, fmt::format("Bounty talisman: +{} damage (+{:.2f}%).", bountyTotalAdd, bountyDamageBonus / 100.0));
+			if (bountyTotalAdd > 0) {
+				// Append to the "loses X due to your attack" line via the damage extension text
+				// (same channel Hazard uses) instead of a separate message. applyExtensions has
+				// already run before CombatHealthFunc, so setting extension here does not skip it.
+				if (!damage.exString.empty()) {
+					damage.exString += " ";
+				}
+				damage.exString += fmt::format("Bonus +{} damage (+{:.2f}%).", bountyTotalAdd, bountyDamageBonus / 100.0);
+				damage.extension = true;
+			}
 		}
 
 		// Monster type onPlayerAttack event
