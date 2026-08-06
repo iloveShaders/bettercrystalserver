@@ -1687,6 +1687,7 @@ public:
 	bool setStance(Stance_t stance);
 	bool setElementalStance(Stance_t stance);
 	void persistStances();
+	void loadStances();
 	static bool isStanceCompatibleWithVocation(Stance_t stance, uint16_t vocationBaseId);
 	static uint16_t getStanceSpellId(Stance_t stance);
 	static bool isElementalStance(Stance_t stance);

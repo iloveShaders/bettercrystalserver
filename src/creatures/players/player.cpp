@@ -11630,6 +11630,9 @@ void Player::onCreatureAppear(const std::shared_ptr<Creature> &creature, bool is
 
 		g_game().changePlayerSpeed(static_self_cast<Player>(), 0);
 		g_game().checkSpecialTiles(static_self_cast<Player>());
+		// Restore persisted sorcerer/monk stances and refresh the client highlight
+		// so the action-bar glow matches the engine state after a restart or relog.
+		loadStances();
 		IOLoginData::updateOnlineStatus(guid, true);
 	}
 }
@@ -12720,6 +12723,7 @@ bool Player::setStance(Stance_t stance) {
 			return false;
 		}
 		m_stancePrimary = STANCE_NONE;
+		persistStances();
 		sendStanceProtocol(); // resend full active set (count 0 if nothing left -> clean clear, never id 0)
 		sendSkills();
 		return true;
@@ -12730,6 +12734,7 @@ bool Player::setStance(Stance_t stance) {
 		}
 	}
 	m_stancePrimary = stance;
+	persistStances();
 	sendStanceProtocol(); // resend full active set (primary + elemental)
 	sendSkills();
 	return true;
@@ -12749,11 +12754,13 @@ bool Player::setElementalStance(Stance_t stance) {
 			return false;
 		}
 		m_stanceElemental = STANCE_NONE;
+		persistStances();
 		sendStanceProtocol(); // resend full active set (count 0 if nothing left -> clean clear, never id 0)
 		sendSkills();
 		return true;
 	}
 	m_stanceElemental = stance;
+	persistStances();
 	sendStanceProtocol(); // resend full active set (elemental + crippling)
 	sendSkills();
 	return true;
@@ -12763,6 +12770,45 @@ void Player::persistStances() {
 	// Vocation Adjustment: persist the active stances so they are restored on the next login.
 	kv()->scoped("stance")->set("primary", static_cast<int>(m_stancePrimary));
 	kv()->scoped("stance")->set("elemental", static_cast<int>(m_stanceElemental));
+}
+
+void Player::loadStances() {
+	// Restore the stances saved by persistStances() and refresh the client's
+	// action-bar highlight. Without this the engine starts at STANCE_NONE on
+	// login while the client still shows the stance spell glowing, so it looks
+	// active but deals no stance effect until recast.
+	const auto &stanceScope = kv()->scoped("stance");
+	if (!stanceScope) {
+		return;
+	}
+
+	const auto loadOne = [&stanceScope](const std::string &key) -> Stance_t {
+		const auto stored = stanceScope->get(key);
+		if (!stored) {
+			return STANCE_NONE;
+		}
+		const int value = static_cast<int>(stored->getNumber());
+		if (value <= static_cast<int>(STANCE_NONE) || value > static_cast<int>(STANCE_ELEMENTAL_SYNTHESIS)) {
+			return STANCE_NONE;
+		}
+		return static_cast<Stance_t>(value);
+	};
+
+	const Stance_t primary = loadOne("primary");
+	const Stance_t elemental = loadOne("elemental");
+
+	// Only accept a stance the current vocation may actually use, so a vocation
+	// change can never leave a stale/incompatible stance highlighted.
+	if (primary != STANCE_NONE && !isElementalStance(primary)
+	    && vocation && isStanceCompatibleWithVocation(primary, vocation->getBaseId())) {
+		m_stancePrimary = primary;
+	}
+	if (elemental != STANCE_NONE && isElementalStance(elemental)
+	    && vocation && vocation->getBaseId() == VOCATION_SORCERER) {
+		m_stanceElemental = elemental;
+	}
+
+	sendStanceProtocol();
 }
 
 uint8_t Player::getMonkAuraVocMask() const {
