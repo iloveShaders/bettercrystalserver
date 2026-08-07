@@ -4551,7 +4551,14 @@ void Player::addInFightTicks(bool pzlock /*= false*/) {
 		sendIcons();
 	}
 
-	updateImbuementTrackerStats();
+	// NOTE: updateImbuementTrackerStats() was previously called here. addInFightTicks
+	// fires on every combat action (each hit dealt/taken), so with the imbuement tracker
+	// window open this resent the full 0x5D imbuement packet 100-150x/sec during dense
+	// combat, flooding the client and causing the FPS drop. Imbuement state (duration)
+	// only changes on the 1s decay tick (checkImbuementsAndSereneStatus ->
+	// updateInventoryImbuement) and on equip/unequip/imbue, all of which already call
+	// updateImbuementTrackerStats() at their own sites. So the tracker stays accurate
+	// (updates once per second and on every real change) without the per-hit flood.
 
 	safeCall([this] {
 		addCondition(Condition::createCondition(CONDITIONID_DEFAULT, CONDITION_INFIGHT, g_configManager().getNumber(PZ_LOCKED)));

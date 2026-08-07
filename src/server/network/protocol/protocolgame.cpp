@@ -1069,36 +1069,6 @@ void ProtocolGame::disconnectClient(const std::string &message, DisconnectClient
 }
 
 void ProtocolGame::writeToOutputBuffer(NetworkMessage &msg) {
-	// --- TEMP OPCODE PROFILER (remove after diagnosis) ---------------------------
-	// Counts outgoing packets by opcode for a single player, dumping a sorted summary
-	// once per second. ~1 log line/sec (no per-packet spam). The opcode is the first
-	// body byte at INITIAL_BUFFER_POSITION (7); getLength() is the pre-encryption size.
-	if (player && player->getName() == "Tony" && msg.getLength() > 0) {
-		static thread_local std::map<uint8_t, uint32_t> s_opCount;
-		static thread_local std::map<uint8_t, uint64_t> s_opBytes;
-		static thread_local int64_t s_lastDump = 0;
-		const uint8_t opcode = msg.getBuffer()[NetworkMessage::INITIAL_BUFFER_POSITION];
-		s_opCount[opcode]++;
-		s_opBytes[opcode] += msg.getLength();
-		const int64_t now = OTSYS_TIME();
-		if (s_lastDump == 0) {
-			s_lastDump = now;
-		}
-		if (now - s_lastDump >= 1000) {
-			std::vector<std::pair<uint8_t, uint32_t>> sorted(s_opCount.begin(), s_opCount.end());
-			std::sort(sorted.begin(), sorted.end(), [](const auto &a, const auto &b) { return a.second > b.second; });
-			std::string line;
-			for (const auto &[op, cnt] : sorted) {
-				line += fmt::format("0x{:02X}:{}({}B) ", op, cnt, s_opBytes[op]);
-			}
-			g_logger().info("[OPPROF Tony /s] {}", line);
-			s_opCount.clear();
-			s_opBytes.clear();
-			s_lastDump = now;
-		}
-	}
-	// --- END TEMP OPCODE PROFILER ------------------------------------------------
-
 	g_dispatcher().safeCall([self = getThis(), msg = std::move(msg)] {
 		self->getOutputBuffer(msg.getLength())->append(msg);
 	});
