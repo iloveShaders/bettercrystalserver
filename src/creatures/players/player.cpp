@@ -1813,6 +1813,84 @@ void Player::flushAnalyzerBuffers() const {
 	m_inputAnalyzerBuffer.clear();
 }
 
+bool Player::accumulateCombatMessage(const TextMessage &message) const {
+	switch (message.type) {
+		case MESSAGE_DAMAGE_DEALT:
+		case MESSAGE_DAMAGE_RECEIVED:
+		case MESSAGE_HEALED:
+		case MESSAGE_EXPERIENCE:
+		case MESSAGE_MANA:
+		case MESSAGE_DAMAGE_OTHERS:
+		case MESSAGE_HEALED_OTHERS:
+		case MESSAGE_EXPERIENCE_OTHERS:
+			break;
+		default:
+			return false;
+	}
+
+	auto &bucket = m_combatLogBuffer[message.type];
+	bucket.value += static_cast<int64_t>(message.primary.value) + static_cast<int64_t>(message.secondary.value);
+	bucket.position = message.position;
+	bucket.color = static_cast<uint8_t>(message.primary.color);
+	++bucket.count;
+	return true;
+}
+
+void Player::flushCombatLog() const {
+	if (m_combatLogBuffer.empty()) {
+		return;
+	}
+	if (!client) {
+		m_combatLogBuffer.clear();
+		return;
+	}
+
+	for (const auto &[type, bucket] : m_combatLogBuffer) {
+		if (bucket.value == 0) {
+			continue;
+		}
+
+		TextMessage message;
+		message.type = type;
+		message.position = bucket.position;
+		message.primary.value = static_cast<int32_t>(bucket.value);
+		message.primary.color = static_cast<TextColor_t>(bucket.color);
+
+		switch (type) {
+			case MESSAGE_DAMAGE_DEALT:
+				message.text = fmt::format("Your attacks deal {} damage.", bucket.value);
+				break;
+			case MESSAGE_DAMAGE_RECEIVED:
+				message.text = fmt::format("You lose {} hitpoints.", bucket.value);
+				break;
+			case MESSAGE_HEALED:
+				message.text = fmt::format("You were healed for {} hitpoints.", bucket.value);
+				break;
+			case MESSAGE_EXPERIENCE:
+				message.text = fmt::format("You gained {} experience points.", bucket.value);
+				break;
+			case MESSAGE_MANA:
+				message.text = fmt::format("You were restored {} mana.", bucket.value);
+				break;
+			case MESSAGE_DAMAGE_OTHERS:
+				message.text = fmt::format("Nearby creatures take {} damage.", bucket.value);
+				break;
+			case MESSAGE_HEALED_OTHERS:
+				message.text = fmt::format("Nearby creatures are healed for {} hitpoints.", bucket.value);
+				break;
+			case MESSAGE_EXPERIENCE_OTHERS:
+				message.text = fmt::format("Nearby players gain {} experience points.", bucket.value);
+				break;
+			default:
+				break;
+		}
+
+		client->sendTextMessage(message);
+	}
+
+	m_combatLogBuffer.clear();
+}
+
 void Player::createLeaderTeamFinder(NetworkMessage &msg) const {
 	if (client) {
 		client->createLeaderTeamFinder(msg);
@@ -2392,6 +2470,9 @@ void Player::sendTextMessage(MessageClasses mclass, const std::string &message) 
 
 void Player::sendTextMessage(const TextMessage &message) const {
 	if (client) {
+		if (g_configManager().getBoolean(COALESCE_COMBAT_LOG) && accumulateCombatMessage(message)) {
+			return;
+		}
 		client->sendTextMessage(message);
 	}
 }
@@ -8606,6 +8687,8 @@ void Player::onThink(uint32_t interval) {
 
 	// Flush coalesced analyzer (impact/input tracker) updates once per think.
 	flushAnalyzerBuffers();
+	// Flush coalesced combat-log / floating-number (0xB4) messages once per think.
+	flushCombatLog();
 
 	// Flush the coalesced skills packet (see addSkillAdvance / addManaSpent).
 	if (m_skillsDirty) {

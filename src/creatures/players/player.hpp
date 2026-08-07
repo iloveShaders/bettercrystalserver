@@ -1296,6 +1296,8 @@ public:
 	void updateSupplyTracker(const std::shared_ptr<Item> &item);
 	void updateImpactTracker(CombatType_t type, int32_t amount) const;
 	void flushAnalyzerBuffers() const;
+	bool accumulateCombatMessage(const TextMessage &message) const;
+	void flushCombatLog() const;
 
 	void updateInputAnalyzer(CombatType_t type, int32_t amount, const std::string &target) const;
 
@@ -1866,6 +1868,17 @@ private:
 	// Per-think coalescing buffers for analyzer packets (see flushAnalyzerBuffers).
 	mutable std::map<CombatType_t, int64_t> m_impactTrackerBuffer;
 	mutable std::map<std::pair<CombatType_t, std::string>, int32_t> m_inputAnalyzerBuffer;
+
+	// Per-think coalescing of combat log / floating-number (0xB4) messages (see flushCombatLog).
+	// Dense AoE emits one 0xB4 per hit per message type; we sum per type and flush a single
+	// summed message in onThink, collapsing dozens of packets/redraws into <=8 per second.
+	struct CombatLogBucket {
+		int64_t value = 0;
+		Position position;
+		uint8_t color = 0;
+		uint32_t count = 0;
+	};
+	mutable std::map<MessageClasses, CombatLogBucket> m_combatLogBuffer;
 
 	// Coalesced skills-packet flag: addSkillAdvance/addManaSpent set this instead of calling
 	// sendSkills() per action; Player::onThink flushes it once per think. Prevents the 0xA1
