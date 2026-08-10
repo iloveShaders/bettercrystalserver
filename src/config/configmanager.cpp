@@ -352,7 +352,7 @@ bool ConfigManager::load() {
 	loadIntConfig(L, PZ_LOCKED, "pzLocked", 60000);
 	loadIntConfig(L, RATE_EXPERIENCE, "rateExp", 1);
 	loadIntConfig(L, RATE_KILLING_IN_THE_NAME_OF_POINTS, "rateKillingInTheNameOfPoints", 1);
-	loadIntConfig(L, RATE_LOOT, "rateLoot", 1);
+	loadFloatConfig(L, RATE_LOOT, "rateLoot", 1.0);
 	loadIntConfig(L, RATE_MAGIC, "rateMagic", 1);
 	loadIntConfig(L, RATE_SKILL, "rateSkill", 1);
 	loadIntConfig(L, RATE_SPAWN, "rateSpawn", 1);
