@@ -7048,6 +7048,7 @@ void Game::checkCreatures() {
 			} else {
 				creature->inCheckCreaturesVector = false;
 			}
+		}
 			// Dead/expired: don't increment writeIndex (remove entry)
 		}
 
