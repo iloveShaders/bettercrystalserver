@@ -6196,6 +6196,11 @@ void ProtocolGame::sendCoinBalance() {
 	}
 
 	writeToOutputBuffer(msg);
+
+	if (!oldProtocol) {
+		sendResourceBalance(RESOURCE_COIN_NORMAL, player->coinBalance);
+		sendResourceBalance(RESOURCE_COIN_TRANSFERRABLE, player->coinTransferableBalance);
+	}
 }
 
 void ProtocolGame::updateCoinBalance() {
