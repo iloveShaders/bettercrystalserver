@@ -111,6 +111,7 @@ bool ConfigManager::load() {
 	loadBoolConfig(L, HOUSE_PURSHASED_SHOW_PRICE, "housePurchasedShowPrice", false);
 	loadBoolConfig(L, INVENTORY_GLOW, "inventoryGlowOnFiveBless", false);
 	loadBoolConfig(L, LOYALTY_ENABLED, "loyaltyEnabled", true);
+	loadBoolConfig(L, LUA_DEBUG_HOOK, "luaDebugHook", true);
 	loadBoolConfig(L, MARKET_PREMIUM, "premiumToCreateMarketOffer", true);
 	loadBoolConfig(L, METRICS_ENABLE_OSTREAM, "metricsEnableOstream", false);
 	loadBoolConfig(L, METRICS_ENABLE_PROMETHEUS, "metricsEnablePrometheus", false);
