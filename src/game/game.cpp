@@ -7660,7 +7660,6 @@ void Game::applyWheelOfDestinyEffectsToDamage(CombatDamage &damage, const std::s
 		damage.secondary.value -= (damage.secondary.value * damage.damageReductionMultiplier) / 100;
 	}
 
-
 	if (attackerPlayer) {
 		damage.primary.value -= attackerPlayer->wheel()->getStat(WheelStat_t::DAMAGE);
 		if (damage.secondary.value != 0) {
