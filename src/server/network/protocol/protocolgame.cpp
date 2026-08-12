@@ -1069,6 +1069,38 @@ void ProtocolGame::disconnectClient(const std::string &message, DisconnectClient
 }
 
 void ProtocolGame::writeToOutputBuffer(NetworkMessage &msg) {
+	// --- OPCODE PROFILER (diagnostic; enable per player with /opprof <name>) -------
+	// Counts outgoing packets by opcode for the profiled player, dumping a sorted summary
+	// once per second (~1 log line/sec, no per-packet spam). Counters live on the connection
+	// so profiling several players at once cannot mix them. The opcode is the first body byte
+	// at INITIAL_BUFFER_POSITION (7); getLength() is the pre-encryption size.
+	if (player && player->isOpcodeProfiled() && msg.getLength() > 0) {
+		const uint8_t opcode = msg.getBuffer()[NetworkMessage::INITIAL_BUFFER_POSITION];
+		m_opProfCount[opcode]++;
+		m_opProfBytes[opcode] += msg.getLength();
+		const int64_t now = OTSYS_TIME();
+		if (m_opProfLastDump == 0) {
+			m_opProfLastDump = now;
+		}
+		if (now - m_opProfLastDump >= 1000) {
+			std::vector<std::pair<uint8_t, uint32_t>> sorted(m_opProfCount.begin(), m_opProfCount.end());
+			std::sort(sorted.begin(), sorted.end(), [](const auto &a, const auto &b) { return a.second > b.second; });
+			std::string line;
+			uint32_t totalPackets = 0;
+			uint64_t totalBytes = 0;
+			for (const auto &[op, cnt] : sorted) {
+				line += fmt::format("0x{:02X}:{}({}B) ", op, cnt, m_opProfBytes[op]);
+				totalPackets += cnt;
+				totalBytes += m_opProfBytes[op];
+			}
+			g_logger().info("[OPPROF {} /s] total:{}pkt({}B) {}", player->getName(), totalPackets, totalBytes, line);
+			m_opProfCount.clear();
+			m_opProfBytes.clear();
+			m_opProfLastDump = now;
+		}
+	}
+	// --- END OPCODE PROFILER ------------------------------------------------------
+
 	g_dispatcher().safeCall([self = getThis(), msg = std::move(msg)] {
 		self->getOutputBuffer(msg.getLength())->append(msg);
 	});

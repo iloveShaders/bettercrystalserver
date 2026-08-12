@@ -1814,6 +1814,9 @@ void Player::flushAnalyzerBuffers() const {
 }
 
 bool Player::accumulateCombatMessage(const TextMessage &message) const {
+	if (!m_combatLogCoalesced) {
+		return false;
+	}
 	switch (message.type) {
 		case MESSAGE_DAMAGE_DEALT:
 		case MESSAGE_DAMAGE_RECEIVED:

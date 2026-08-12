@@ -438,6 +438,11 @@ class PlayerFunctions {
 	static int luaPlayerGetVipDays(lua_State* L);
 	static int luaPlayerGetVipTime(lua_State* L);
 
+	static int luaPlayerIsCombatLogCoalesced(lua_State* L);
+	static int luaPlayerSetCombatLogCoalesced(lua_State* L);
+	static int luaPlayerIsOpcodeProfiled(lua_State* L);
+	static int luaPlayerSetOpcodeProfiled(lua_State* L);
+
 	static int luaPlayerKV(lua_State* L);
 	static int luaPlayerGetStoreInbox(lua_State* L);
 	static int luaPlayerIsNearDepotBox(lua_State* L);

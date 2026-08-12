@@ -459,6 +459,10 @@ void PlayerFunctions::init(lua_State* L) {
 	Lua::registerMethod(L, "Player", "clearSpellCooldowns", PlayerFunctions::luaPlayerClearSpellCooldowns);
 
 	Lua::registerMethod(L, "Player", "isVip", PlayerFunctions::luaPlayerIsVip);
+	Lua::registerMethod(L, "Player", "isCombatLogCoalesced", PlayerFunctions::luaPlayerIsCombatLogCoalesced);
+	Lua::registerMethod(L, "Player", "setCombatLogCoalesced", PlayerFunctions::luaPlayerSetCombatLogCoalesced);
+	Lua::registerMethod(L, "Player", "isOpcodeProfiled", PlayerFunctions::luaPlayerIsOpcodeProfiled);
+	Lua::registerMethod(L, "Player", "setOpcodeProfiled", PlayerFunctions::luaPlayerSetOpcodeProfiled);
 	Lua::registerMethod(L, "Player", "getVipDays", PlayerFunctions::luaPlayerGetVipDays);
 	Lua::registerMethod(L, "Player", "getVipTime", PlayerFunctions::luaPlayerGetVipTime);
 
@@ -5166,6 +5170,56 @@ int PlayerFunctions::luaPlayerClearSpellCooldowns(lua_State* L) {
 		return 1;
 	}
 	player->clearCooldowns();
+	Lua::pushBoolean(L, true);
+	return 1;
+}
+
+int PlayerFunctions::luaPlayerIsCombatLogCoalesced(lua_State* L) {
+	// player:isCombatLogCoalesced()
+	const auto &player = Lua::getUserdataShared<Player>(L, 1);
+	if (!player) {
+		Lua::reportErrorFunc(Lua::getErrorDesc(LUA_ERROR_PLAYER_NOT_FOUND));
+		Lua::pushBoolean(L, false);
+		return 1;
+	}
+	Lua::pushBoolean(L, player->isCombatLogCoalesced());
+	return 1;
+}
+
+int PlayerFunctions::luaPlayerSetCombatLogCoalesced(lua_State* L) {
+	// player:setCombatLogCoalesced(enabled)
+	const auto &player = Lua::getUserdataShared<Player>(L, 1);
+	if (!player) {
+		Lua::reportErrorFunc(Lua::getErrorDesc(LUA_ERROR_PLAYER_NOT_FOUND));
+		Lua::pushBoolean(L, false);
+		return 1;
+	}
+	player->setCombatLogCoalesced(Lua::getBoolean(L, 2));
+	Lua::pushBoolean(L, true);
+	return 1;
+}
+
+int PlayerFunctions::luaPlayerIsOpcodeProfiled(lua_State* L) {
+	// player:isOpcodeProfiled()
+	const auto &player = Lua::getUserdataShared<Player>(L, 1);
+	if (!player) {
+		Lua::reportErrorFunc(Lua::getErrorDesc(LUA_ERROR_PLAYER_NOT_FOUND));
+		Lua::pushBoolean(L, false);
+		return 1;
+	}
+	Lua::pushBoolean(L, player->isOpcodeProfiled());
+	return 1;
+}
+
+int PlayerFunctions::luaPlayerSetOpcodeProfiled(lua_State* L) {
+	// player:setOpcodeProfiled(enabled)
+	const auto &player = Lua::getUserdataShared<Player>(L, 1);
+	if (!player) {
+		Lua::reportErrorFunc(Lua::getErrorDesc(LUA_ERROR_PLAYER_NOT_FOUND));
+		Lua::pushBoolean(L, false);
+		return 1;
+	}
+	player->setOpcodeProfiled(Lua::getBoolean(L, 2));
 	Lua::pushBoolean(L, true);
 	return 1;
 }

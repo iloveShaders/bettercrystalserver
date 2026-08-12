@@ -576,6 +576,11 @@ private:
 	friend class PlayerAttachedEffects;
 
 	std::unordered_set<uint32_t> knownCreatureSet;
+	// TEMP outgoing-opcode profiler state (see writeToOutputBuffer). Per-connection so that
+	// profiling several players at once cannot mix their counters. Gated by player->isOpcodeProfiled().
+	std::map<uint8_t, uint32_t> m_opProfCount;
+	std::map<uint8_t, uint64_t> m_opProfBytes;
+	int64_t m_opProfLastDump = 0;
 	std::shared_ptr<Player> player = nullptr;
 
 	std::list<uint32_t> creatureOrder;

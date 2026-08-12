@@ -1299,6 +1299,18 @@ public:
 	void flushAnalyzerBuffers() const;
 	bool accumulateCombatMessage(const TextMessage &message) const;
 	void flushCombatLog() const;
+	bool isCombatLogCoalesced() const {
+		return m_combatLogCoalesced;
+	}
+	void setCombatLogCoalesced(bool value) {
+		m_combatLogCoalesced = value;
+	}
+	bool isOpcodeProfiled() const {
+		return m_opcodeProfiled;
+	}
+	void setOpcodeProfiled(bool value) {
+		m_opcodeProfiled = value;
+	}
 
 	void updateInputAnalyzer(CombatType_t type, int32_t amount, const std::string &target) const;
 
@@ -1880,6 +1892,10 @@ private:
 		uint32_t count = 0;
 	};
 	mutable std::map<MessageClasses, CombatLogBucket> m_combatLogBuffer;
+	// Per-player opt-out of combat-log coalescing (!combatlog); persisted in KV, restored on login.
+	bool m_combatLogCoalesced = true;
+	// Per-player outgoing-opcode profiler gate (/opprof); diagnostic only, never persisted.
+	bool m_opcodeProfiled = false;
 
 	// Coalesced skills-packet flag: addSkillAdvance/addManaSpent set this instead of calling
 	// sendSkills() per action; Player::onThink flushes it once per think. Prevents the 0xA1
