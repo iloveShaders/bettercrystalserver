@@ -2853,7 +2853,11 @@ void Combat::applyExtensions(const std::shared_ptr<Creature> &caster, const std:
 						}
 					}
 
-					if ((savageBlowBonus != 0) && raceId == playerSavageBlowCharmRaceId) {
+					// Savage Blow Charm - Vocation Adjustment 2026 double-proc removal: on multi-target
+					// (AoE) hits only apply on the player's locked main target. Low Blow is the deliberate
+					// exception (handled above) and still applies to every AoE target.
+					if ((savageBlowBonus != 0) && raceId == playerSavageBlowCharmRaceId
+					    && (isSingleCombat || targetCreature == attackedCreature)) {
 						finalCriticalHitDamage += savageBlowBonus;
 					}
 
