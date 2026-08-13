@@ -354,7 +354,7 @@ bool IOLoginDataSave::savePlayerFirst(const std::shared_ptr<Player> &player) {
 			propWeaponProficiency.write<uint8_t>(perk.perkPosition);
 		}
 	}
-	
+
 	// 15.25 (sommerrelease26) SHAPE: trailing modified-slots section. Appended AFTER the main loop so old blobs
 	// (which lack it) still load — the loader treats a missing section as "no modified slots". See PORT.md §7.5.
 	uint16_t modifiedWeaponCount = 0;
