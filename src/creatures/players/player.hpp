@@ -1299,6 +1299,14 @@ public:
 	void flushAnalyzerBuffers() const;
 	bool accumulateCombatMessage(const TextMessage &message) const;
 	void flushCombatLog() const;
+	// Loot-batch coalescing: while items are being collected (autoloot/quickloot), inventory
+	// notifications are deferred to one flush in onThink instead of firing sendInventoryIds
+	// (0xF5, ~820B) + sendStats + onSendContainer per item. Marked from
+	// Game::internalCollectManagedItems, the single funnel all loot passes through.
+	void markManagedItemActivity();
+	bool isManagedItemBatchActive() const;
+	void scheduleBatchInventoryUpdate();
+	void executeBatchInventoryUpdate();
 	bool isCombatLogCoalesced() const {
 		return m_combatLogCoalesced;
 	}
@@ -1896,6 +1904,9 @@ private:
 	bool m_combatLogCoalesced = true;
 	// Per-player outgoing-opcode profiler gate (/opprof); diagnostic only, never persisted.
 	bool m_opcodeProfiled = false;
+	// Loot-batch coalescing state (see markManagedItemActivity/executeBatchInventoryUpdate).
+	int64_t m_lastManagedItemActivity = 0;
+	bool m_batchInventoryUpdateScheduled = false;
 
 	// Coalesced skills-packet flag: addSkillAdvance/addManaSpent set this instead of calling
 	// sendSkills() per action; Player::onThink flushes it once per think. Prevents the 0xA1

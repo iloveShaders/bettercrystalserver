@@ -1894,6 +1894,39 @@ void Player::flushCombatLog() const {
 	m_combatLogBuffer.clear();
 }
 
+void Player::markManagedItemActivity() {
+	m_lastManagedItemActivity = OTSYS_TIME();
+}
+
+bool Player::isManagedItemBatchActive() const {
+	// Batch window: any managed-item collection in the last 500ms keeps the batch open, so a
+	// continuous loot stream coalesces while normal inventory actions stay immediate.
+	return m_lastManagedItemActivity != 0 && (OTSYS_TIME() - m_lastManagedItemActivity) < 500;
+}
+
+void Player::scheduleBatchInventoryUpdate() {
+	m_batchInventoryUpdateScheduled = true;
+}
+
+void Player::executeBatchInventoryUpdate() {
+	if (!m_batchInventoryUpdateScheduled) {
+		return;
+	}
+	m_batchInventoryUpdateScheduled = false;
+
+	updateInventoryWeight();
+	updateItemsLight();
+	sendInventoryIds();
+	sendStats();
+
+	for (const auto &[containerId, containerInfo] : openContainers) {
+		const auto &container = containerInfo.container;
+		if (container && container->getTopParent() == getPlayer()) {
+			onSendContainer(container);
+		}
+	}
+}
+
 void Player::createLeaderTeamFinder(NetworkMessage &msg) const {
 	if (client) {
 		client->createLeaderTeamFinder(msg);
@@ -8706,6 +8739,10 @@ void Player::onThink(uint32_t interval) {
 	flushAnalyzerBuffers();
 	// Flush coalesced combat-log / floating-number (0xB4) messages once per think.
 	flushCombatLog();
+	// Flush inventory/container updates batched during looting (see markManagedItemActivity).
+	if (m_batchInventoryUpdateScheduled) {
+		executeBatchInventoryUpdate();
+	}
 
 	// Flush the coalesced skills packet (see addSkillAdvance / addManaSpent).
 	if (m_skillsDirty) {
@@ -8771,15 +8808,23 @@ void Player::postAddNotification(const std::shared_ptr<Thing> &thing, const std:
 			requireListUpdate = oldParent != getPlayer();
 		}
 
-		updateInventoryWeight();
-		updateItemsLight();
-		sendInventoryIds();
-		sendStats();
+		if (isManagedItemBatchActive()) {
+			scheduleBatchInventoryUpdate();
+		} else {
+			updateInventoryWeight();
+			updateItemsLight();
+			sendInventoryIds();
+			sendStats();
+		}
 	}
 
 	if (const auto &item = thing->getItem()) {
 		if (const auto &container = item->getContainer()) {
-			onSendContainer(container);
+			if (isManagedItemBatchActive()) {
+				scheduleBatchInventoryUpdate();
+			} else {
+				onSendContainer(container);
+			}
 		}
 
 		if (shopOwner && !scheduledSaleUpdate && requireListUpdate) {
@@ -8847,10 +8892,14 @@ void Player::postRemoveNotification(const std::shared_ptr<Thing> &thing, const s
 			requireListUpdate = copyNewParent != getPlayer();
 		}
 
-		updateInventoryWeight();
-		updateItemsLight();
-		sendInventoryIds();
-		sendStats();
+		if (isManagedItemBatchActive()) {
+			scheduleBatchInventoryUpdate();
+		} else {
+			updateInventoryWeight();
+			updateItemsLight();
+			sendInventoryIds();
+			sendStats();
+		}
 	}
 
 	if (const auto &item = copyThing->getItem()) {
@@ -8860,7 +8909,11 @@ void Player::postRemoveNotification(const std::shared_ptr<Thing> &thing, const s
 			if (container->isRemoved() || !Position::areInRange<1, 1, 0>(getPosition(), container->getPosition())) {
 				autoCloseContainers(container);
 			} else if (container->getTopParent() == getPlayer()) {
-				onSendContainer(container);
+				if (isManagedItemBatchActive()) {
+					scheduleBatchInventoryUpdate();
+				} else {
+					onSendContainer(container);
+				}
 			} else if (const auto &topContainer = std::dynamic_pointer_cast<Container>(container->getTopParent())) {
 				if (const auto &depotChest = std::dynamic_pointer_cast<DepotChest>(topContainer)) {
 					bool isOwner = false;
