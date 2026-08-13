@@ -18,20 +18,20 @@
 #pragma once
 
 static constexpr auto SOFTWARE_NAME = "Crystal Server";
-static constexpr auto SOFTWARE_VERSION = "4.1.9";
-static constexpr auto GAME_UPDATE = "Vocation Balancing";
+static constexpr auto SOFTWARE_VERSION = "4.1.10";
+static constexpr auto GAME_UPDATE = "Summer Update 2026";
 
 static constexpr auto AUTHENTICATOR_DIGITS = 6U;
 static constexpr auto AUTHENTICATOR_PERIOD = 30U;
 
 // SERVER_MAJOR_VERSION is the actual full version of the server, including minor and patch numbers.
 // This is intended for internal use to identify the exact state of the server (release) software.
-static constexpr auto CLIENT_VERSION = 1525;
+static constexpr auto CLIENT_VERSION = 1530;
 
 // Accepted client build range. Login is gated on this range instead of an exact
 // match, so allowing older or newer protocol to join (same protocol structure).
-static constexpr auto CLIENT_VERSION_MIN = 1525;
-static constexpr auto CLIENT_VERSION_MAX = 1525;
+static constexpr auto CLIENT_VERSION_MIN = 1530;
+static constexpr auto CLIENT_VERSION_MAX = 1530;
 
 #define CLIENT_VERSION_UPPER (CLIENT_VERSION / 100)
 #define CLIENT_VERSION_LOWER (CLIENT_VERSION % 100)

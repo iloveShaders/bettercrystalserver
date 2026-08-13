@@ -412,7 +412,12 @@ void SpawnMonster::checkSpawnMonster() {
 		}
 
 		if (mType->info.isBlockable) {
-			spawnMonster(spawnMonsterId, sb, mType);
+			if (!spawnMonster(spawnMonsterId, sb, mType)) {
+				// placement failed (tile occupied, no valid spot in range): stamp anyway.
+				// Without this the block stays permanently overdue, getNextCheckDelay() pins
+				// the timer to its 1s floor and we retry placement every single second.
+				sb.lastSpawn = OTSYS_TIME();
+			}
 		} else {
 			// stamp now: with the timer aimed at exact due times, re-checks land during the
 			// 4.2s staging window and would queue duplicate staged chains (effect spam)

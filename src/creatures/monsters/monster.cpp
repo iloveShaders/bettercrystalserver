@@ -384,7 +384,13 @@ void Monster::onRemoveCreature(const std::shared_ptr<Creature> &creature, bool i
 	}
 
 	if (creature.get() == this) {
-		if (const auto &spawn = spawnMonster.lock()) {
+		// spawnMonster is a weak_ptr in this fork; lock() gives us an owning copy that stays
+		// valid even though removeMonster() clears the member via setSpawnMonster(nullptr)
+		if (const auto spawn = spawnMonster.lock()) {
+			// remove OUR block explicitly (matched by pointer): the isRemoved() flag is
+			// not set yet inside this callback, so cleanup() alone would skip this corpse
+			// until the next timer tick (AoE double-kills lost up to a full interval)
+			spawn->removeMonster(static_self_cast<Monster>());
 			spawn->startSpawnMonsterCheck();
 		}
 
@@ -2682,7 +2688,37 @@ float Monster::getAttackMultiplier() const {
 	if (auto stacks = getForgeStack(); stacks > 0) {
 		multiplier *= (1.35 + (stacks - 1) * 0.1);
 	}
+	if (echoWarden) {
+		multiplier *= echoAtkMult;
+	}
 	return multiplier;
+}
+
+bool Monster::applyEchoWarden(float hpMult, float atkMult) {
+	if (echoWarden) {
+		return false;
+	}
+	if (!mType) {
+		return false;
+	}
+	// Same protections as the forge/soulpit guards: never on summon/boss/fiendish/soulpit.
+	// (C: also excluded `dark`, but this fork has no dark-monster layer.)
+	if (isSummon() || mType->isBoss() || forgeStack > 0 || soulPit) {
+		return false;
+	}
+
+	echoWarden = true;
+	echoAtkMult = atkMult;
+
+	healthMax = static_cast<int32_t>(std::ceil(static_cast<float>(healthMax) * hpMult));
+	health = healthMax;
+	runAwayHealth = static_cast<int32_t>(std::ceil(static_cast<float>(runAwayHealth) * hpMult));
+
+	// Intense glow, distinct "warden" key (NOT "forge"); NO rename, classification stays NORMAL.
+	setIcon("warden", CreatureIcon(CreatureIconModifications_t::Fiendish, 0));
+	g_game().updateCreatureIcon(static_self_cast<Monster>());
+	g_game().sendUpdateCreature(static_self_cast<Monster>());
+	return true;
 }
 
 float Monster::getDefenseMultiplier() const {
