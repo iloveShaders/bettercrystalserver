@@ -36,13 +36,6 @@
 static constexpr int32_t MONSTER_MINSPAWN_INTERVAL = 1000; // 1 second
 static constexpr int32_t MONSTER_MAXSPAWN_INTERVAL = 86400000; // 1 day
 
-namespace {
-	// TEMP DEBUG (Mount Sternum cyclops timing) - remove after the respawn test
-	bool respawnDbgBox(const Position &pos) {
-		return pos.x >= 32500 && pos.x <= 32560 && pos.y >= 32040 && pos.y <= 32090;
-	}
-}
-
 bool SpawnsMonster::loadFromXML(const std::string &filemonstername) {
 	if (isLoaded()) {
 		return true;
@@ -317,9 +310,6 @@ bool SpawnMonster::spawnMonster(uint32_t spawnMonsterId, spawnBlock_t &sb, const
 	monster->setSpawnMonster(static_self_cast<SpawnMonster>());
 	monster->setMasterPos(sb.pos);
 
-	if (respawnDbgBox(sb.pos)) {
-		g_logger().debug("[RespawnDBG] SPAWNED block {} {} at {} ({} ms after death-stamp)", spawnMonsterId, monsterType->name, sb.pos.toString(), OTSYS_TIME() - sb.lastSpawn);
-	}
 	spawnedMonsterMap[spawnMonsterId] = monster;
 	sb.lastSpawn = OTSYS_TIME();
 
@@ -454,9 +444,6 @@ void SpawnMonster::cleanup() {
 			auto spawnIt = spawnMonsterMap.find(it->first);
 			if (spawnIt != spawnMonsterMap.end()) {
 				spawnIt->second.lastSpawn = OTSYS_TIME();
-				if (respawnDbgBox(spawnIt->second.pos)) {
-					g_logger().debug("[RespawnDBG] DEAD block {} at {}", it->first, spawnIt->second.pos.toString());
-				}
 			}
 			it = spawnedMonsterMap.erase(it);
 		} else {
@@ -552,9 +539,6 @@ void SpawnMonster::removeMonster(const std::shared_ptr<Monster> &monster) {
 		auto spawnIt = spawnMonsterMap.find(spawnMonsterId);
 		if (spawnIt != spawnMonsterMap.end()) {
 			spawnIt->second.lastSpawn = OTSYS_TIME();
-			if (respawnDbgBox(spawnIt->second.pos)) {
-				g_logger().debug("[RespawnDBG] REMOVED block {} at {}", spawnMonsterId, spawnIt->second.pos.toString());
-			}
 		}
 		spawnedMonsterMap.erase(spawnMonsterId);
 	}
