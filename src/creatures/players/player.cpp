@@ -13852,8 +13852,9 @@ void Player::applyEquippedWeaponProficiency(const uint16_t /* itemId */) {
 				}
 				case PROFICIENCY_PERK_BESTIARY_DAMAGE: {
 					if (perk.bestiaryId > 0) {
-						equippedWeaponProficiency.bestiaryRacePercentDamageGain += perk.perkValue;
-						equippedWeaponProficiency.bestiaryId = perk.bestiaryId;
+						// Keyed per race: several bestiary perks on the same tree target different races and must
+						// not collapse into one entry.
+						equippedWeaponProficiency.bestiaryRacePercentDamageGain[perk.bestiaryId] += perk.perkValue;
 					}
 					break;
 				}
@@ -13994,8 +13995,8 @@ void Player::applyEquippedWeaponProficiency(const uint16_t /* itemId */) {
 
 		// --- bestiary damage: 251-271 = 250 + bestiaryId (0.50% -> 2.50% vs that race) ---
 		if (idx >= 251 && idx <= 271) {
-			equippedWeaponProficiency.bestiaryRacePercentDamageGain += lerp(0.5f, 2.5f) / 100.0f;
-			equippedWeaponProficiency.bestiaryId = static_cast<uint8_t>(idx - 250); // single-slot: last decoded wins
+			// Stacks onto whatever the tree already granted for this race, and leaves other races untouched.
+			equippedWeaponProficiency.bestiaryRacePercentDamageGain[static_cast<uint8_t>(idx - 250)] += lerp(0.5f, 2.5f) / 100.0f;
 			continue;
 		}
 

@@ -181,7 +181,11 @@ struct EquippedWeaponProficiencyBonuses {
 	std::map<skills_t, uint8_t> skillBonus;
 	int32_t specialMagicLevel[COMBAT_COUNT] = { 0 };
 	std::vector<WeaponProficiencyAugment> spellAugments;
-	float bestiaryRacePercentDamageGain = 0;
+	// Per-race bonus keyed by BestiaryType_t (1-21). A proficiency tree can hold several bestiary perks for
+	// DIFFERENT races (e.g. Amber 2H Bow grants Aquatic and Demon), and shape slots can add more on top, so a
+	// single scalar + single race id cannot represent this: it stacked every percentage but applied the total
+	// against whichever race was written last. Repeat perks on the same race accumulate, as on global.
+	std::map<uint8_t, float> bestiaryRacePercentDamageGain;
 	float damageGainBossAndSinisterEmbraced = 0;
 	uint16_t critHitChance = 0;
 	int32_t critHitChanceForElementIdToSpellsAndRunes[COMBAT_COUNT] = { 0 };
@@ -208,8 +212,6 @@ struct EquippedWeaponProficiencyBonuses {
 	float armorPenetration = 0; // ignores X% of target's physical armor
 	float elementalPierce[COMBAT_COUNT] = { 0 }; // ignores X% of target's elemental resistance per combat type
 
-	uint8_t bestiaryId = 0;
-
 	// True while this aggregate holds bonuses from an equipped proficiency weapon. Lets callers skip a
 	// reset()+sendStats()+sendSkills() round trip when there is provably nothing to clear -- equipping a
 	// weapon with no proficiency tree is the common case and must not cost two extra packets.
@@ -223,7 +225,7 @@ struct EquippedWeaponProficiencyBonuses {
 		skillBonus.clear();
 		std::fill(std::begin(specialMagicLevel), std::end(specialMagicLevel), 0);
 		spellAugments.clear();
-		bestiaryRacePercentDamageGain = 0;
+		bestiaryRacePercentDamageGain.clear();
 		damageGainBossAndSinisterEmbraced = 0;
 		critHitChance = 0;
 		std::fill(std::begin(critHitChanceForElementIdToSpellsAndRunes), std::end(critHitChanceForElementIdToSpellsAndRunes), 0);
@@ -249,8 +251,6 @@ struct EquippedWeaponProficiencyBonuses {
 		omegaStrikeExtraDamage = 0;
 		armorPenetration = 0;
 		std::fill(std::begin(elementalPierce), std::end(elementalPierce), 0.0f);
-
-		bestiaryId = 0;
 	}
 };
 
