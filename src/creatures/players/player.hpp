@@ -210,7 +210,13 @@ struct EquippedWeaponProficiencyBonuses {
 
 	uint8_t bestiaryId = 0;
 
+	// True while this aggregate holds bonuses from an equipped proficiency weapon. Lets callers skip a
+	// reset()+sendStats()+sendSkills() round trip when there is provably nothing to clear -- equipping a
+	// weapon with no proficiency tree is the common case and must not cost two extra packets.
+	bool active = false;
+
 	void reset() {
+		active = false;
 		attack = 0;
 		defense = 0;
 		weaponShieldMod = 0;
@@ -1175,6 +1181,9 @@ public:
 	// 15.25 (sommerrelease26) SHAPE handlers + helpers (see CLIENT_15.25_e2a4a1_PORT.md §7.5 / §8).
 	uint8_t getWeaponProficiencyVocationRegion(const uint16_t itemId) const;
 	WeaponProficiencyPerkType_t rollWeaponProficiencyPerk(const uint16_t itemId) const;
+	// Validates a WIRE (0-based) level/position pair against the loaded proficiency tree. Every shape action
+	// must pass this before charging dust or writing to modifiedSlots -- the client is not trusted.
+	bool isValidWeaponProficiencySlot(const uint16_t itemId, const uint8_t proficiencyLevel, const uint8_t perkPosition) const;
 	void modifyWeaponProficiencySlot(const uint16_t itemId, const uint8_t proficiencyLevel, const uint8_t perkPosition);
 	void refineWeaponProficiencySlot(const uint16_t itemId, const uint8_t proficiencyLevel, const uint8_t perkPosition);
 	void maximiseWeaponProficiencySlot(const uint16_t itemId, const uint8_t proficiencyLevel, const uint8_t perkPosition);
@@ -1358,6 +1367,34 @@ public:
 	}
 	void setOpcodeProfiled(bool value) {
 		m_opcodeProfiled = value;
+	}
+
+	// --- OPCODE TRACE (diagnostic) -------------------------------------------------
+	// Full hex dump of individual packets, unlike the profiler which only counts them. Per-player and
+	// opcode-filtered because an unfiltered dump on a live world is far too much log volume: leave the
+	// filter empty only for very short captures. Outgoing and incoming are toggled independently.
+	bool isOpcodeTraced() const {
+		return m_opcodeTraceOut || m_opcodeTraceIn;
+	}
+	bool isOpcodeTraceOut() const {
+		return m_opcodeTraceOut;
+	}
+	bool isOpcodeTraceIn() const {
+		return m_opcodeTraceIn;
+	}
+	void setOpcodeTrace(bool outgoing, bool incoming) {
+		m_opcodeTraceOut = outgoing;
+		m_opcodeTraceIn = incoming;
+	}
+	// Empty filter = trace every opcode.
+	bool isOpcodeTraceFiltered(uint8_t opcode) const {
+		return m_opcodeTraceFilter.empty() || m_opcodeTraceFilter.contains(opcode);
+	}
+	void addOpcodeTraceFilter(uint8_t opcode) {
+		m_opcodeTraceFilter.insert(opcode);
+	}
+	void clearOpcodeTraceFilter() {
+		m_opcodeTraceFilter.clear();
 	}
 
 	void updateInputAnalyzer(CombatType_t type, int32_t amount, const std::string &target) const;
@@ -1949,6 +1986,11 @@ private:
 	bool m_combatLogCoalesced = true;
 	// Per-player outgoing-opcode profiler gate (/opprof); diagnostic only, never persisted.
 	bool m_opcodeProfiled = false;
+	// Per-player packet hex-trace gates (/optrace); diagnostic only, never persisted. The filter keeps the
+	// log volume survivable on a live world -- an unfiltered trace of one active player is already heavy.
+	bool m_opcodeTraceOut = false;
+	bool m_opcodeTraceIn = false;
+	std::set<uint8_t> m_opcodeTraceFilter;
 	// Loot-batch coalescing state (see markManagedItemActivity/executeBatchInventoryUpdate).
 	int64_t m_lastManagedItemActivity = 0;
 	bool m_batchInventoryUpdateScheduled = false;

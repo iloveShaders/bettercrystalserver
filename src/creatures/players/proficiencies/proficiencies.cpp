@@ -159,7 +159,9 @@ uint8_t Proficiencies::getMaxProficiencyLevelForItem(uint16_t itemId) const {
 		return 0;
 	}
 
-	const auto* proficiency = getProficiencyByItemId(itemType.proficiencyId);
+	// getProficiencyByItemId expects an ITEM id and dereferences Item::items[...] itself; passing the
+	// proficiencyId here looked up a random item and always failed.
+	const auto* proficiency = getProficiencyByItemId(itemId);
 	if (!proficiency) {
 		return 0;
 	}
@@ -174,7 +176,9 @@ uint8_t Proficiencies::getMaxPerksPerProficiencyLevelForItem(uint16_t itemId, ui
 		return 0;
 	}
 
-	const auto* proficiency = getProficiencyByItemId(itemType.proficiencyId);
+	// getProficiencyByItemId expects an ITEM id and dereferences Item::items[...] itself; passing the
+	// proficiencyId here looked up a random item and always failed.
+	const auto* proficiency = getProficiencyByItemId(itemId);
 	if (!proficiency) {
 		return 0;
 	}

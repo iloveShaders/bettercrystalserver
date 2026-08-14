@@ -13418,6 +13418,31 @@ WeaponProficiencyPerkType_t Player::rollWeaponProficiencyPerk(const uint16_t ite
 	return WEAPON_PROFICIENCY_GENERAL_SHAPEABLE_PERKS[pick - augmentPoolSize];
 }
 
+bool Player::isValidWeaponProficiencySlot(const uint16_t itemId, const uint8_t proficiencyLevel, const uint8_t perkPosition) const {
+	// Wire values are 0-based; the tree loaded from proficiencies.json is 1-based (levelIndex starts at 1,
+	// positionSlot = perkIdx + 1). A modified client can send any pair, so reject anything not in the tree.
+	const auto storedLevel = static_cast<uint32_t>(proficiencyLevel) + 1;
+	const auto storedPosition = static_cast<uint32_t>(perkPosition) + 1;
+
+	const WeaponProficiencyStruct* proficiencyData = g_proficiencies().getProficiencyByItemId(itemId);
+	if (!proficiencyData) {
+		return false;
+	}
+
+	for (const auto &lvl : proficiencyData->proficiencyDataLevel) {
+		if (static_cast<uint32_t>(lvl.proficiencyLevel) != storedLevel) {
+			continue;
+		}
+		for (const auto &perk : lvl.proficiencyDataPerks) {
+			if (static_cast<uint32_t>(perk.positionSlot) == storedPosition) {
+				return true;
+			}
+		}
+		return false;
+	}
+	return false;
+}
+
 void Player::modifyWeaponProficiencySlot(const uint16_t itemId, const uint8_t proficiencyLevel, const uint8_t perkPosition) {
 	static constexpr uint64_t MODIFY_DUST_COST = 250;
 	auto it = weaponProficiencies.find(itemId);
@@ -13428,6 +13453,13 @@ void Player::modifyWeaponProficiencySlot(const uint16_t itemId, const uint8_t pr
 	const auto &tile = getTile();
 	if (!tile || !tile->hasFlag(TILESTATE_PROTECTIONZONE)) {
 		sendTextMessage(MESSAGE_FAILURE, "You can only modify proficiency slots inside a protection zone.");
+		return;
+	}
+	// Validate BEFORE charging dust: the old code charged first and then appended whatever (level, position)
+	// the client sent, so a modified client could grow modifiedSlots without bound.
+	if (!isValidWeaponProficiencySlot(itemId, proficiencyLevel, perkPosition)) {
+		sendTextMessage(MESSAGE_FAILURE, "That perk slot does not exist on this weapon.");
+		g_logger().warn("[{}] player {} sent out-of-range proficiency slot level={} position={} for itemId {}", __FUNCTION__, getName(), proficiencyLevel, perkPosition, itemId);
 		return;
 	}
 	if (getForgeDusts() < MODIFY_DUST_COST) {
@@ -13655,20 +13687,38 @@ void Player::resetAllWeaponProficiencyPerks(const uint16_t itemId) {
 	it->second.activePerks.clear();
 }
 
-void Player::applyEquippedWeaponProficiency(const uint16_t itemId) {
-	auto it = weaponProficiencies.find(itemId);
-	if (it == weaponProficiencies.end()) {
+void Player::applyEquippedWeaponProficiency(const uint16_t /* itemId */) {
+	// equippedWeaponProficiency is a SINGLE aggregate that must always describe the weapon currently held in a
+	// hand slot. Callers pass the itemId the proficiency WINDOW is open on, which is not necessarily the equipped
+	// weapon, so that argument is deliberately ignored: we always recompute from the equipped weapon. Rebuilding
+	// from the window's item would apply a backpack weapon's perks to whatever is actually held.
+	const auto &equippedWeapon = getWeapon(true);
+	const uint16_t equippedItemId = equippedWeapon ? equippedWeapon->getID() : 0;
+
+	// getProficiencyByItemId logs an error for items with no proficiencyId, so pre-check to avoid log spam on
+	// every recompute for a weapon that has no proficiency tree.
+	const WeaponProficiencyStruct* proficiencyData = nullptr;
+	if (equippedItemId != 0 && Item::items[equippedItemId].proficiencyId != 0) {
+		proficiencyData = g_proficiencies().getProficiencyByItemId(equippedItemId);
+	}
+
+	auto it = weaponProficiencies.find(equippedItemId);
+	if (!proficiencyData || it == weaponProficiencies.end()) {
+		// Nothing equipped, no tree, or no progress on it: clear so bonuses from a previously held weapon
+		// cannot linger. The old code returned early here and left the aggregate stale. Skip the work entirely
+		// when the aggregate is already empty -- this path runs on every equip of every non-proficiency weapon.
+		if (equippedWeaponProficiency.active) {
+			equippedWeaponProficiency.reset();
+			sendStats();
+			sendSkills();
+		}
 		return;
 	}
 
 	const WeaponProficiencyData &playerProficiencyData = it->second;
 
-	const WeaponProficiencyStruct* proficiencyData = g_proficiencies().getProficiencyByItemId(itemId);
-	if (!proficiencyData) {
-		return;
-	}
-
 	equippedWeaponProficiency.reset();
+	equippedWeaponProficiency.active = true;
 
 	for (const auto &lvl : proficiencyData->proficiencyDataLevel) {
 		for (const auto &perk : lvl.proficiencyDataPerks) {
@@ -13783,7 +13833,9 @@ void Player::applyEquippedWeaponProficiency(const uint16_t itemId) {
 					break;
 				}
 				case PROFICIENCY_PERK_SPECIAL_MAGIC_LEVEL: {
-					if (damageTypeIndex > 0) {
+					// COMBAT_PHYSICALDAMAGE == 0, so a `> 0` guard silently discards PROFICIENCY_DAMAGETYPE_PHYSICAL.
+					// damageTypeIndex stays -1 when the perk carries no element, so `>= 0` is the correct sentinel test.
+					if (damageTypeIndex >= 0 && damageTypeIndex < COMBAT_COUNT) {
 						equippedWeaponProficiency.specialMagicLevel[damageTypeIndex] = std::max(0, equippedWeaponProficiency.specialMagicLevel[damageTypeIndex] + static_cast<int32_t>(perk.perkValue));
 					}
 					break;
@@ -13814,7 +13866,7 @@ void Player::applyEquippedWeaponProficiency(const uint16_t itemId) {
 					break;
 				}
 				case PROFICIENCY_PERK_CRITICAL_HIT_CHANCE_FOR_ELEMENT_ID_SPELLS_AND_RUNES: {
-					if (damageTypeIndex > 0) {
+					if (damageTypeIndex >= 0 && damageTypeIndex < COMBAT_COUNT) {
 						equippedWeaponProficiency.critHitChanceForElementIdToSpellsAndRunes[damageTypeIndex] = std::max(0, equippedWeaponProficiency.critHitChanceForElementIdToSpellsAndRunes[damageTypeIndex] + static_cast<uint16_t>(perk.perkValue * 10000.0f));
 					}
 					break;
@@ -13832,7 +13884,7 @@ void Player::applyEquippedWeaponProficiency(const uint16_t itemId) {
 					break;
 				}
 				case PROFICIENCY_PERK_CRITICAL_EXTRA_DAMAGE_FOR_ELEMENT_ID_SPELLS_AND_RUNES: {
-					if (damageTypeIndex > 0) {
+					if (damageTypeIndex >= 0 && damageTypeIndex < COMBAT_COUNT) {
 						equippedWeaponProficiency.critExtraDamageForElementIdToSpellsAndRunes[damageTypeIndex] = std::max(0, equippedWeaponProficiency.critExtraDamageForElementIdToSpellsAndRunes[damageTypeIndex] + static_cast<uint16_t>(perk.perkValue * 10000.0f));
 					}
 					break;

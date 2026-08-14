@@ -463,6 +463,8 @@ void PlayerFunctions::init(lua_State* L) {
 	Lua::registerMethod(L, "Player", "setCombatLogCoalesced", PlayerFunctions::luaPlayerSetCombatLogCoalesced);
 	Lua::registerMethod(L, "Player", "isOpcodeProfiled", PlayerFunctions::luaPlayerIsOpcodeProfiled);
 	Lua::registerMethod(L, "Player", "setOpcodeProfiled", PlayerFunctions::luaPlayerSetOpcodeProfiled);
+	Lua::registerMethod(L, "Player", "setOpcodeTrace", PlayerFunctions::luaPlayerSetOpcodeTrace);
+	Lua::registerMethod(L, "Player", "setWeaponProficiencyModifiedSlot", PlayerFunctions::luaPlayerSetWeaponProficiencyModifiedSlot);
 	Lua::registerMethod(L, "Player", "getVipDays", PlayerFunctions::luaPlayerGetVipDays);
 	Lua::registerMethod(L, "Player", "getVipTime", PlayerFunctions::luaPlayerGetVipTime);
 
@@ -5391,6 +5393,92 @@ int PlayerFunctions::luaPlayerSetOpcodeProfiled(lua_State* L) {
 		return 1;
 	}
 	player->setOpcodeProfiled(Lua::getBoolean(L, 2));
+	Lua::pushBoolean(L, true);
+	return 1;
+}
+
+int PlayerFunctions::luaPlayerSetOpcodeTrace(lua_State* L) {
+	// player:setOpcodeTrace(outgoing, incoming[, opcodeTable])
+	// Diagnostic hex trace. opcodeTable is a list of numeric opcodes to restrict the dump to; omit it (or pass
+	// an empty table) to trace everything, which is only safe for a very short capture on a live world.
+	const auto &player = Lua::getUserdataShared<Player>(L, 1);
+	if (!player) {
+		Lua::reportErrorFunc(Lua::getErrorDesc(LUA_ERROR_PLAYER_NOT_FOUND));
+		Lua::pushBoolean(L, false);
+		return 1;
+	}
+
+	const bool outgoing = Lua::getBoolean(L, 2, false);
+	const bool incoming = Lua::getBoolean(L, 3, false);
+
+	player->clearOpcodeTraceFilter();
+	if (lua_istable(L, 4)) {
+		lua_pushnil(L);
+		while (lua_next(L, 4) != 0) {
+			const auto opcode = static_cast<uint32_t>(lua_tonumber(L, -1));
+			if (opcode <= 0xFF) {
+				player->addOpcodeTraceFilter(static_cast<uint8_t>(opcode));
+			}
+			lua_pop(L, 1);
+		}
+	}
+
+	player->setOpcodeTrace(outgoing, incoming);
+	Lua::pushBoolean(L, true);
+	return 1;
+}
+
+int PlayerFunctions::luaPlayerSetWeaponProficiencyModifiedSlot(lua_State* L) {
+	// player:setWeaponProficiencyModifiedSlot(itemId, level, position, perkType, value)
+	// DIAGNOSTIC ONLY. Force-writes one shape slot with an operator-chosen perkType/value and pushes 0xC4, so
+	// the encoding the client actually understands can be determined without guessing. level/position are
+	// 1-based here (the same form stored in modifiedSlots), not the 0-based values seen on the wire.
+	const auto &player = Lua::getUserdataShared<Player>(L, 1);
+	if (!player) {
+		Lua::reportErrorFunc(Lua::getErrorDesc(LUA_ERROR_PLAYER_NOT_FOUND));
+		Lua::pushBoolean(L, false);
+		return 1;
+	}
+
+	const uint16_t itemId = Lua::getNumber<uint16_t>(L, 2);
+	const uint8_t level = Lua::getNumber<uint8_t>(L, 3);
+	const uint8_t position = Lua::getNumber<uint8_t>(L, 4);
+	const uint16_t perkType = Lua::getNumber<uint16_t>(L, 5);
+	const uint8_t value = Lua::getNumber<uint8_t>(L, 6, 1);
+
+	if (level == 0 || position == 0) {
+		Lua::reportErrorFunc("level and position are 1-based and must be greater than zero");
+		Lua::pushBoolean(L, false);
+		return 1;
+	}
+
+	auto it = player->weaponProficiencies.find(itemId);
+	if (it == player->weaponProficiencies.end()) {
+		// No progress row yet: create one so the slot can be pushed to the client regardless.
+		it = player->weaponProficiencies.emplace(itemId, WeaponProficiencyData {}).first;
+	}
+
+	auto &proficiency = it->second;
+	bool replaced = false;
+	for (auto &slot : proficiency.modifiedSlots) {
+		if (slot.proficiencyLevel == level && slot.perkPosition == position) {
+			slot.perkType = static_cast<WeaponProficiencyPerkType_t>(perkType);
+			slot.value = value;
+			replaced = true;
+			break;
+		}
+	}
+	if (!replaced) {
+		WeaponProficiencyModifiedSlot slot {};
+		slot.proficiencyLevel = level;
+		slot.perkPosition = position;
+		slot.perkType = static_cast<WeaponProficiencyPerkType_t>(perkType);
+		slot.value = value;
+		proficiency.modifiedSlots.push_back(slot);
+	}
+
+	player->applyEquippedWeaponProficiency(itemId);
+	player->sendWeaponProficiencyInfo(itemId);
 	Lua::pushBoolean(L, true);
 	return 1;
 }

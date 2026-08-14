@@ -1102,6 +1102,24 @@ void ProtocolGame::writeToOutputBuffer(NetworkMessage &msg) {
 	}
 	// --- END OPCODE PROFILER ------------------------------------------------------
 
+	// --- OPCODE TRACE (diagnostic; enable per player with /optrace) ----------------
+	// Dumps the full pre-encryption body of outgoing packets as hex. This is what you compare against a
+	// client-side capture when a packet layout is in doubt. Filtered by opcode so a live world stays usable.
+	if (player && player->isOpcodeTraceOut() && msg.getLength() > 0) {
+		const uint8_t opcode = msg.getBuffer()[NetworkMessage::INITIAL_BUFFER_POSITION];
+		if (player->isOpcodeTraceFiltered(opcode)) {
+			const uint8_t* body = msg.getBuffer() + NetworkMessage::INITIAL_BUFFER_POSITION;
+			const uint32_t bodyLen = msg.getLength();
+			std::string hex;
+			hex.reserve(static_cast<size_t>(bodyLen) * 3);
+			for (uint32_t i = 0; i < bodyLen; ++i) {
+				fmt::format_to(std::back_inserter(hex), "{:02X} ", body[i]);
+			}
+			g_logger().info("[OPTRACE OUT {}] 0x{:02X} len={} | {}", player->getName(), opcode, bodyLen, hex);
+		}
+	}
+	// --- END OPCODE TRACE ---------------------------------------------------------
+
 	g_dispatcher().safeCall([self = getThis(), msg = std::move(msg)] {
 		self->getOutputBuffer(msg.getLength())->append(msg);
 	});
@@ -1112,12 +1130,32 @@ void ProtocolGame::parsePacket(NetworkMessage &msg) {
 		return;
 	}
 
+	// Captured before getByte() advances the read cursor so the dump below includes the opcode itself.
+	const auto traceStartPos = msg.getBufferPosition();
 	uint8_t recvbyte = msg.getByte();
 
 	// Silence ping/pong: 0x1D = pingBack, 0x1E = ping [TRACKS CLIENT BYTES]
 	if (recvbyte != 0x1D && recvbyte != 0x1E) {
 		g_logger().debug("BYTE RECEIVED: 0x{:02X}", recvbyte);
 	}
+
+	// --- OPCODE TRACE IN (diagnostic; enable per player with /optrace) -------------
+	// Hex of the decrypted client packet. Pairs with the outgoing trace in writeToOutputBuffer: together they
+	// give both halves of a request/response exchange, which is what you need to pin down an unknown layout.
+	if (player && player->isOpcodeTraceIn() && player->isOpcodeTraceFiltered(recvbyte)) {
+		const auto bodyEnd = static_cast<int32_t>(NetworkMessage::INITIAL_BUFFER_POSITION) + static_cast<int32_t>(msg.getLength());
+		const int32_t remaining = bodyEnd - static_cast<int32_t>(traceStartPos);
+		if (remaining > 0 && bodyEnd <= static_cast<int32_t>(NETWORKMESSAGE_MAXSIZE)) {
+			const uint8_t* body = msg.getBuffer() + traceStartPos;
+			std::string hex;
+			hex.reserve(static_cast<size_t>(remaining) * 3);
+			for (int32_t i = 0; i < remaining; ++i) {
+				fmt::format_to(std::back_inserter(hex), "{:02X} ", body[i]);
+			}
+			g_logger().info("[OPTRACE IN {}] 0x{:02X} len={} | {}", player->getName(), recvbyte, remaining, hex);
+		}
+	}
+	// --- END OPCODE TRACE IN ------------------------------------------------------
 
 	if (!player || player->isRemoved()) {
 		if (recvbyte == 0x0F) {
@@ -11650,6 +11688,12 @@ void ProtocolGame::parseWeaponProficiency(NetworkMessage &msg) {
 
 	} else if (type == WEAPON_PROFICIENCY_RESET_PERKS) {
 		const uint16_t itemId = msg.get<uint16_t>();
+		// Was a no-op: itemId was read and discarded, so the Reset button did nothing. Drop every selected tree
+		// perk, then re-apply (the guard inside applyEquippedWeaponProficiency makes this a no-op unless this
+		// weapon is the equipped one) and push the refreshed state so the client redraws the tree.
+		player->resetAllWeaponProficiencyPerks(itemId);
+		player->applyEquippedWeaponProficiency(itemId);
+		player->sendWeaponProficiencyInfo(itemId);
 
 	} else if (type == WEAPON_PROFICIENCY_APPLY_PERKS) {
 		const uint16_t itemId = msg.get<uint16_t>();
@@ -11662,8 +11706,23 @@ void ProtocolGame::parseWeaponProficiency(NetworkMessage &msg) {
 			const uint8_t proficiencyLevel = msg.getByte();
 			const uint8_t perkPosition = msg.getByte();
 
-			proficiency.activePerks.push_back({ static_cast<uint8_t>(proficiencyLevel + 1),
-			                                    static_cast<uint8_t>(perkPosition + 1) });
+			// The client is not trusted: reject slots that do not exist in the loaded tree, and reject
+			// duplicates (the same slot sent twice would apply its bonus twice).
+			if (!player->isValidWeaponProficiencySlot(itemId, proficiencyLevel, perkPosition)) {
+				g_logger().warn("[ProtocolGame::parseWeaponProficiency] player {} sent out-of-range active perk level={} position={} for itemId {}", player->getName(), proficiencyLevel, perkPosition, itemId);
+				continue;
+			}
+
+			const WeaponProficiencyPerk candidate { static_cast<uint8_t>(proficiencyLevel + 1),
+			                                        static_cast<uint8_t>(perkPosition + 1) };
+			const bool alreadySelected = std::any_of(proficiency.activePerks.begin(), proficiency.activePerks.end(), [&candidate](const WeaponProficiencyPerk &existing) {
+				return existing.proficiencyLevel == candidate.proficiencyLevel && existing.perkPosition == candidate.perkPosition;
+			});
+			if (alreadySelected) {
+				continue;
+			}
+
+			proficiency.activePerks.push_back(candidate);
 		}
 
 		player->applyEquippedWeaponProficiency(itemId);
