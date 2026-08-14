@@ -11227,7 +11227,11 @@ void Player::forgeResourceConversion(ForgeAction_t actionType) {
 		history.cost = upgradeCost;
 		history.gained = dustLevel;
 		removeForgeDusts(upgradeCost);
-		addForgeDustLevel(1);
+		// +20 per purchase: the 15.30 client renders the limit as 100 + <byte> * 20, so
+		// anything finer than 20 is invisible to the player. Mirrored in !dusts
+		// (data/scripts/talkactions/player/forge_dusts.lua) -- keep both in sync.
+		const uint64_t maxDustLevel = g_configManager().getNumber(FORGE_MAX_DUST);
+		addForgeDustLevel(std::min<uint64_t>(20, maxDustLevel - dustLevel));
 	}
 
 	history.createdAt = getTimeNow();
