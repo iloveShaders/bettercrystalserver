@@ -6817,7 +6817,12 @@ void ProtocolGame::sendForgingData() {
 		msg.add<uint64_t>(price);
 	}
 
-	const auto dustLevelByte = static_cast<uint8_t>(std::min<uint64_t>(player->getForgeDustLevel() > 100 ? player->getForgeDustLevel() - 100 : 0, 225));
+	// The 15.30 client treats this byte as the number of purchased dust upgrades and
+	// renders the limit as 100 + byte * 20 (retail: 225 upgrades -> 4600 dust ceiling).
+	// forgeDustLevel is the capacity itself in this engine, so divide by 20 before
+	// sending; passing the raw capacity made every player above level 100 display an
+	// inflated limit (level 500 clamped to 225 and showed as 4600 while capped at 500).
+	const auto dustLevelByte = static_cast<uint8_t>(std::min<uint64_t>(player->getForgeDustLevel() > 100 ? (player->getForgeDustLevel() - 100) / 20 : 0, 225));
 	msg.addByte(dustLevelByte);
 
 	// Update player resources
