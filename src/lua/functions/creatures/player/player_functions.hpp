@@ -449,6 +449,8 @@ class PlayerFunctions {
 	static int luaPlayerSetCombatLogCoalesced(lua_State* L);
 	static int luaPlayerIsOpcodeProfiled(lua_State* L);
 	static int luaPlayerSetOpcodeProfiled(lua_State* L);
+	static int luaPlayerSetOpcodeTrace(lua_State* L);
+	static int luaPlayerSetWeaponProficiencyModifiedSlot(lua_State* L);
 
 	static int luaPlayerKV(lua_State* L);
 	static int luaPlayerGetStoreInbox(lua_State* L);
