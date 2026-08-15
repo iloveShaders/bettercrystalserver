@@ -11716,7 +11716,7 @@ void ProtocolGame::parseWeaponProficiency(NetworkMessage &msg) {
 			}
 
 			const WeaponProficiencyPerk candidate { static_cast<uint8_t>(proficiencyLevel + 1),
-			                                        static_cast<uint8_t>(perkPosition + 1) };
+				                                    static_cast<uint8_t>(perkPosition + 1) };
 			const bool alreadySelected = std::any_of(proficiency.activePerks.begin(), proficiency.activePerks.end(), [&candidate](const WeaponProficiencyPerk &existing) {
 				return existing.proficiencyLevel == candidate.proficiencyLevel && existing.perkPosition == candidate.perkPosition;
 			});
