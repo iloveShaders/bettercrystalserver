@@ -11144,13 +11144,6 @@ void Player::forgeResourceConversion(ForgeAction_t actionType) {
 		if (cost > dusts) {
 			g_logger().error("[{}] Not enough dust", __FUNCTION__);
 			sendForgeError(RETURNVALUE_CONTACTADMINISTRATOR);
-			{
-				const int32_t cur = getStorageValue(30160);
-				addStorageValue(30160, (cur < 0 ? 0 : cur) + 1, true);
-				if (getStorageValue(30161) < 0) {
-					addStorageValue(30161, static_cast<int32_t>(OTSYS_TIME() / 1000), true);
-				}
-			}
 			return;
 		}
 
@@ -11172,13 +11165,6 @@ void Player::forgeResourceConversion(ForgeAction_t actionType) {
 		if (cost > sliverCount) {
 			g_logger().error("[{}] Not enough sliver", __FUNCTION__);
 			sendForgeError(RETURNVALUE_CONTACTADMINISTRATOR);
-			{
-				const int32_t cur = getStorageValue(30160);
-				addStorageValue(30160, (cur < 0 ? 0 : cur) + 1, true);
-				if (getStorageValue(30161) < 0) {
-					addStorageValue(30161, static_cast<int32_t>(OTSYS_TIME() / 1000), true);
-				}
-			}
 			return;
 		}
 
@@ -11214,13 +11200,6 @@ void Player::forgeResourceConversion(ForgeAction_t actionType) {
 		    upgradeCost > dusts) {
 			g_logger().error("[{}] Not enough dust", __FUNCTION__);
 			sendForgeError(RETURNVALUE_CONTACTADMINISTRATOR);
-			{
-				const int32_t cur = getStorageValue(30160);
-				addStorageValue(30160, (cur < 0 ? 0 : cur) + 1, true);
-				if (getStorageValue(30161) < 0) {
-					addStorageValue(30161, static_cast<int32_t>(OTSYS_TIME() / 1000), true);
-				}
-			}
 			return;
 		}
 
