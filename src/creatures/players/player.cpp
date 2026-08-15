@@ -11195,7 +11195,12 @@ void Player::forgeResourceConversion(ForgeAction_t actionType) {
 			return;
 		}
 
-		const uint64_t upgradeCost = dustLevel > 100 ? dustLevel - 75 : 25;
+		// 15.30: each unlocked stage grants +20 capacity (100 + stage * 20, 225 stages
+		// -> 4600 max), while the unlock costs are unchanged from before the update.
+		// The cost is therefore driven by the STAGE, not by the inflated capacity:
+		// the Nth unlock still costs N + 24, i.e. stage + 25 for the next one.
+		const uint64_t dustStage = dustLevel > 100 ? (dustLevel - 100) / 20 : 0;
+		const uint64_t upgradeCost = dustStage + 25;
 		if (const auto dusts = getForgeDusts();
 		    upgradeCost > dusts) {
 			g_logger().error("[{}] Not enough dust", __FUNCTION__);
@@ -11206,8 +11211,7 @@ void Player::forgeResourceConversion(ForgeAction_t actionType) {
 		history.cost = upgradeCost;
 		history.gained = dustLevel;
 		removeForgeDusts(upgradeCost);
-		// +20 per purchase: the 15.30 client renders the limit as 100 + <byte> * 20, so
-		// anything finer than 20 is invisible to the player. Mirrored in !dusts
+		// one stage = +20 capacity (see the cost comment above). Mirrored in !dusts
 		// (data/scripts/talkactions/player/forge_dusts.lua) -- keep both in sync.
 		const uint64_t maxDustLevel = g_configManager().getNumber(FORGE_MAX_DUST);
 		addForgeDustLevel(std::min<uint64_t>(20, maxDustLevel - dustLevel));
@@ -11267,7 +11271,9 @@ void Player::addForgeDusts(uint64_t amount) {
 }
 
 void Player::removeForgeDusts(uint64_t amount) {
-	forgeDusts = std::max<uint64_t>(0, forgeDusts - amount);
+	// unsigned: subtracting more than we hold wraps to ~1.8e19 and std::max(0, huge)
+	// keeps it, so clamp explicitly rather than relying on caller-side guards
+	forgeDusts = amount > forgeDusts ? 0 : forgeDusts - amount;
 	if (client) {
 		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints(), getSoulsealsPoints(), getForgeDusts());
 	}
@@ -11284,8 +11290,16 @@ void Player::addForgeDustLevel(uint64_t amount) {
 	}
 }
 
+void Player::setForgeDustLevel(uint64_t amount) {
+	forgeDustLevel = amount;
+	if (client) {
+		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints(), getSoulsealsPoints(), getForgeDusts());
+	}
+}
+
 void Player::removeForgeDustLevel(uint64_t amount) {
-	forgeDustLevel = std::max<uint64_t>(0, forgeDustLevel - amount);
+	// same unsigned underflow as removeForgeDusts()
+	forgeDustLevel = amount > forgeDustLevel ? 0 : forgeDustLevel - amount;
 	if (client) {
 		client->sendResourcesBalance(getMoney(), getBankBalance(), getPreyCards(), getTaskHuntingPoints(), getSoulsealsPoints(), getForgeDusts());
 	}

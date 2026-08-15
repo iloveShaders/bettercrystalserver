@@ -7101,7 +7101,9 @@ void ProtocolGame::sendOpenForge() {
 	msg.addByte(convergenceTransferCount);
 	msg.setBufferPosition(dustLevelPosition);
 
-	msg.addByte(static_cast<uint8_t>(std::min<uint16_t>(player->getForgeDustLevel(), 0xFF))); // Player dust limit
+	// same mapping as sendForgingData(): the client renders 100 + byte * 20, so send
+	// the upgrade count rather than the raw capacity
+	msg.addByte(static_cast<uint8_t>(std::min<uint64_t>(player->getForgeDustLevel() > 100 ? (player->getForgeDustLevel() - 100) / 20 : 0, 225))); // Player dust limit
 	writeToOutputBuffer(msg);
 	// Update forging informations
 	sendForgingData();
@@ -11714,7 +11716,7 @@ void ProtocolGame::parseWeaponProficiency(NetworkMessage &msg) {
 			}
 
 			const WeaponProficiencyPerk candidate { static_cast<uint8_t>(proficiencyLevel + 1),
-				                                    static_cast<uint8_t>(perkPosition + 1) };
+			                                        static_cast<uint8_t>(perkPosition + 1) };
 			const bool alreadySelected = std::any_of(proficiency.activePerks.begin(), proficiency.activePerks.end(), [&candidate](const WeaponProficiencyPerk &existing) {
 				return existing.proficiencyLevel == candidate.proficiencyLevel && existing.perkPosition == candidate.perkPosition;
 			});

@@ -186,8 +186,10 @@ bool IOLoginDataLoad::loadPlayerBasicInfo(const std::shared_ptr<Player> &player,
 	player->loginPosition.z = static_cast<uint8_t>(result->getNumber<uint16_t>("posz"));
 	player->addPreyCards(result->getNumber<uint64_t>("prey_wildcard"));
 	player->addTaskHuntingPoints(result->getNumber<uint64_t>("task_points"));
-	player->addForgeDusts(result->getNumber<uint64_t>("forge_dusts"));
-	player->addForgeDustLevel(result->getNumber<uint64_t>("forge_dust_level"));
+	// setters, not adders: these run once per load, but any path that loads twice onto
+	// the same Player object would otherwise double both values and persist it on save
+	player->setForgeDusts(result->getNumber<uint64_t>("forge_dusts"));
+	player->setForgeDustLevel(result->getNumber<uint64_t>("forge_dust_level"));
 	player->setRandomMount(static_cast<uint8_t>(result->getNumber<uint16_t>("randomize_mount")));
 	player->addBossPoints(result->getNumber<uint32_t>("boss_points"));
 	player->lastLoginSaved = result->getNumber<time_t>("lastlogin");

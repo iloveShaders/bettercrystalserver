@@ -1585,6 +1585,7 @@ public:
 	uint64_t getForgeDusts() const;
 
 	void addForgeDustLevel(uint64_t amount);
+	void setForgeDustLevel(uint64_t amount);
 	void removeForgeDustLevel(uint64_t amount);
 	uint64_t getForgeDustLevel() const;
 
