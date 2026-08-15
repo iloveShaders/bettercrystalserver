@@ -1370,7 +1370,7 @@ void Combat::addDistanceEffect(const std::shared_ptr<Creature> &caster, const Po
 	}
 }
 
-void Combat::doChainEffect(const Position &origin, const Position &dest, uint16_t effect) {
+void Combat::doChainEffect(const Position &origin, const Position &dest, uint8_t effect) {
 	if (effect > 0) {
 		std::vector<Direction> dirList;
 
@@ -1516,15 +1516,13 @@ bool Combat::doCombatChain(const std::shared_ptr<Creature> &caster, const std::s
 				delay, [combat, caster, origin = from, nextTarget, affected]() {
 					if (combat && caster && nextTarget) {
 						// Chain hops call CombatHealthFunc() directly and so never reach
-					    // doCombatHealth(), which is what normally emits a spell's visuals.
-					    // Without this the chain is invisible between targets: doChainEffect()
-					    // paints the impact effect along the ground path from the previous hop
-					    // and on the target itself.
-						if (combat->params.impactEffect != CONST_ME_NONE) {
-							Combat::doChainEffect(origin, nextTarget->getPosition(), combat->params.impactEffect);
-						}
-						if (combat->params.distanceEffect != CONST_ANI_NONE) {
-							Combat::addDistanceEffect(caster, origin, nextTarget->getPosition(), combat->params.distanceEffect);
+						// doCombatHealth(), which is what normally emits a spell's visuals.
+						// doChainEffect() paints params.chainEffect along the ground path
+						// from the previous hop. Use chainEffect (COMBAT_PARAM_CHAIN_EFFECT),
+						// NOT impactEffect: spells such as Chivalrous Challenge and Divine
+						// Dazzle set only the chain effect and no impact effect.
+						if (combat->params.chainEffect != CONST_ME_NONE) {
+							Combat::doChainEffect(origin, nextTarget->getPosition(), combat->params.chainEffect);
 						}
 
 						CombatDamage damage = combat->getCombatDamage(caster, nextTarget);
