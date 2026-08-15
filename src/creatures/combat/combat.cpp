@@ -1516,11 +1516,11 @@ bool Combat::doCombatChain(const std::shared_ptr<Creature> &caster, const std::s
 				delay, [combat, caster, origin = from, nextTarget, affected]() {
 					if (combat && caster && nextTarget) {
 						// Chain hops call CombatHealthFunc() directly and so never reach
-						// doCombatHealth(), which is what normally emits a spell's visuals.
-						// doChainEffect() paints params.chainEffect along the ground path
-						// from the previous hop. Use chainEffect (COMBAT_PARAM_CHAIN_EFFECT),
-						// NOT impactEffect: spells such as Chivalrous Challenge and Divine
-						// Dazzle set only the chain effect and no impact effect.
+					    // doCombatHealth(), which is what normally emits a spell's visuals.
+					    // doChainEffect() paints params.chainEffect along the ground path
+					    // from the previous hop. Use chainEffect (COMBAT_PARAM_CHAIN_EFFECT),
+					    // NOT impactEffect: spells such as Chivalrous Challenge and Divine
+					    // Dazzle set only the chain effect and no impact effect.
 						if (combat->params.chainEffect != CONST_ME_NONE) {
 							Combat::doChainEffect(origin, nextTarget->getPosition(), combat->params.chainEffect);
 						}
