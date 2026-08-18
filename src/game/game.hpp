@@ -742,7 +742,7 @@ public:
 	uint32_t getFiendishLimit() const;
 	uint32_t getInfluencedLimit() const;
 
-	bool addInfluencedMonster(const std::shared_ptr<Monster> &monster);
+	bool addInfluencedMonster(const std::shared_ptr<Monster> &monster, bool ignoreLimit = false);
 	void sendUpdateCreature(const std::shared_ptr<Creature> &creature);
 	std::shared_ptr<Item> wrapItem(const std::shared_ptr<Item> &item, const std::shared_ptr<House> &house);
 

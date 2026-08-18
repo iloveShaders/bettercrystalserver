@@ -11965,11 +11965,15 @@ void Game::checkForgeEventId(uint32_t monsterId) {
 	}
 }
 
-bool Game::addInfluencedMonster(const std::shared_ptr<Monster> &monster) {
+bool Game::addInfluencedMonster(const std::shared_ptr<Monster> &monster, bool ignoreLimit /* = false */) {
 	if (monster && monster->canBeForgeMonster()) {
+		// ignoreLimit: temporary creatures (echo raids) must still be tracked here so
+		// Monster::death -> removeForgeMonster() finds them, but they should not be
+		// refused when the world pool is full, nor count against it permanently --
+		// they despawn on their own and the background fill backs off meanwhile.
 		if (auto maxInfluencedMonsters = static_cast<uint32_t>(getInfluencedLimit());
 		    // If condition
-		    (influencedMonsters.size() + 1) > maxInfluencedMonsters) {
+		    !ignoreLimit && (influencedMonsters.size() + 1) > maxInfluencedMonsters) {
 			return false;
 		}
 
