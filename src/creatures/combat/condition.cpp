@@ -888,6 +888,14 @@ void ConditionAttributes::endCondition(std::shared_ptr<Creature> creature) {
 	for (uint8_t i = 0; i < COMBAT_COUNT; i++) {
 		auto value = getAbsorbByIndex(i);
 		if (value) {
+			// Absorb-only conditions (e.g. the Expose Weakness aura) drive monster icons too, and the
+			// buffs loop above never flags them. Only refresh on REAL expiry: executeConditions()
+			// erases the condition BEFORE calling endCondition(), whereas
+			// ConditionAttributes::addCondition() calls it while the condition is still attached --
+			// flagging unconditionally would resend the icon to every spectator on every re-hit.
+			if (!creature->getCondition(conditionType, id, subId)) {
+				needUpdateIcons = true;
+			}
 			creature->setAbsorbPercent(indexToCombatType(i), -value);
 		}
 		auto increaseValue = getIncreaseByIndex(i);

@@ -2659,7 +2659,7 @@ std::vector<CreatureIcon> Monster::getIcons() const {
 	using enum CreatureIconModifications_t;
 	if (challengeMeleeDuration > 0 && mType->info.targetDistance > targetDistance) {
 		return { CreatureIcon(TurnedMelee) };
-	} else if (varBuffs[BUFF_DAMAGERECEIVED] > 100) {
+	} else if (varBuffs[BUFF_DAMAGERECEIVED] > 100 || getCondition(CONDITION_ATTRIBUTES, CONDITIONID_COMBAT, static_cast<uint32_t>(AttrSubId_t::SorcererExposeWeaknessAura))) {
 		return { CreatureIcon(HigherDamageReceived) };
 	} else if (varBuffs[BUFF_DAMAGEDEALT] < 100) {
 		return { CreatureIcon(LowerDamageDealt) };

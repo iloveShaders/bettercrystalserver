@@ -185,12 +185,19 @@ static void applyCripplingStanceAura(const std::shared_ptr<Player> &attackerPlay
 		condition->setParam(CONDITION_PARAM_BUFF_DAMAGEDEALT, 90); // deals 90% => -10% damage
 		target->addCombatCondition(condition, true);
 	} else if (stance == STANCE_EXPOSE_WEAKNESS) {
-		const auto condition = Condition::createCondition(CONDITIONID_COMBAT, CONDITION_ATTRIBUTES, 10000, 0, false, static_cast<uint32_t>(AttrSubId_t::SorcererExposeWeaknessAura));
+		const auto subId = static_cast<uint32_t>(AttrSubId_t::SorcererExposeWeaknessAura);
+		// The aura is absorb-only, so ConditionAttributes never flags an icon refresh for it.
+		// Push one manually on FIRST application only (re-hits merely refresh the timer).
+		const bool wasActive = target->getCondition(CONDITION_ATTRIBUTES, CONDITIONID_COMBAT, subId) != nullptr;
+		const auto condition = Condition::createCondition(CONDITIONID_COMBAT, CONDITION_ATTRIBUTES, 10000, 0, false, subId);
 		condition->setParam(CONDITION_PARAM_ABSORB_FIREPERCENT, -8); // negative absorb => +8% taken
 		condition->setParam(CONDITION_PARAM_ABSORB_ICEPERCENT, -8);
 		condition->setParam(CONDITION_PARAM_ABSORB_ENERGYPERCENT, -8);
 		condition->setParam(CONDITION_PARAM_ABSORB_EARTHPERCENT, -8);
 		target->addCombatCondition(condition, true);
+		if (!wasActive && target->getMonster()) {
+			g_game().updateCreatureIcon(target);
+		}
 	}
 }
 
