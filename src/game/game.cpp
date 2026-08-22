@@ -8424,7 +8424,7 @@ void Game::buildMessageAsSpectator(
 			}
 		}
 		ss << '.';
-		if (damage.extension) {
+		if (damage.extension || damage.showExString) {
 			ss << " " << damage.exString;
 		}
 		spectatorMessage = ss.str();
@@ -8454,7 +8454,7 @@ void Game::buildMessageAsTarget(
 	} else {
 		ss << " due to " << article << " " << attackMsg << "attack by " << attacker->getNameDescription() << '.';
 	}
-	if (damage.extension) {
+	if (damage.extension || damage.showExString) {
 		ss << " " << damage.exString;
 	}
 	if (handleSoulPit && damage.critical) {
@@ -8486,7 +8486,7 @@ void Game::buildMessageAsAttacker(
 		}
 	}
 
-	if (damage.extension) {
+	if (damage.extension || damage.showExString) {
 		ss << " " << damage.exString;
 	}
 

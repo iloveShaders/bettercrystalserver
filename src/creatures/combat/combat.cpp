@@ -958,13 +958,16 @@ void Combat::CombatHealthFunc(const std::shared_ptr<Creature> &caster, const std
 			const int32_t bountyTotalAdd = std::abs(bountyPrimaryAdd) + std::abs(bountySecondaryAdd);
 			if (bountyTotalAdd > 0) {
 				// Append to the "loses X due to your attack" line via the damage extension text
-				// (same channel Hazard uses) instead of a separate message. applyExtensions has
-				// already run before CombatHealthFunc, so setting extension here does not skip it.
+				// (same channel Hazard uses) instead of a separate message.
+				// NOTE: do NOT set damage.extension here. It is not a display flag: combatChangeHealth
+				// uses it to skip perfect shot, offensive charm runes and life/mana leech, so flagging
+				// the hit would disable every charm and leech proc against the bounty task creature.
+				// showExString only makes the text render.
 				if (!damage.exString.empty()) {
 					damage.exString += " ";
 				}
 				damage.exString += fmt::format("Bonus +{} damage (+{:.2f}%).", bountyTotalAdd, bountyDamageBonus / 100.0);
-				damage.extension = true;
+				damage.showExString = true;
 			}
 		}
 

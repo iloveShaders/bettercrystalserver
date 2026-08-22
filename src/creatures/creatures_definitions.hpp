@@ -1742,6 +1742,11 @@ struct CombatDamage {
 	int affected = 1;
 	bool extension = false;
 	std::string exString;
+	// Display-only flag: makes exString render in the combat messages WITHOUT marking the damage
+	// packet as a derived/extension hit. `extension` is a behavioural gate (it suppresses
+	// applyExtensions, perfect shot, offensive charms and life/mana leech), so anything that only
+	// wants to append text to the hit message must use this instead.
+	bool showExString = false;
 	bool fatal = false;
 	bool hazardDodge = false;
 
