@@ -3936,18 +3936,43 @@ WheelSpellGrade_t PlayerWheel::getSpellUpgrade(const std::string &name) const {
 		}
 	}
 
-	// Grouped "Vocation Adjustment" augments (e.g. Forked Spells) are stored in
-	// m_spellsSelected under a placeholder name, while the wheel boost data is
+	// Grouped "Vocation Adjustment" augments (Forked / Special / Focus) are stored
+	// in m_spellsSelected under a placeholder name, while the wheel boost data is
 	// registered on the concrete spells (see IOWheel::registerWheelSpellTable).
 	// Map the concrete spell back to its placeholder so the grade resolves at cast
 	// time; without this the spell's isUpgraded gate stays false and its grade
-	// boosts (e.g. the -2s cooldown) are silently skipped.
-	if (name == "Forked Glacier" || name == "Forked Thorns") {
+	// boosts (e.g. the -4s cooldown on the strike spells) are silently skipped.
+	// Keep these lists in sync with m_forkedSpells / m_specialSpells /
+	// m_focusSpells in io_wheel.cpp.
+	static const std::vector<std::pair<std::string, std::string>> placeholderBySpell = {
+		{ "Forked Glacier", "Any_Forked_Spell" },
+		{ "Forked Thorns", "Any_Forked_Spell" },
+
+		{ "Strong Energy Strike", "Any_Special_Mage_Spell" },
+		{ "Strong Flame Strike", "Any_Special_Mage_Spell" },
+		{ "Strong Ice Strike", "Any_Special_Mage_Spell" },
+		{ "Strong Terra Strike", "Any_Special_Mage_Spell" },
+		{ "Ultimate Energy Strike", "Any_Special_Mage_Spell" },
+		{ "Ultimate Flame Strike", "Any_Special_Mage_Spell" },
+		{ "Ultimate Ice Strike", "Any_Special_Mage_Spell" },
+		{ "Ultimate Terra Strike", "Any_Special_Mage_Spell" },
+
+		{ "Eternal Winter", "Any_Focus_Mage_Spell" },
+		{ "Hell's Core", "Any_Focus_Mage_Spell" },
+		{ "Rage of the Skies", "Any_Focus_Mage_Spell" },
+		{ "Wrath of Nature", "Any_Focus_Mage_Spell" },
+	};
+
+	for (const auto &[concreteName, placeholderName] : placeholderBySpell) {
+		if (concreteName != name) {
+			continue;
+		}
 		for (const auto &[name_it, grade_it] : m_spellsSelected) {
-			if (name_it == "Any_Forked_Spell") {
+			if (name_it == placeholderName) {
 				return grade_it;
 			}
 		}
+		break;
 	}
 
 	return WheelSpellGrade_t::NONE;
