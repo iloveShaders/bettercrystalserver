@@ -1550,6 +1550,9 @@ void ProtocolGame::parsePacketFromDispatcher(NetworkMessage &msg, uint8_t recvby
 			if (outfitModule) {
 				outfitModule->executeOnRecvbyte(player, msg);
 			}
+			if (!player) {
+				break;
+			}
 			if (msg.getBufferPosition() == startBufferPosition) {
 				g_game().playerRequestOutfit(player->getID());
 			}
@@ -1560,6 +1563,9 @@ void ProtocolGame::parsePacketFromDispatcher(NetworkMessage &msg, uint8_t recvby
 			const auto &outfitModule = g_modules().getEventByRecvbyte(0xD3, false);
 			if (outfitModule) {
 				outfitModule->executeOnRecvbyte(player, msg);
+			}
+			if (!player) {
+				break;
 			}
 			if (msg.getBufferPosition() == startBufferPosition) {
 				parseSetOutfit(msg);
