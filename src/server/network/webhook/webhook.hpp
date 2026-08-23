@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <atomic>
+
 #include "lib/thread/thread_pool.hpp"
 
 struct WebhookTask {
@@ -47,6 +49,9 @@ private:
 	ThreadPool &threadPool;
 	std::deque<std::shared_ptr<WebhookTask>> webhooks;
 	curl_slist* headers = nullptr;
+	// Guarantees only one blocking HTTP request is in flight at a time,
+	// otherwise multiple pool workers race over the same queue entry.
+	std::atomic<bool> sending { false };
 
 	void sendWebhook();
 

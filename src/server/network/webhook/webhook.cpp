@@ -153,25 +153,47 @@ std::string Webhook::getPayload(const std::string &title, const std::string &mes
 }
 
 void Webhook::sendWebhook() {
+	// The HTTP call below is blocking and runs outside taskLock, so more than one
+	// pool worker can enter this function. Without this guard two workers would
+	// read the same front() entry and both pop it, corrupting the deque.
+	if (sending.exchange(true, std::memory_order_acq_rel)) {
+		return;
+	}
+
+	struct SendingGuard {
+		std::atomic<bool> &flag;
+		~SendingGuard() {
+			flag.store(false, std::memory_order_release);
+		}
+	} sendingGuard { sending };
+
+	// Take ownership of the task up front: it is removed from the queue while the
+	// lock is held, so no other worker can ever observe or pop the same entry.
 	std::shared_ptr<WebhookTask> task;
 	{
 		std::scoped_lock lock { taskLock };
 		if (webhooks.empty()) {
 			return;
 		}
-		task = webhooks.front();
+		task = std::move(webhooks.front());
+		webhooks.pop_front();
 	}
 
-	std::string response_body;
-	auto response_code = sendRequest(task->url.c_str(), task->payload.c_str(), &response_body);
-
-	if (response_code == -1) {
+	if (!task) {
 		return;
 	}
 
-	if (response_code == 429 || response_code == 504) {
-		g_logger().warn("Webhook encountered error code {}, re-queueing task.", response_code);
+	std::string response_body;
+	const auto response_code = sendRequest(task->url.c_str(), task->payload.c_str(), &response_body);
 
+	if (response_code == -1 || response_code == 429 || response_code == 504) {
+		if (response_code != -1) {
+			g_logger().warn("Webhook encountered error code {}, re-queueing task.", response_code);
+		}
+
+		// Transient failure: put it back at the head so ordering is preserved.
+		std::scoped_lock lock { taskLock };
+		webhooks.emplace_front(std::move(task));
 		return;
 	}
 
@@ -183,12 +205,9 @@ void Webhook::sendWebhook() {
 			task->payload
 		);
 
+		// Permanent failure - the task is already dropped from the queue.
 		return;
 	}
 
 	g_logger().debug("Webhook successfully sent to {}", task->url);
-
-	// Removes the object after processing everything, avoiding memory usage after freeing
-	std::scoped_lock lock { taskLock };
-	webhooks.pop_front();
 }
