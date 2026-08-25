@@ -600,7 +600,7 @@ int NpcTypeFunctions::luaNpcTypeRespawnTypeIsUnderground(lua_State* L) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, npcType->info.respawnType.underground);
 		} else {
-			npcType->info.respawnType.underground = Lua::getNumber<RespawnPeriod_t>(L, 2);
+			npcType->info.respawnType.underground = Lua::getBoolean(L, 2);
 			Lua::pushBoolean(L, true);
 		}
 	} else {

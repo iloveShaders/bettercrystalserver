@@ -1763,7 +1763,7 @@ int MonsterTypeFunctions::luaMonsterTypeRespawnTypeIsUnderground(lua_State* L) {
 		if (lua_gettop(L) == 1) {
 			lua_pushnumber(L, monsterType->info.respawnType.underground);
 		} else {
-			monsterType->info.respawnType.underground = Lua::getNumber<RespawnPeriod_t>(L, 2);
+			monsterType->info.respawnType.underground = Lua::getBoolean(L, 2);
 			Lua::pushBoolean(L, true);
 		}
 	} else {
