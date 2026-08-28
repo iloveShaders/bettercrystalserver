@@ -905,30 +905,30 @@ void ItemParse::parseStackSize(const std::string &stringValue, pugi::xml_attribu
 
 void ItemParse::parseSpecializedMagicLevelPoint(const std::string &stringValue, pugi::xml_attribute valueAttribute, ItemType &itemType) {
 	Abilities &abilities = itemType.getAbilities();
+	// NOTE: these attributes must only touch specializedMagicLevel. They must NOT set
+	// abilities.elementType - that field is for weapon elemental damage conversion and is
+	// owned by parseElement (elementfire/elementice/...) and parseElementalBond.
+	// Setting it here broke items carrying two elemental magic level bonuses (e.g. sanguine
+	// rod = earth + ice, sanguine coil = fire + energy): whichever attribute parsed last won,
+	// and the item was then reported with a bogus element in the item description and in the
+	// Cyclopedia/market packets (several of those branches test elementType without also
+	// testing elementDamage). The specializedMagicLevel values themselves were always correct.
 	if (stringValue == "deathmagiclevelpoints") {
 		abilities.specializedMagicLevel[combatTypeToIndex(COMBAT_DEATHDAMAGE)] += pugi::cast<int32_t>(valueAttribute.value());
-		abilities.elementType = COMBAT_DEATHDAMAGE;
 	} else if (stringValue == "energymagiclevelpoints") {
 		abilities.specializedMagicLevel[combatTypeToIndex(COMBAT_ENERGYDAMAGE)] += pugi::cast<int32_t>(valueAttribute.value());
-		abilities.elementType = COMBAT_ENERGYDAMAGE;
 	} else if (stringValue == "earthmagiclevelpoints") {
 		abilities.specializedMagicLevel[combatTypeToIndex(COMBAT_EARTHDAMAGE)] += pugi::cast<int32_t>(valueAttribute.value());
-		abilities.elementType = COMBAT_EARTHDAMAGE;
 	} else if (stringValue == "firemagiclevelpoints") {
 		abilities.specializedMagicLevel[combatTypeToIndex(COMBAT_FIREDAMAGE)] += pugi::cast<int32_t>(valueAttribute.value());
-		abilities.elementType = COMBAT_FIREDAMAGE;
 	} else if (stringValue == "healingmagiclevelpoints") {
 		abilities.specializedMagicLevel[combatTypeToIndex(COMBAT_HEALING)] += pugi::cast<int32_t>(valueAttribute.value());
-		abilities.elementType = COMBAT_HEALING;
 	} else if (stringValue == "holymagiclevelpoints") {
 		abilities.specializedMagicLevel[combatTypeToIndex(COMBAT_HOLYDAMAGE)] += pugi::cast<int32_t>(valueAttribute.value());
-		abilities.elementType = COMBAT_HOLYDAMAGE;
 	} else if (stringValue == "icemagiclevelpoints") {
 		abilities.specializedMagicLevel[combatTypeToIndex(COMBAT_ICEDAMAGE)] += pugi::cast<int32_t>(valueAttribute.value());
-		abilities.elementType = COMBAT_ICEDAMAGE;
 	} else if (stringValue == "physicalmagiclevelpoints") {
 		abilities.specializedMagicLevel[combatTypeToIndex(COMBAT_PHYSICALDAMAGE)] += pugi::cast<int32_t>(valueAttribute.value());
-		abilities.elementType = COMBAT_PHYSICALDAMAGE;
 	}
 }
 
