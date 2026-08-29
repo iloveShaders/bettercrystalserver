@@ -11937,8 +11937,40 @@ void ProtocolGame::parseBossDifficultySelection(NetworkMessage &msg) {
 		if (difficulty > 25) {
 			difficulty = 25;
 		}
+
+		// --- Lua bridge (see data/libs/functions/boss_lever.lua) ---------------------
+		// The 0x2F window has no Lua callback of its own, so BossLever:openDifficultySelection
+		// stashes the context in player storage before sending it, and we hand the answer back
+		// the same way. Keys are declared in data-global/lib/core/storages.lua under
+		// Storage.BossDifficulty:
+		//   910100 selected difficulty (-1 = no pending selection, -2 = cancelled)
+		//   910101/910102/910103 position of the lever the window was opened from
+		//   910104 lever item id
+		//   910105 highest difficulty unlocked by every member of the group
+		// Re-using the lever is what resumes the Lua flow: BossLever's onUse sees 910100 >= 0 on
+		// this second pass and starts the fight instead of re-opening the window.
+		const auto allowedDifficulty = static_cast<uint16_t>(std::max<int32_t>(0, player->getStorageValue(910105)));
+		if (difficulty > allowedDifficulty) {
+			difficulty = allowedDifficulty;
+		}
+		player->addStorageValue(910100, difficulty);
+
+		const Position leverPosition {
+			static_cast<uint16_t>(std::max<int32_t>(0, player->getStorageValue(910101))),
+			static_cast<uint16_t>(std::max<int32_t>(0, player->getStorageValue(910102))),
+			static_cast<uint8_t>(std::clamp<int32_t>(player->getStorageValue(910103), 0, MAP_MAX_LAYERS - 1)),
+		};
+		const auto leverItemId = static_cast<uint16_t>(std::max<int32_t>(0, player->getStorageValue(910104)));
+		if (leverItemId != 0 && leverPosition.x != 0 && leverPosition.y != 0) {
+			g_game().playerUseItem(player->getID(), leverPosition, 0, 0, leverItemId);
+		}
+		// --- end Lua bridge ----------------------------------------------------------
+
 		g_logger().info("[BossDiffSel] START FIGHT difficulty={} (0..25)", difficulty);
 	} else {
+		// Cancel: clear the pending selection so a later lever pull re-opens the window
+		// instead of silently starting a fight at a stale difficulty.
+		player->addStorageValue(910100, -2);
 		g_logger().info("[BossDiffSel] cancel/other action={}", action);
 	}
 	// Start (after handling) or Cancel -> close the dialog
