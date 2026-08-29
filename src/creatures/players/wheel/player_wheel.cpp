@@ -294,6 +294,42 @@ const static std::unordered_map<uint8_t, std::reference_wrapper<const std::vecto
 // To avoid conflict in other files that might use a function with the same name
 // Here are built-in helper functions
 namespace {
+	// Grouped "Vocation Adjustment" augments (Forked / Special / Focus) are keyed in
+	// the wheel bonus table (io_wheel.cpp) under a placeholder name, while callers and
+	// m_spellsSelected use the concrete spell name.
+	//
+	// Boost-style perks (cooldown, damage, mana, leech) are unaffected: at startup
+	// IOWheel::registerWheelSpellTable expands the placeholder and stores those boosts
+	// on the real Spell objects. The table-lookup perks below (area / additional target
+	// / additional duration) never touch the Spell object -- they read m_wheelBonusData
+	// directly and match on SpellType::name, so a concrete name never matches the
+	// placeholder entry and the perk silently returns 0.
+	//
+	// Keep in sync with m_forkedSpells / m_specialSpells / m_focusSpells in io_wheel.cpp.
+	const std::string &resolveWheelTableName(const std::string &name) {
+		static const std::unordered_map<std::string, std::string> placeholderBySpell = {
+			{ "Forked Glacier", "Any_Forked_Spell" },
+			{ "Forked Thorns", "Any_Forked_Spell" },
+
+			{ "Strong Energy Strike", "Any_Special_Mage_Spell" },
+			{ "Strong Flame Strike", "Any_Special_Mage_Spell" },
+			{ "Strong Ice Strike", "Any_Special_Mage_Spell" },
+			{ "Strong Terra Strike", "Any_Special_Mage_Spell" },
+			{ "Ultimate Energy Strike", "Any_Special_Mage_Spell" },
+			{ "Ultimate Flame Strike", "Any_Special_Mage_Spell" },
+			{ "Ultimate Ice Strike", "Any_Special_Mage_Spell" },
+			{ "Ultimate Terra Strike", "Any_Special_Mage_Spell" },
+
+			{ "Eternal Winter", "Any_Focus_Mage_Spell" },
+			{ "Hell's Core", "Any_Focus_Mage_Spell" },
+			{ "Rage of the Skies", "Any_Focus_Mage_Spell" },
+			{ "Wrath of Nature", "Any_Focus_Mage_Spell" },
+		};
+
+		const auto it = placeholderBySpell.find(name);
+		return it == placeholderBySpell.end() ? name : it->second;
+	}
+
 	template <typename SpellType>
 	bool checkSpellArea(const std::array<SpellType, 5> &spellsTable, const std::string &spellName, uint8_t stage) {
 		for (const auto &spellTable : spellsTable) {
@@ -1040,17 +1076,20 @@ bool PlayerWheel::getSpellAdditionalArea(const std::string &spellName) const {
 		return false;
 	}
 
+	// Grouped augments are stored in the bonus table under a placeholder name.
+	const auto &tableName = resolveWheelTableName(spellName);
+
 	const auto vocationEnum = m_player.getPlayerVocationEnum();
 	if (vocationEnum == Vocation_t::VOCATION_KNIGHT_CIP) {
-		return checkSpellArea(g_game().getIOWheel()->getWheelBonusData().spells.knight, spellName, stage);
+		return checkSpellArea(g_game().getIOWheel()->getWheelBonusData().spells.knight, tableName, stage);
 	} else if (vocationEnum == Vocation_t::VOCATION_PALADIN_CIP) {
-		return checkSpellArea(g_game().getIOWheel()->getWheelBonusData().spells.paladin, spellName, stage);
+		return checkSpellArea(g_game().getIOWheel()->getWheelBonusData().spells.paladin, tableName, stage);
 	} else if (vocationEnum == Vocation_t::VOCATION_DRUID_CIP) {
-		return checkSpellArea(g_game().getIOWheel()->getWheelBonusData().spells.druid, spellName, stage);
+		return checkSpellArea(g_game().getIOWheel()->getWheelBonusData().spells.druid, tableName, stage);
 	} else if (vocationEnum == Vocation_t::VOCATION_SORCERER_CIP) {
-		return checkSpellArea(g_game().getIOWheel()->getWheelBonusData().spells.sorcerer, spellName, stage);
+		return checkSpellArea(g_game().getIOWheel()->getWheelBonusData().spells.sorcerer, tableName, stage);
 	} else if (vocationEnum == Vocation_t::VOCATION_MONK_CIP) {
-		return checkSpellArea(g_game().getIOWheel()->getWheelBonusData().spells.monk, spellName, stage);
+		return checkSpellArea(g_game().getIOWheel()->getWheelBonusData().spells.monk, tableName, stage);
 	}
 
 	return false;
@@ -1062,17 +1101,21 @@ int PlayerWheel::getSpellAdditionalTarget(const std::string &spellName) const {
 		return 0;
 	}
 
+	// Grouped augments are stored in the bonus table under a placeholder name.
+	// Without this the druid Forked Spells grade II (+1 chain target) never resolves.
+	const auto &tableName = resolveWheelTableName(spellName);
+
 	const auto vocationEnum = m_player.getPlayerVocationEnum();
 	if (vocationEnum == Vocation_t::VOCATION_KNIGHT_CIP) {
-		return checkSpellAdditionalTarget(g_game().getIOWheel()->getWheelBonusData().spells.knight, spellName, stage);
+		return checkSpellAdditionalTarget(g_game().getIOWheel()->getWheelBonusData().spells.knight, tableName, stage);
 	} else if (vocationEnum == Vocation_t::VOCATION_PALADIN_CIP) {
-		return checkSpellAdditionalTarget(g_game().getIOWheel()->getWheelBonusData().spells.paladin, spellName, stage);
+		return checkSpellAdditionalTarget(g_game().getIOWheel()->getWheelBonusData().spells.paladin, tableName, stage);
 	} else if (vocationEnum == Vocation_t::VOCATION_DRUID_CIP) {
-		return checkSpellAdditionalTarget(g_game().getIOWheel()->getWheelBonusData().spells.druid, spellName, stage);
+		return checkSpellAdditionalTarget(g_game().getIOWheel()->getWheelBonusData().spells.druid, tableName, stage);
 	} else if (vocationEnum == Vocation_t::VOCATION_SORCERER_CIP) {
-		return checkSpellAdditionalTarget(g_game().getIOWheel()->getWheelBonusData().spells.sorcerer, spellName, stage);
+		return checkSpellAdditionalTarget(g_game().getIOWheel()->getWheelBonusData().spells.sorcerer, tableName, stage);
 	} else if (vocationEnum == Vocation_t::VOCATION_MONK_CIP) {
-		return checkSpellAdditionalTarget(g_game().getIOWheel()->getWheelBonusData().spells.monk, spellName, stage);
+		return checkSpellAdditionalTarget(g_game().getIOWheel()->getWheelBonusData().spells.monk, tableName, stage);
 	}
 	return 0;
 }
@@ -1083,17 +1126,20 @@ int PlayerWheel::getSpellAdditionalDuration(const std::string &spellName) const 
 		return 0;
 	}
 
+	// Grouped augments are stored in the bonus table under a placeholder name.
+	const auto &tableName = resolveWheelTableName(spellName);
+
 	const auto vocationEnum = m_player.getPlayerVocationEnum();
 	if (vocationEnum == Vocation_t::VOCATION_KNIGHT_CIP) {
-		return checkSpellAdditionalDuration(g_game().getIOWheel()->getWheelBonusData().spells.knight, spellName, stage);
+		return checkSpellAdditionalDuration(g_game().getIOWheel()->getWheelBonusData().spells.knight, tableName, stage);
 	} else if (vocationEnum == Vocation_t::VOCATION_PALADIN_CIP) {
-		return checkSpellAdditionalDuration(g_game().getIOWheel()->getWheelBonusData().spells.paladin, spellName, stage);
+		return checkSpellAdditionalDuration(g_game().getIOWheel()->getWheelBonusData().spells.paladin, tableName, stage);
 	} else if (vocationEnum == Vocation_t::VOCATION_DRUID_CIP) {
-		return checkSpellAdditionalDuration(g_game().getIOWheel()->getWheelBonusData().spells.druid, spellName, stage);
+		return checkSpellAdditionalDuration(g_game().getIOWheel()->getWheelBonusData().spells.druid, tableName, stage);
 	} else if (vocationEnum == Vocation_t::VOCATION_SORCERER_CIP) {
-		return checkSpellAdditionalDuration(g_game().getIOWheel()->getWheelBonusData().spells.sorcerer, spellName, stage);
+		return checkSpellAdditionalDuration(g_game().getIOWheel()->getWheelBonusData().spells.sorcerer, tableName, stage);
 	} else if (vocationEnum == Vocation_t::VOCATION_MONK_CIP) {
-		return checkSpellAdditionalDuration(g_game().getIOWheel()->getWheelBonusData().spells.monk, spellName, stage);
+		return checkSpellAdditionalDuration(g_game().getIOWheel()->getWheelBonusData().spells.monk, tableName, stage);
 	}
 	return 0;
 }
@@ -3942,37 +3988,13 @@ WheelSpellGrade_t PlayerWheel::getSpellUpgrade(const std::string &name) const {
 	// Map the concrete spell back to its placeholder so the grade resolves at cast
 	// time; without this the spell's isUpgraded gate stays false and its grade
 	// boosts (e.g. the -4s cooldown on the strike spells) are silently skipped.
-	// Keep these lists in sync with m_forkedSpells / m_specialSpells /
-	// m_focusSpells in io_wheel.cpp.
-	static const std::vector<std::pair<std::string, std::string>> placeholderBySpell = {
-		{ "Forked Glacier", "Any_Forked_Spell" },
-		{ "Forked Thorns", "Any_Forked_Spell" },
-
-		{ "Strong Energy Strike", "Any_Special_Mage_Spell" },
-		{ "Strong Flame Strike", "Any_Special_Mage_Spell" },
-		{ "Strong Ice Strike", "Any_Special_Mage_Spell" },
-		{ "Strong Terra Strike", "Any_Special_Mage_Spell" },
-		{ "Ultimate Energy Strike", "Any_Special_Mage_Spell" },
-		{ "Ultimate Flame Strike", "Any_Special_Mage_Spell" },
-		{ "Ultimate Ice Strike", "Any_Special_Mage_Spell" },
-		{ "Ultimate Terra Strike", "Any_Special_Mage_Spell" },
-
-		{ "Eternal Winter", "Any_Focus_Mage_Spell" },
-		{ "Hell's Core", "Any_Focus_Mage_Spell" },
-		{ "Rage of the Skies", "Any_Focus_Mage_Spell" },
-		{ "Wrath of Nature", "Any_Focus_Mage_Spell" },
-	};
-
-	for (const auto &[concreteName, placeholderName] : placeholderBySpell) {
-		if (concreteName != name) {
-			continue;
-		}
+	const auto &placeholderName = resolveWheelTableName(name);
+	if (placeholderName != name) {
 		for (const auto &[name_it, grade_it] : m_spellsSelected) {
 			if (name_it == placeholderName) {
 				return grade_it;
 			}
 		}
-		break;
 	}
 
 	return WheelSpellGrade_t::NONE;
