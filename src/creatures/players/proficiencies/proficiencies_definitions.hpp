@@ -54,10 +54,16 @@ enum WeaponProficiencyPerkType_t : uint16_t {
 };
 
 // 15.25 (sommerrelease26) SHAPE system: the perkType sent in a modified slot / reshape offer (0xC4/0xBB) is an
-// INDEX into the client's shaping catalogue (1-323), NOT this server enum. UNIVERSAL = the per-vocation spell
-// augment OFFSETS (added to region*50 in rollWeaponProficiencyPerk): {1-5 crit-chance, 11-15 crit-extra,
-// 21-25 base-damage}. GENERAL = the vocation-agnostic 251-323 block (bestiary / leech-on-hit-on-kill /
-// alpha-omega / skill% / armor-pen / elemental-pierce / powerful-foe). See CLIENT_15.25_e2a4a1_PORT.md §8.1.
+// INDEX into the client's shaping catalogue, NOT this server enum. UNIVERSAL = the per-vocation spell augment
+// OFFSETS (added to region*50 in rollWeaponProficiencyPerk): {1-5 crit-chance, 11-15 crit-extra,
+// 21-25 base-damage}.
+//
+// INCOMPLETE: the real per-region layout is five blocks of six -- 1-6 crit chance, 11-16 crit extra damage,
+// 21-26 base damage, 31-36 mana leech, 41-46 life leech. CipSoft's own description of the shape pool lists
+// mana and life leech among the possible effects, and those are blocks 31-36 / 41-46 which are absent here.
+// So 15 of the 30 augments that exist are never rolled. Not added yet: unlike the removals below, adding
+// indices we have never seen the client render is unverified, and a bad index in a reshape offer is the
+// leading suspect for the reported client crash on that window.
 inline constexpr WeaponProficiencyPerkType_t WEAPON_PROFICIENCY_UNIVERSAL_SHAPEABLE_PERKS[] = {
 	static_cast<WeaponProficiencyPerkType_t>(1),
 	static_cast<WeaponProficiencyPerkType_t>(2),
@@ -76,11 +82,26 @@ inline constexpr WeaponProficiencyPerkType_t WEAPON_PROFICIENCY_UNIVERSAL_SHAPEA
 	static_cast<WeaponProficiencyPerkType_t>(25),
 };
 
-// 15.25 (sommerrelease26): the GENERAL (vocation-agnostic) shapeable catalogue indices in the 251-323 block.
+// 15.25 (sommerrelease26): the GENERAL (vocation-agnostic) shapeable catalogue indices.
 //   251-271 = bestiary damage (250 + bestiaryId, 21 races)
-//   281-288 = mana/life leech, mana/life on-hit, mana/life on-kill, alpha strike, omega strike
-//   291-297 = skill% of auto-attacks (290 + skillSlot 1-7); 301-307 = skill% of spells; 311-317 = skill% of healing (313 omitted)
-//   321-323 = armor penetration, elemental pierce, powerful foe
+//   281-287 = crit chance (runes / auto-attacks), crit extra damage (runes / auto-attacks),
+//             life on hit, mana on kill, life on kill
+//   291-293 = highest-skill% as extra auto-attack damage / spell damage / spell healing
+//   321-323 = alpha strike, omega strike, armour penetration
+//
+// REMOVED: 288, 294-297, 301-307, 311-317 -- these indices do not exist in the client catalogue.
+// Evidence, independent of any third-party id list:
+//   * All 18 already fell through applyEquippedWeaponProficiency's default: branch, so none of them ever had
+//     a combat effect. Players were paying 250 dust to roll a guaranteed no-op.
+//   * 295 and 317 were both captured live on the wire rendering as "Attack Damage +0 attack".
+//   * Attack damage is a TREE perk (Type 0, 151 occurrences in proficiencies.json) and is NOT part of the
+//     shape pool per CipSoft's description of the update, so that render can only be the client's fallback
+//     for an index it failed to resolve.
+// A reshape window shows three indices at once, so with the old 52-entry table ~62% of windows contained at
+// least one unresolvable index -- the leading suspect for the client crash reported on that window.
+//
+// The previous comment here claimed 291-297 / 301-307 / 311-317 were skill% blocks and that 321-323 were
+// armor penetration / elemental pierce / powerful foe. Both were wrong; corrected above.
 inline constexpr WeaponProficiencyPerkType_t WEAPON_PROFICIENCY_GENERAL_SHAPEABLE_PERKS[] = {
 	static_cast<WeaponProficiencyPerkType_t>(251),
 	static_cast<WeaponProficiencyPerkType_t>(252),
@@ -110,27 +131,9 @@ inline constexpr WeaponProficiencyPerkType_t WEAPON_PROFICIENCY_GENERAL_SHAPEABL
 	static_cast<WeaponProficiencyPerkType_t>(285),
 	static_cast<WeaponProficiencyPerkType_t>(286),
 	static_cast<WeaponProficiencyPerkType_t>(287),
-	static_cast<WeaponProficiencyPerkType_t>(288),
 	static_cast<WeaponProficiencyPerkType_t>(291),
 	static_cast<WeaponProficiencyPerkType_t>(292),
 	static_cast<WeaponProficiencyPerkType_t>(293),
-	static_cast<WeaponProficiencyPerkType_t>(294),
-	static_cast<WeaponProficiencyPerkType_t>(295),
-	static_cast<WeaponProficiencyPerkType_t>(296),
-	static_cast<WeaponProficiencyPerkType_t>(297),
-	static_cast<WeaponProficiencyPerkType_t>(301),
-	static_cast<WeaponProficiencyPerkType_t>(302),
-	static_cast<WeaponProficiencyPerkType_t>(303),
-	static_cast<WeaponProficiencyPerkType_t>(304),
-	static_cast<WeaponProficiencyPerkType_t>(305),
-	static_cast<WeaponProficiencyPerkType_t>(306),
-	static_cast<WeaponProficiencyPerkType_t>(307),
-	static_cast<WeaponProficiencyPerkType_t>(311),
-	static_cast<WeaponProficiencyPerkType_t>(312),
-	static_cast<WeaponProficiencyPerkType_t>(314),
-	static_cast<WeaponProficiencyPerkType_t>(315),
-	static_cast<WeaponProficiencyPerkType_t>(316),
-	static_cast<WeaponProficiencyPerkType_t>(317),
 	static_cast<WeaponProficiencyPerkType_t>(321),
 	static_cast<WeaponProficiencyPerkType_t>(322),
 	static_cast<WeaponProficiencyPerkType_t>(323),

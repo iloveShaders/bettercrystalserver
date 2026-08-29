@@ -13398,9 +13398,14 @@ uint8_t Player::getWeaponProficiencyVocationRegion(const uint16_t itemId) const 
 }
 
 WeaponProficiencyPerkType_t Player::rollWeaponProficiencyPerk(const uint16_t itemId) const {
-	// 15.25 (sommerrelease26): roll one valid shapeable perk from the union of the weapon's per-vocation spell
-	// augments (region*50 + UNIVERSAL offsets) and the GENERAL vocation-agnostic pool. Both contain only valid
-	// catalogue indices, so the client never renders the "Attack Damage" fallback.
+	// 15.25 (sommerrelease26): roll one shapeable perk from the union of the weapon's per-vocation spell
+	// augments (region*50 + UNIVERSAL offsets) and the GENERAL vocation-agnostic pool.
+	//
+	// The previous comment here asserted both tables "contain only valid catalogue indices, so the client never
+	// renders the 'Attack Damage' fallback". Live captures disproved that: indices 295 and 317 both came out of
+	// this roll and rendered exactly that fallback. The 18 non-existent general indices have since been removed,
+	// but the universal table is still only half the real catalogue (see proficiencies_definitions.hpp), so this
+	// pool remains narrower than official rather than wrong.
 	const uint8_t region = getWeaponProficiencyVocationRegion(itemId);
 	constexpr int32_t augmentPoolSize = static_cast<int32_t>(sizeof(WEAPON_PROFICIENCY_UNIVERSAL_SHAPEABLE_PERKS) / sizeof(WEAPON_PROFICIENCY_UNIVERSAL_SHAPEABLE_PERKS[0]));
 	constexpr int32_t generalPoolSize = static_cast<int32_t>(sizeof(WEAPON_PROFICIENCY_GENERAL_SHAPEABLE_PERKS) / sizeof(WEAPON_PROFICIENCY_GENERAL_SHAPEABLE_PERKS[0]));
