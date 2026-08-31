@@ -119,6 +119,7 @@ bool ConfigManager::load() {
 	loadBoolConfig(L, ONLY_PREMIUM_ACCOUNT, "onlyPremiumAccount", false);
 	loadBoolConfig(L, PARTY_AUTO_SHARE_EXPERIENCE, "partyAutoShareExperience", true);
 	loadBoolConfig(L, PARTY_SHARE_LOOT_BOOSTS, "partyShareLootBoosts", true);
+	loadBoolConfig(L, ADHOC_SHARE_ENABLED, "adhocShareEnabled", true);
 	loadBoolConfig(L, PREY_ENABLED, "preySystemEnabled", true);
 	loadBoolConfig(L, PREY_FREE_THIRD_SLOT, "preyFreeThirdSlot", false);
 	loadBoolConfig(L, PUSH_WHEN_ATTACKING, "pushWhenAttacking", false);
@@ -213,6 +214,10 @@ bool ConfigManager::load() {
 	loadFloatConfig(L, ONSLAUGHT_CHANCE_FORMULA_C, "onslaughtChanceFormulaC", 0.05);
 	loadFloatConfig(L, PARTY_SHARE_LOOT_BOOSTS_DIMINISHING_FACTOR, "partyShareLootBoostsDimishingFactor", 0.7f);
 	loadFloatConfig(L, PARTY_SHARE_RANGE_MULTIPLIER, "partyShareRangeMultiplier", 1.5f);
+	loadFloatConfig(L, ADHOC_SHARE_INVITE_MARGIN, "adhocShareInviteMargin", 0.10f);
+	loadFloatConfig(L, ADHOC_SHARE_PENALTY_CAP, "adhocSharePenaltyCap", 0.40f);
+	loadFloatConfig(L, ADHOC_SHARE_DWELL_CARRY, "adhocShareDwellCarry", 0.5f);
+	loadFloatConfig(L, ADHOC_SHARE_RANGE_MULTIPLIER, "adhocShareRangeMultiplier", 1.5f);
 	loadFloatConfig(L, PVP_RATE_DAMAGE_REDUCTION_PER_LEVEL, "pvpRateDamageReductionPerLevel", 0.0);
 	loadFloatConfig(L, PVP_RATE_DAMAGE_TAKEN_PER_LEVEL, "pvpRateDamageTakenPerLevel", 0.0);
 	loadFloatConfig(L, RATE_ATTACK_SPEED, "rateAttackSpeed", 1.0);
@@ -414,6 +419,10 @@ bool ConfigManager::load() {
 	loadIntConfig(L, MARKET_ACTIONS_DELAY_INTERVAL, "marketActionsDelay", 1000);
 	loadIntConfig(L, IMBUEMENT_ACTIONS_DELAY_INTERVAL, "imbueActionsDelay", 1000);
 	loadIntConfig(L, EXPERIENCE_SHARE_ACTIVITY, "experienceShareActivity", 2 * 60 * 1000);
+	loadIntConfig(L, ADHOC_SHARE_MAX_OUTSIDERS, "adhocShareMaxOutsiders", 1);
+	loadIntConfig(L, ADHOC_SHARE_MIN_DAMAGE_RATIO, "adhocShareMinDamageRatio", 15);
+	loadIntConfig(L, ADHOC_SHARE_DWELL_START, "adhocShareDwellStart", 1 * 60 * 1000);
+	loadIntConfig(L, ADHOC_SHARE_DWELL_FULL, "adhocShareDwellFull", 5 * 60 * 1000);
 	loadIntConfig(L, MAX_HOUSES_LIMIT, "maxHousesLimit", 3);
 	loadIntConfig(L, MAX_IP_CONNECTIONS, "maxIPConnections", 4);
 	loadIntConfig(L, STASH_MANAGE_AMOUNT, "stashManageAmount", 100000);

@@ -1800,6 +1800,48 @@ public:
 		return m_managedContainers;
 	}
 
+	// Ad-hoc spawn sharing -------------------------------------------------
+	// Coarse 32x32 tile "hunting bucket" derived from the position of every
+	// monster this player is credited for, plus how long they have held it.
+	// x/y are at most 65535 so (x >> 5) fits in 11 bits; z fits in 4.
+	static uint32_t huntBucketOf(const Position &pos) {
+		return (static_cast<uint32_t>(pos.z) << 22)
+			| (static_cast<uint32_t>(pos.y >> 5) << 11)
+			| static_cast<uint32_t>(pos.x >> 5);
+	}
+
+	void updateHuntBucket(const Position &pos, int64_t now, int64_t gapMs, double carry) {
+		const uint32_t bucket = huntBucketOf(pos);
+		if (m_huntBucketSince == 0 || (now - m_huntBucketLast) > gapMs) {
+			// First kill, or came back after a real break: start clean.
+			m_huntBucket = bucket;
+			m_huntBucketSince = now;
+		} else if (bucket != m_huntBucket) {
+			// Hopped to a neighbouring spawn without stopping. Carry part of the
+			// accumulated dwell over so rotating between spawns does not reset it.
+			int64_t held = m_huntBucketLast - m_huntBucketSince;
+			if (held < 0) {
+				held = 0;
+			}
+			m_huntBucket = bucket;
+			m_huntBucketSince = now - static_cast<int64_t>(static_cast<double>(held) * carry);
+		}
+		m_huntBucketLast = now;
+	}
+
+	// Continuous dwell in `bucket`, or 0 if the player is not currently in it.
+	[[nodiscard]] int64_t getHuntDwellIn(uint32_t bucket, int64_t now) const {
+		if (m_huntBucketSince == 0 || m_huntBucket != bucket) {
+			return 0;
+		}
+		const int64_t dwell = now - m_huntBucketSince;
+		return dwell > 0 ? dwell : 0;
+	}
+
+	uint32_t m_huntBucket = 0;
+	int64_t m_huntBucketSince = 0;
+	int64_t m_huntBucketLast = 0;
+
 private:
 	friend class PlayerLock;
 	std::mutex mutex;

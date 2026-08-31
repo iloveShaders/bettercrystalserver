@@ -580,6 +580,13 @@ void Creature::onDeath() {
 		}
 	}
 
+	// Cheapest and most selective test first: almost every kill has a single
+	// credited group. getMonster() builds a shared_ptr and getBoolean() does two
+	// map lookups, so neither should run on the common path.
+	if (experienceMap.size() > 1 && getMonster() && g_configManager().getBoolean(ADHOC_SHARE_ENABLED)) {
+		applyAdhocSpawnShare(experienceMap, timeNow);
+	}
+
 	for (const auto &[creature, experience] : experienceMap) {
 		creature->onGainExperience(experience, getCreature());
 	}
@@ -1110,6 +1117,130 @@ double Creature::getDamageRatio(const std::shared_ptr<Creature> &attacker) const
 
 uint64_t Creature::getGainedExperience(const std::shared_ptr<Creature> &attacker) const {
 	return std::floor(getDamageRatio(attacker) * getLostExperience());
+}
+
+void Creature::applyAdhocSpawnShare(std::map<std::shared_ptr<Creature>, uint64_t> &experienceMap, int64_t timeNow) {
+	const auto maxOutsiders = static_cast<size_t>(g_configManager().getNumber(ADHOC_SHARE_MAX_OUTSIDERS));
+	const uint64_t totalExperience = getLostExperience();
+	if (maxOutsiders == 0 || totalExperience == 0) {
+		return;
+	}
+
+	const auto dwellStart = static_cast<int64_t>(g_configManager().getNumber(ADHOC_SHARE_DWELL_START));
+	const auto dwellFull = static_cast<int64_t>(g_configManager().getNumber(ADHOC_SHARE_DWELL_FULL));
+	const auto dwellGap = static_cast<int64_t>(g_configManager().getNumber(EXPERIENCE_SHARE_ACTIVITY));
+	const double carry = g_configManager().getFloat(ADHOC_SHARE_DWELL_CARRY);
+	const double minRatio = static_cast<double>(g_configManager().getNumber(ADHOC_SHARE_MIN_DAMAGE_RATIO)) / 100.0;
+	const float rangeMultiplier = g_configManager().getFloat(ADHOC_SHARE_RANGE_MULTIPLIER);
+
+	const Position &killPos = getPosition();
+	const uint32_t bucket = Player::huntBucketOf(killPos);
+
+	// Refresh the hunting bucket of everyone credited for this kill, and of any
+	// party member physically standing in the same bucket. Dwell lives on Player,
+	// so passing party leadership around cannot reset it.
+	std::shared_ptr<Party> incumbent = nullptr;
+	int64_t incumbentDwell = 0;
+
+	for (const auto &[creature, experience] : experienceMap) {
+		const auto &player = creature->getPlayer();
+		if (!player) {
+			continue;
+		}
+		player->updateHuntBucket(killPos, timeNow, dwellGap, carry);
+
+		const auto &party = player->getParty();
+		if (!party || !party->isSharedExperienceActive() || !party->isSharedExperienceEnabled()) {
+			continue;
+		}
+
+		int64_t dwell = player->getHuntDwellIn(bucket, timeNow);
+		for (const auto &member : party->getMembers()) {
+			if (!member || Player::huntBucketOf(member->getPosition()) != bucket) {
+				continue;
+			}
+			member->updateHuntBucket(killPos, timeNow, dwellGap, carry);
+			dwell = std::max(dwell, member->getHuntDwellIn(bucket, timeNow));
+		}
+
+		if (dwell > incumbentDwell) {
+			incumbentDwell = dwell;
+			incumbent = party;
+		}
+	}
+
+	// Below the threshold nothing changes at all: no party has camped this spawn
+	// long enough to owe anybody a share.
+	if (!incumbent || incumbentDwell < dwellStart) {
+		return;
+	}
+
+	double strength = 1.0;
+	if (dwellFull > dwellStart) {
+		strength = static_cast<double>(incumbentDwell - dwellStart) / static_cast<double>(dwellFull - dwellStart);
+	}
+	if (strength > 1.0) {
+		strength = 1.0;
+	}
+	if (strength <= 0.0) {
+		return;
+	}
+
+	// Level taper anchor: the highest level in the incumbent group.
+	uint32_t anchorLevel = 1;
+	if (const auto &incumbentLeader = incumbent->getLeader()) {
+		anchorLevel = std::max(anchorLevel, incumbentLeader->getLevel());
+	}
+	for (const auto &member : incumbent->getMembers()) {
+		if (member) {
+			anchorLevel = std::max(anchorLevel, member->getLevel());
+		}
+	}
+	const double minLevelRatio = rangeMultiplier > 0.0f ? 1.0 / static_cast<double>(rangeMultiplier) : 1.0;
+
+	// Candidates: solo damagers outside the incumbent group who carried a real
+	// share of the damage. Players hunting in their own shared-experience party
+	// are skipped, so no party is ever paid out of another party's pool.
+	std::vector<std::pair<std::shared_ptr<Creature>, uint64_t>> candidates;
+	for (const auto &[creature, experience] : experienceMap) {
+		const auto &player = creature->getPlayer();
+		if (!player) {
+			continue;
+		}
+		const auto &outsiderParty = player->getParty();
+		if (outsiderParty == incumbent) {
+			continue;
+		}
+		if (outsiderParty && outsiderParty->isSharedExperienceActive() && outsiderParty->isSharedExperienceEnabled()) {
+			continue;
+		}
+		if (static_cast<double>(experience) / static_cast<double>(totalExperience) < minRatio) {
+			continue;
+		}
+		candidates.emplace_back(creature, experience);
+	}
+
+	if (candidates.empty()) {
+		return;
+	}
+
+	std::sort(candidates.begin(), candidates.end(), [](const auto &lhs, const auto &rhs) {
+		return lhs.second > rhs.second;
+	});
+	if (candidates.size() > maxOutsiders) {
+		candidates.resize(maxOutsiders);
+	}
+
+	for (const auto &[creature, experience] : candidates) {
+		const auto &player = creature->getPlayer();
+		const double levelRatio = std::min(1.0, static_cast<double>(player->getLevel()) / static_cast<double>(anchorLevel));
+		const double levelFactor = levelRatio >= minLevelRatio ? 1.0 : levelRatio / minLevelRatio;
+
+		incumbent->addVirtualOutsider(player, experience, levelFactor, strength);
+		// The incumbent party pays them instead; drop the direct grant so the
+		// outsider cannot collect twice.
+		experienceMap.erase(creature);
+	}
 }
 
 void Creature::addDamagePoints(const std::shared_ptr<Creature> &attacker, int32_t damagePoints) {

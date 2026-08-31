@@ -469,6 +469,10 @@ public:
 	}
 
 	void onDeath();
+	// Ad-hoc spawn sharing. Called from death() once the experience map is built.
+	// Picks the incumbent party (longest continuous hold on this hunting bucket)
+	// and hands the best-contributing outsider over to it for payout.
+	void applyAdhocSpawnShare(std::map<std::shared_ptr<Creature>, uint64_t> &experienceMap, int64_t timeNow);
 	virtual uint64_t getGainedExperience(const std::shared_ptr<Creature> &attacker) const;
 	void addDamagePoints(const std::shared_ptr<Creature> &attacker, int32_t damagePoints);
 	bool hasBeenAttacked(uint32_t attackerId) const;

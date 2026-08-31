@@ -525,9 +525,21 @@ bool Party::isSharedExperienceEnabled() const {
 	return sharedExpEnabled;
 }
 
+void Party::addVirtualOutsider(const std::shared_ptr<Player> &player, uint64_t baseExperience, double levelFactor, double strength) {
+	if (!player) {
+		return;
+	}
+	m_virtualOutsiders.emplace_back(VirtualOutsider { player, baseExperience, levelFactor });
+	if (strength > m_outsiderStrength) {
+		m_outsiderStrength = strength;
+	}
+}
+
 void Party::shareExperience(uint64_t experience, const std::shared_ptr<Creature> &target /* = nullptr*/) {
 	auto leader = getLeader();
 	if (!leader) {
+		m_virtualOutsiders.clear();
+		m_outsiderStrength = 0.0;
 		return;
 	}
 
@@ -535,10 +547,66 @@ void Party::shareExperience(uint64_t experience, const std::shared_ptr<Creature>
 	g_events().eventPartyOnShareExperience(getParty(), shareExperience);
 	g_callbacks().executeCallback(EventCallback_t::partyOnShareExperience, &EventCallback::partyOnShareExperience, getParty(), std::ref(shareExperience));
 
-	for (const auto &member : getMembers()) {
-		member->onGainSharedExperience(shareExperience, target);
+	// `shareExperience` is now the per-head amount, vocation bonus and party size
+	// already applied by the Lua callback. Everything below is derived from it so
+	// the split formula stays owned by data/events/scripts/party.lua.
+	uint64_t memberExperience = shareExperience;
+
+	if (!m_virtualOutsiders.empty()) {
+		const auto partySize = static_cast<double>(getMemberCount() + 1);
+		const double strength = m_outsiderStrength;
+		const double dilution = partySize / (partySize + static_cast<double>(m_virtualOutsiders.size()));
+
+		// An outsider only qualifies if a head share actually beats the
+		// damage-proportional experience they were already going to receive.
+		// Otherwise nothing happens and the party is not charged.
+		std::vector<std::pair<std::shared_ptr<Player>, uint64_t>> payouts;
+		payouts.reserve(m_virtualOutsiders.size());
+
+		for (const auto &outsider : m_virtualOutsiders) {
+			if (!outsider.player) {
+				continue;
+			}
+			const auto head = static_cast<uint64_t>(static_cast<double>(shareExperience) * dilution * outsider.levelFactor);
+			if (head <= outsider.baseExperience) {
+				continue;
+			}
+			// Ramp from "exactly what they would have got anyway" up to a full head
+			// share as the incumbent's dwell in this spawn grows.
+			const auto bonus = static_cast<uint64_t>(static_cast<double>(head - outsider.baseExperience) * strength);
+			payouts.emplace_back(outsider.player, outsider.baseExperience + bonus);
+		}
+
+		if (!payouts.empty()) {
+			const double margin = g_configManager().getFloat(ADHOC_SHARE_INVITE_MARGIN);
+			const double cap = g_configManager().getFloat(ADHOC_SHARE_PENALTY_CAP);
+
+			// Sized so that inviting the outsider is always better for the party
+			// than leaving them outside, by `margin`, at every party size.
+			double penalty = 1.0 - (partySize * (1.0 - margin)) / (partySize + static_cast<double>(payouts.size()));
+			if (penalty < 0.0) {
+				penalty = 0.0;
+			}
+			if (penalty > cap) {
+				penalty = cap;
+			}
+			penalty *= strength;
+
+			memberExperience = static_cast<uint64_t>(static_cast<double>(shareExperience) * (1.0 - penalty));
+
+			for (const auto &[outsider, amount] : payouts) {
+				outsider->onGainSharedExperience(amount, target);
+			}
+		}
 	}
-	leader->onGainSharedExperience(shareExperience, target);
+
+	m_virtualOutsiders.clear();
+	m_outsiderStrength = 0.0;
+
+	for (const auto &member : getMembers()) {
+		member->onGainSharedExperience(memberExperience, target);
+	}
+	leader->onGainSharedExperience(memberExperience, target);
 }
 
 bool Party::canUseSharedExperience(const std::shared_ptr<Player> &player) {

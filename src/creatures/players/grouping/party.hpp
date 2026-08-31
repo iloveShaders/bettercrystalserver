@@ -67,6 +67,11 @@ public:
 
 	void shareExperience(uint64_t experience, const std::shared_ptr<Creature> &target = nullptr);
 	bool setSharedExperience(const std::shared_ptr<Player> &player, bool sharedExpActive, bool silent = false);
+
+	// Ad-hoc spawn sharing: a non-member who damaged the same monster is queued
+	// here by Creature::death() and paid out of this party's pool in
+	// shareExperience(). Consumed and cleared on every kill.
+	void addVirtualOutsider(const std::shared_ptr<Player> &player, uint64_t baseExperience, double levelFactor, double strength);
 	bool isSharedExperienceActive() const;
 	bool isSharedExperienceEnabled() const;
 	bool canUseSharedExperience(const std::shared_ptr<Player> &player);
@@ -114,6 +119,14 @@ private:
 	float shareRangeMultiplier() const;
 
 	std::map<uint32_t, int64_t> ticksMap;
+
+	struct VirtualOutsider {
+		std::shared_ptr<Player> player;
+		uint64_t baseExperience = 0;
+		double levelFactor = 1.0;
+	};
+	std::vector<VirtualOutsider> m_virtualOutsiders;
+	double m_outsiderStrength = 0.0;
 
 	std::vector<std::shared_ptr<Player>> memberList;
 	std::vector<std::shared_ptr<Player>> inviteList;
