@@ -999,17 +999,22 @@ void Container::clearLootHighlight(const std::shared_ptr<Player> &player) {
 }
 
 uint32_t Container::getOwnerId() const {
-	uint32_t ownerId = Item::getOwnerId();
-	if (ownerId > 0) {
-		return ownerId;
-	}
-	for (const auto &item : itemlist) {
-		ownerId = item->getOwnerId();
-		if (ownerId > 0) {
-			return ownerId;
-		}
-	}
-	return 0;
+	// A container reports only its OWN owner. It deliberately does not inherit
+	// ownership from its contents.
+	//
+	// Inheriting made any container holding a single owner-tagged item behave as
+	// if the whole container belonged to that owner, which locked the legitimate
+	// holder out of their own bags: opening them, and "show higher container"
+	// (Game::playerMoveUpContainer -> browse field of the tile) both failed with
+	// "This item is not yours." ItemAttribute_t::OWNER is persisted (ATTR_OWNER)
+	// and never cleared, so a stale tag from a previous character poisoned every
+	// container it sat in, permanently.
+	//
+	// Loot protection is unaffected: each owned item is still checked on its own
+	// at Container::queryAdd ("a non-owner can move the item around but not pick
+	// it up") and at Game::internalMoveItem, so a non-owner still cannot take an
+	// owned item out of a container they are allowed to open.
+	return Item::getOwnerId();
 }
 
 /**
