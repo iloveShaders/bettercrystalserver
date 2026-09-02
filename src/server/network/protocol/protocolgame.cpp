@@ -11953,7 +11953,6 @@ void ProtocolGame::parseBossDifficultySelection(NetworkMessage &msg) {
 		if (difficulty > allowedDifficulty) {
 			difficulty = allowedDifficulty;
 		}
-		player->addStorageValue(910100, difficulty);
 
 		const Position leverPosition {
 			static_cast<uint16_t>(std::max<int32_t>(0, player->getStorageValue(910101))),
@@ -11961,12 +11960,21 @@ void ProtocolGame::parseBossDifficultySelection(NetworkMessage &msg) {
 			static_cast<uint8_t>(std::clamp<int32_t>(player->getStorageValue(910103), 0, MAP_MAX_LAYERS - 1)),
 		};
 		const auto leverItemId = static_cast<uint16_t>(std::max<int32_t>(0, player->getStorageValue(910104)));
-		if (leverItemId != 0 && leverPosition.x != 0 && leverPosition.y != 0) {
+
+		// Only arm 910100 when there is a lever to consume it on the second pass. A window opened
+		// by anything other than BossLever:openDifficultySelection (the /bossdiff god talkaction,
+		// or any future caller) leaves no lever context, and arming the storage there would make
+		// the player's NEXT genuine lever pull skip openDifficultySelection and start a fight
+		// against whatever ceiling happened to be left in 910105.
+		if (leverItemId == 0 || leverPosition.x == 0 || leverPosition.y == 0) {
+			player->addStorageValue(910100, -1);
+			g_logger().info("[BossDiffSel] no lever context, ignoring start (difficulty={})", difficulty);
+		} else {
+			player->addStorageValue(910100, difficulty);
 			g_game().playerUseItem(player->getID(), leverPosition, 0, 0, leverItemId);
+			g_logger().info("[BossDiffSel] START FIGHT difficulty={} (0..25) allowed={}", difficulty, allowedDifficulty);
 		}
 		// --- end Lua bridge ----------------------------------------------------------
-
-		g_logger().info("[BossDiffSel] START FIGHT difficulty={} (0..25)", difficulty);
 	} else {
 		// Cancel: clear the pending selection so a later lever pull re-opens the window
 		// instead of silently starting a fight at a stale difficulty.
