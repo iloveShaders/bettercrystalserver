@@ -351,6 +351,11 @@ void CrystalServer::loadModules() {
 
 	// Load XML folder dependencies (order matters)
 	modulesLoadHelper(g_vocations().loadFromXml(), "XML/vocations.xml");
+	// Clear rates and the eventscheduler KV flags before parsing: nothing else calls
+	// reset(), so a stale forge-chance / double-bestiary / double-bosstiary /
+	// fast-exercise / boss-cooldown row would survive in kv_store and keep applying
+	// long after the event window closed.
+	g_eventsScheduler().reset();
 	modulesLoadHelper(g_eventsScheduler().loadScheduleEventFromXml(), "XML/events.xml");
 	modulesLoadHelper(g_eventsScheduler().loadScheduleEventFromJson(), "json/eventscheduler/events.json");
 	modulesLoadHelper(Outfits::getInstance().loadFromXml(), "XML/outfits.xml");
