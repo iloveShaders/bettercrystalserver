@@ -557,11 +557,13 @@ void Party::shareExperience(uint64_t experience, const std::shared_ptr<Creature>
 		const double strength = m_outsiderStrength;
 		const double dilution = partySize / (partySize + static_cast<double>(m_virtualOutsiders.size()));
 
-		// An outsider only qualifies if a head share actually beats the
+		// An outsider only *costs the party* if a head share actually beats the
 		// damage-proportional experience they were already going to receive.
-		// Otherwise nothing happens and the party is not charged.
+		// Either way they must still be paid here: Creature::death() removed them
+		// from the direct grant, so this is now their only payer.
 		std::vector<std::pair<std::shared_ptr<Player>, uint64_t>> payouts;
 		payouts.reserve(m_virtualOutsiders.size());
+		size_t chargeable = 0;
 
 		for (const auto &outsider : m_virtualOutsiders) {
 			if (!outsider.player) {
@@ -569,30 +571,36 @@ void Party::shareExperience(uint64_t experience, const std::shared_ptr<Creature>
 			}
 			const auto head = static_cast<uint64_t>(static_cast<double>(shareExperience) * dilution * outsider.levelFactor);
 			if (head <= outsider.baseExperience) {
+				// Already out-earning a head share on their own damage. Hand back
+				// exactly what they would have had and charge the party nothing.
+				payouts.emplace_back(outsider.player, outsider.baseExperience);
 				continue;
 			}
 			// Ramp from "exactly what they would have got anyway" up to a full head
 			// share as the incumbent's dwell in this spawn grows.
 			const auto bonus = static_cast<uint64_t>(static_cast<double>(head - outsider.baseExperience) * strength);
 			payouts.emplace_back(outsider.player, outsider.baseExperience + bonus);
+			++chargeable;
 		}
 
 		if (!payouts.empty()) {
-			const double margin = g_configManager().getFloat(ADHOC_SHARE_INVITE_MARGIN);
-			const double cap = g_configManager().getFloat(ADHOC_SHARE_PENALTY_CAP);
+			if (chargeable > 0) {
+				const double margin = g_configManager().getFloat(ADHOC_SHARE_INVITE_MARGIN);
+				const double cap = g_configManager().getFloat(ADHOC_SHARE_PENALTY_CAP);
 
-			// Sized so that inviting the outsider is always better for the party
-			// than leaving them outside, by `margin`, at every party size.
-			double penalty = 1.0 - (partySize * (1.0 - margin)) / (partySize + static_cast<double>(payouts.size()));
-			if (penalty < 0.0) {
-				penalty = 0.0;
-			}
-			if (penalty > cap) {
-				penalty = cap;
-			}
-			penalty *= strength;
+				// Sized so that inviting the outsider is always better for the party
+				// than leaving them outside, by `margin`, at every party size.
+				double penalty = 1.0 - (partySize * (1.0 - margin)) / (partySize + static_cast<double>(chargeable));
+				if (penalty < 0.0) {
+					penalty = 0.0;
+				}
+				if (penalty > cap) {
+					penalty = cap;
+				}
+				penalty *= strength;
 
-			memberExperience = static_cast<uint64_t>(static_cast<double>(shareExperience) * (1.0 - penalty));
+				memberExperience = static_cast<uint64_t>(static_cast<double>(shareExperience) * (1.0 - penalty));
+			}
 
 			for (const auto &[outsider, amount] : payouts) {
 				outsider->onGainSharedExperience(amount, target);
