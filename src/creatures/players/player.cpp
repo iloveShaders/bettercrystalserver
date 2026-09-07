@@ -13790,7 +13790,9 @@ void Player::applyEquippedWeaponProficiency(const uint16_t itemId) {
 					break;
 				}
 				case PROFICIENCY_PERK_SPECIAL_MAGIC_LEVEL: {
-					if (damageTypeIndex > 0) {
+					// COMBAT_PHYSICALDAMAGE == 0, so a `> 0` guard silently discards PROFICIENCY_DAMAGETYPE_PHYSICAL.
+					// damageTypeIndex stays -1 when the perk carries no element, so `>= 0` is the correct sentinel test.
+					if (damageTypeIndex >= 0 && damageTypeIndex < COMBAT_COUNT) {
 						equippedWeaponProficiency.specialMagicLevel[damageTypeIndex] = std::max(0, equippedWeaponProficiency.specialMagicLevel[damageTypeIndex] + static_cast<int32_t>(perk.perkValue));
 					}
 					break;
@@ -13821,7 +13823,7 @@ void Player::applyEquippedWeaponProficiency(const uint16_t itemId) {
 					break;
 				}
 				case PROFICIENCY_PERK_CRITICAL_HIT_CHANCE_FOR_ELEMENT_ID_SPELLS_AND_RUNES: {
-					if (damageTypeIndex > 0) {
+					if (damageTypeIndex >= 0 && damageTypeIndex < COMBAT_COUNT) {
 						equippedWeaponProficiency.critHitChanceForElementIdToSpellsAndRunes[damageTypeIndex] = std::max(0, equippedWeaponProficiency.critHitChanceForElementIdToSpellsAndRunes[damageTypeIndex] + static_cast<uint16_t>(perk.perkValue * 10000.0f));
 					}
 					break;
@@ -13839,7 +13841,7 @@ void Player::applyEquippedWeaponProficiency(const uint16_t itemId) {
 					break;
 				}
 				case PROFICIENCY_PERK_CRITICAL_EXTRA_DAMAGE_FOR_ELEMENT_ID_SPELLS_AND_RUNES: {
-					if (damageTypeIndex > 0) {
+					if (damageTypeIndex >= 0 && damageTypeIndex < COMBAT_COUNT) {
 						equippedWeaponProficiency.critExtraDamageForElementIdToSpellsAndRunes[damageTypeIndex] = std::max(0, equippedWeaponProficiency.critExtraDamageForElementIdToSpellsAndRunes[damageTypeIndex] + static_cast<uint16_t>(perk.perkValue * 10000.0f));
 					}
 					break;
@@ -13943,10 +13945,14 @@ void Player::applyEquippedWeaponProficiency(const uint16_t itemId) {
 	sanitizeWeaponProficiencyShapes(itemId);
 	const auto highestCombatSkill = [this]() {
 		// "Highest combat skill" = the best of fist, club, sword, axe, distance and magic level.
+		// Magic level must NOT go through getSkillLevel(): SKILL_MAGLEVEL is 13 while varSkills is sized
+		// SKILL_LAST + 1 (13 entries, valid 0-12), so getSkillLevel(SKILL_MAGLEVEL) reads one past the end of
+		// the array before it reaches its own SKILL_MAGLEVEL branch. combat.cpp already special-cases this the
+		// same way when it reads these maps back.
 		skills_t best = SKILL_FIST;
-		uint16_t bestLevel = 0;
+		uint32_t bestLevel = 0;
 		for (const skills_t skill : { SKILL_FIST, SKILL_CLUB, SKILL_SWORD, SKILL_AXE, SKILL_DISTANCE, SKILL_MAGLEVEL }) {
-			const uint16_t level = getSkillLevel(skill);
+			const uint32_t level = (skill == SKILL_MAGLEVEL) ? getMagicLevel() : getSkillLevel(skill);
 			if (level > bestLevel) {
 				bestLevel = level;
 				best = skill;

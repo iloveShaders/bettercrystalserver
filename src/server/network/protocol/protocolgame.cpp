@@ -11698,6 +11698,12 @@ void ProtocolGame::parseWeaponProficiency(NetworkMessage &msg) {
 
 	} else if (type == WEAPON_PROFICIENCY_RESET_PERKS) {
 		const uint16_t itemId = msg.get<uint16_t>();
+		// Was a no-op: itemId was read and discarded, so the Reset button did nothing. Drop every selected tree
+		// perk, recompute the aggregate and push the refreshed state so the client redraws the tree. Only the
+		// tree selection is cleared -- dust-bought shaped slots are deliberately left alone.
+		player->resetAllWeaponProficiencyPerks(itemId);
+		player->applyEquippedWeaponProficiency(itemId);
+		player->sendWeaponProficiencyInfo(itemId);
 
 	} else if (type == WEAPON_PROFICIENCY_APPLY_PERKS) {
 		const uint16_t itemId = msg.get<uint16_t>();
