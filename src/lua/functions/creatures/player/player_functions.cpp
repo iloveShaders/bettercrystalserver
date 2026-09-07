@@ -2093,7 +2093,9 @@ int PlayerFunctions::luaPlayerGetSkillLevel(lua_State* L) {
 	// player:getSkillLevel(skillType)
 	const skills_t skillType = Lua::getNumber<skills_t>(L, 2);
 	const auto &player = Lua::getUserdataShared<Player>(L, 1);
-	if (player && skillType <= SKILL_LAST) {
+	// skills_t is int8_t and skills[] is sized SKILL_LAST + 1, so the lower bound matters as much as the upper
+	// one: a negative value from a script would index skills[-1].
+	if (player && skillType >= SKILL_FIRST && skillType <= SKILL_LAST) {
 		lua_pushnumber(L, player->skills[skillType].level);
 	} else {
 		lua_pushnil(L);
@@ -2105,7 +2107,7 @@ int PlayerFunctions::luaPlayerGetEffectiveSkillLevel(lua_State* L) {
 	// player:getEffectiveSkillLevel(skillType)
 	const skills_t skillType = Lua::getNumber<skills_t>(L, 2);
 	const auto &player = Lua::getUserdataShared<Player>(L, 1);
-	if (player && skillType <= SKILL_LAST) {
+	if (player && skillType >= SKILL_FIRST && skillType <= SKILL_LAST) {
 		lua_pushnumber(L, player->getSkillLevel(skillType));
 	} else {
 		lua_pushnil(L);

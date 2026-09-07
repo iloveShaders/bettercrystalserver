@@ -7569,6 +7569,16 @@ int32_t Player::getSkill(skills_t skilltype, SkillsId_t skillinfo) const {
 }
 
 uint16_t Player::getSkillLevel(skills_t skill) const {
+	// skills[] and varSkills[] are both sized SKILL_LAST + 1 (13 entries, valid 0-12), but skills_t continues
+	// past SKILL_LAST with SKILL_MAGLEVEL (13) and SKILL_LEVEL (14). Passing either would read past the end of
+	// BOTH arrays, and past skills[] again inside getLoyaltySkill/getBaseSkill. Reject anything outside the
+	// storable range instead of indexing with it. Magic level is read with getMagicLevel(); character level
+	// with getLevel(). Note the `skill == SKILL_MAGLEVEL` branch further down is therefore unreachable -- it is
+	// left in place only to keep this function byte-identical to upstream apart from this guard.
+	if (skill < SKILL_FIRST || skill > SKILL_LAST) {
+		return 0;
+	}
+
 	auto skillLevel = getLoyaltySkill(skill);
 	skillLevel = std::max<int32_t>(0, skillLevel + varSkills[skill]);
 
