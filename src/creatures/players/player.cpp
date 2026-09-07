@@ -13506,8 +13506,13 @@ void Player::refineWeaponProficiencySlot(const uint16_t itemId, const uint8_t pr
 }
 
 void Player::maximiseWeaponProficiencySlot(const uint16_t itemId, const uint8_t proficiencyLevel, const uint8_t perkPosition) {
-	// TODO(15.25): official client charges 1 special tradeable item; not in data yet, so just set to max.
+	// Maximise is paid for with lunar ascension orbs (53695), not forge dust. The orb is defined only in
+	// appearances.dat ("A condensed sphere of distilled moonsilver. Use it to upgrade a modified weapon
+	// proficiency perk to its maximum level") and is loaded via Items::loadFromProtobuf, so it needs no
+	// items.xml entry to be usable here. Radiant monsters drop it.
 	static constexpr uint8_t MAX_RANK = 10;
+	static constexpr uint16_t MAXIMISE_ORB_ID = 53695;
+	static constexpr uint32_t MAXIMISE_ORB_COST = 1;
 	auto it = weaponProficiencies.find(itemId);
 	if (it == weaponProficiencies.end()) {
 		sendTextMessage(MESSAGE_FAILURE, "You have no proficiency progress on this weapon.");
@@ -13534,6 +13539,16 @@ void Player::maximiseWeaponProficiencySlot(const uint16_t itemId, const uint8_t 
 	}
 	if (slot->value >= MAX_RANK) {
 		sendTextMessage(MESSAGE_FAILURE, "This perk is already at its maximum rank.");
+		return;
+	}
+	// Charged only after every other check passes, so a rejected maximise never costs an orb. The stash is
+	// excluded deliberately: the orb has to be on the character, matching how dust is spent elsewhere.
+	if (!hasItemCountById(MAXIMISE_ORB_ID, MAXIMISE_ORB_COST, false)) {
+		sendTextMessage(MESSAGE_FAILURE, "You need a lunar ascension orb to maximise this perk.");
+		return;
+	}
+	if (!removeItemCountById(MAXIMISE_ORB_ID, MAXIMISE_ORB_COST, false)) {
+		sendTextMessage(MESSAGE_FAILURE, "You need a lunar ascension orb to maximise this perk.");
 		return;
 	}
 	slot->value = MAX_RANK;
