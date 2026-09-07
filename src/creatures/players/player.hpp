@@ -181,11 +181,7 @@ struct EquippedWeaponProficiencyBonuses {
 	std::map<skills_t, uint8_t> skillBonus;
 	int32_t specialMagicLevel[COMBAT_COUNT] = { 0 };
 	std::vector<WeaponProficiencyAugment> spellAugments;
-	// Per-race bonus keyed by BestiaryType_t (1-21). A proficiency tree can hold several bestiary perks for
-	// DIFFERENT races (e.g. Amber 2H Bow grants Aquatic and Demon), and shape slots can add more on top, so a
-	// single scalar + single race id cannot represent this: it stacked every percentage but applied the total
-	// against whichever race was written last. Repeat perks on the same race accumulate, as on global.
-	std::map<uint8_t, float> bestiaryRacePercentDamageGain;
+	float bestiaryRacePercentDamageGain = 0;
 	float damageGainBossAndSinisterEmbraced = 0;
 	uint16_t critHitChance = 0;
 	int32_t critHitChanceForElementIdToSpellsAndRunes[COMBAT_COUNT] = { 0 };
@@ -212,20 +208,16 @@ struct EquippedWeaponProficiencyBonuses {
 	float armorPenetration = 0; // ignores X% of target's physical armor
 	float elementalPierce[COMBAT_COUNT] = { 0 }; // ignores X% of target's elemental resistance per combat type
 
-	// True while this aggregate holds bonuses from an equipped proficiency weapon. Lets callers skip a
-	// reset()+sendStats()+sendSkills() round trip when there is provably nothing to clear -- equipping a
-	// weapon with no proficiency tree is the common case and must not cost two extra packets.
-	bool active = false;
+	uint8_t bestiaryId = 0;
 
 	void reset() {
-		active = false;
 		attack = 0;
 		defense = 0;
 		weaponShieldMod = 0;
 		skillBonus.clear();
 		std::fill(std::begin(specialMagicLevel), std::end(specialMagicLevel), 0);
 		spellAugments.clear();
-		bestiaryRacePercentDamageGain.clear();
+		bestiaryRacePercentDamageGain = 0;
 		damageGainBossAndSinisterEmbraced = 0;
 		critHitChance = 0;
 		std::fill(std::begin(critHitChanceForElementIdToSpellsAndRunes), std::end(critHitChanceForElementIdToSpellsAndRunes), 0);
@@ -251,6 +243,8 @@ struct EquippedWeaponProficiencyBonuses {
 		omegaStrikeExtraDamage = 0;
 		armorPenetration = 0;
 		std::fill(std::begin(elementalPierce), std::end(elementalPierce), 0.0f);
+
+		bestiaryId = 0;
 	}
 };
 
@@ -1179,11 +1173,9 @@ public:
 	}
 	void sendWeaponProficiencyExperience(const uint16_t itemId, const uint32_t addProficiencyExperience);
 	// 15.25 (sommerrelease26) SHAPE handlers + helpers (see CLIENT_15.25_e2a4a1_PORT.md §7.5 / §8).
-	uint8_t getWeaponProficiencyVocationRegion(const uint16_t itemId) const;
-	WeaponProficiencyPerkType_t rollWeaponProficiencyPerk(const uint16_t itemId) const;
-	// Validates a WIRE (0-based) level/position pair against the loaded proficiency tree. Every shape action
-	// must pass this before charging dust or writing to modifiedSlots -- the client is not trusted.
-	bool isValidWeaponProficiencySlot(const uint16_t itemId, const uint8_t proficiencyLevel, const uint8_t perkPosition) const;
+	uint8_t getWeaponProficiencyVocationRegion() const;
+	std::vector<WeaponProficiencyPerkType_t> rollWeaponProficiencyPerks(const size_t count, const std::vector<WeaponProficiencyPerkType_t> &exclude = {}) const;
+	void sanitizeWeaponProficiencyShapes(const uint16_t itemId);
 	void modifyWeaponProficiencySlot(const uint16_t itemId, const uint8_t proficiencyLevel, const uint8_t perkPosition);
 	void refineWeaponProficiencySlot(const uint16_t itemId, const uint8_t proficiencyLevel, const uint8_t perkPosition);
 	void maximiseWeaponProficiencySlot(const uint16_t itemId, const uint8_t proficiencyLevel, const uint8_t perkPosition);

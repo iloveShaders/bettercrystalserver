@@ -11687,21 +11687,17 @@ void ProtocolGame::parseWeaponProficiency(NetworkMessage &msg) {
 
 	if (type == WEAPON_PROFICIENCY_ITEM_INFO) {
 		const uint16_t itemId = msg.get<uint16_t>();
+		player->sanitizeWeaponProficiencyShapes(itemId);
 		player->sendWeaponProficiencyInfo(itemId);
 
 	} else if (type == WEAPON_PROFICIENCY_LIST_INFO) {
 		for (const auto &[itemId, _] : player->weaponProficiencies) {
+			player->sanitizeWeaponProficiencyShapes(itemId);
 			player->sendWeaponProficiencyInfo(itemId);
 		}
 
 	} else if (type == WEAPON_PROFICIENCY_RESET_PERKS) {
 		const uint16_t itemId = msg.get<uint16_t>();
-		// Was a no-op: itemId was read and discarded, so the Reset button did nothing. Drop every selected tree
-		// perk, then re-apply (the guard inside applyEquippedWeaponProficiency makes this a no-op unless this
-		// weapon is the equipped one) and push the refreshed state so the client redraws the tree.
-		player->resetAllWeaponProficiencyPerks(itemId);
-		player->applyEquippedWeaponProficiency(itemId);
-		player->sendWeaponProficiencyInfo(itemId);
 
 	} else if (type == WEAPON_PROFICIENCY_APPLY_PERKS) {
 		const uint16_t itemId = msg.get<uint16_t>();
@@ -11714,23 +11710,8 @@ void ProtocolGame::parseWeaponProficiency(NetworkMessage &msg) {
 			const uint8_t proficiencyLevel = msg.getByte();
 			const uint8_t perkPosition = msg.getByte();
 
-			// The client is not trusted: reject slots that do not exist in the loaded tree, and reject
-			// duplicates (the same slot sent twice would apply its bonus twice).
-			if (!player->isValidWeaponProficiencySlot(itemId, proficiencyLevel, perkPosition)) {
-				g_logger().warn("[ProtocolGame::parseWeaponProficiency] player {} sent out-of-range active perk level={} position={} for itemId {}", player->getName(), proficiencyLevel, perkPosition, itemId);
-				continue;
-			}
-
-			const WeaponProficiencyPerk candidate { static_cast<uint8_t>(proficiencyLevel + 1),
-				                                    static_cast<uint8_t>(perkPosition + 1) };
-			const bool alreadySelected = std::any_of(proficiency.activePerks.begin(), proficiency.activePerks.end(), [&candidate](const WeaponProficiencyPerk &existing) {
-				return existing.proficiencyLevel == candidate.proficiencyLevel && existing.perkPosition == candidate.perkPosition;
-			});
-			if (alreadySelected) {
-				continue;
-			}
-
-			proficiency.activePerks.push_back(candidate);
+			proficiency.activePerks.push_back({ static_cast<uint8_t>(proficiencyLevel + 1),
+			                                    static_cast<uint8_t>(perkPosition + 1) });
 		}
 
 		player->applyEquippedWeaponProficiency(itemId);
@@ -11854,10 +11835,11 @@ void ProtocolGame::sendWeaponProficiencyReshapeOffers(const uint16_t itemId) {
 	// 15.25 (sommerrelease26): Reshape offers = opcode 0xBB (Ghidra-confirmed FUN_140601bf0). NOT 0xC7 (that is
 	// CyclopediaCurrentHouseData). Wire: u16 itemId · byte curLevel · byte curPos · byte count · count×{u16 perkType, byte value}.
 	// Each offer uses the same perkType+rank encoding as a 0xC4 modified slot (no name string). See PORT.md §7.4.
-	uint8_t rank = 1;
+	// Offers are shown at the rank the slot already has (rank 0 = base magnitude); Reshape keeps the refinement.
+	uint8_t rank = 0;
 	for (const auto &slot : it->second.modifiedSlots) {
 		if (slot.proficiencyLevel == it->second.pendingReshapeLevel && slot.perkPosition == it->second.pendingReshapePosition) {
-			rank = std::max<uint8_t>(1, slot.value);
+			rank = slot.value;
 			break;
 		}
 	}
