@@ -3016,10 +3016,13 @@ CombatDamage Combat::applyWeaponProficiencyDamage(const std::shared_ptr<Player> 
 		const auto &proficiencyPerk = attackerPlayer->getEquippedWeaponProficiency();
 
 		// Proficiency Perk: bestiaryRacePercentDamageGain
-		const uint8_t weaponProficiencyBestiaryId = proficiencyPerk.bestiaryId;
-		if (weaponProficiencyBestiaryId > 0) {
-			if (targetMonsterType->info.bestiaryRace == static_cast<BestiaryType_t>(weaponProficiencyBestiaryId)) {
-				const float bonusPercent = proficiencyPerk.bestiaryRacePercentDamageGain;
+		// Look the TARGET's race up in the per-race map, so a weapon carrying bonuses against several races
+		// applies only the one that matches. BESTY_RACE_NONE (0) is never inserted, so it can never match.
+		const auto &bestiaryGains = proficiencyPerk.bestiaryRacePercentDamageGain;
+		if (!bestiaryGains.empty()) {
+			const auto raceIt = bestiaryGains.find(static_cast<uint8_t>(targetMonsterType->info.bestiaryRace));
+			if (raceIt != bestiaryGains.end() && raceIt->second > 0) {
+				const float bonusPercent = raceIt->second;
 				damage.primary.value += static_cast<int32_t>(std::ceil(damage.primary.value * bonusPercent));
 				damage.secondary.value += static_cast<int32_t>(std::ceil(damage.secondary.value * bonusPercent));
 			}

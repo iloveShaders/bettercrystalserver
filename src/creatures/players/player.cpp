@@ -13819,8 +13819,9 @@ void Player::applyEquippedWeaponProficiency(const uint16_t itemId) {
 				}
 				case PROFICIENCY_PERK_BESTIARY_DAMAGE: {
 					if (perk.bestiaryId > 0) {
-						equippedWeaponProficiency.bestiaryRacePercentDamageGain += perk.perkValue;
-						equippedWeaponProficiency.bestiaryId = perk.bestiaryId;
+						// Keyed per race: several bestiary perks on one tree target different races and must not
+						// collapse into a single entry.
+						equippedWeaponProficiency.bestiaryRacePercentDamageGain[perk.bestiaryId] += perk.perkValue;
 					}
 					break;
 				}
@@ -13987,8 +13988,10 @@ void Player::applyEquippedWeaponProficiency(const uint16_t itemId) {
 				break;
 			}
 			case PROFICIENCY_PERK_BESTIARY_DAMAGE: {
-				equippedWeaponProficiency.bestiaryRacePercentDamageGain += value;
-				equippedWeaponProficiency.bestiaryId = entry.bestiaryId; // single-slot field: the last decoded race wins
+				// Stacks onto whatever the tree already granted for this race and leaves other races untouched.
+				if (entry.bestiaryId > 0) {
+					equippedWeaponProficiency.bestiaryRacePercentDamageGain[entry.bestiaryId] += value;
+				}
 				break;
 			}
 			case PROFICIENCY_PERK_CRITICAL_HIT_CHANCE_FOR_OFFENSIVE_RUNES: {
