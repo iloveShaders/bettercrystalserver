@@ -110,6 +110,38 @@ namespace tests {
 			coins_[id][type] = amount;
 			return !failAddCoins;
 		}
+
+		bool applyPremiumDelta(const uint32_t &id, const int32_t &days, const int64_t &now) final {
+			if (failApplyPremiumDelta) {
+				return false;
+			}
+
+			// Mirrors AccountRepositoryDB::applyPremiumDelta: the new lastday is derived from
+			// the account's OWN current value (append to the end of the current window, or
+			// start from now if it already expired), and the display fields are kept in sync
+			// with the result. An UPDATE that matches no row still succeeds in the database,
+			// so an unknown id is reported as success here too.
+			for (auto &account : accounts) {
+				if (account.second.id != id) {
+					continue;
+				}
+
+				int64_t base = static_cast<int64_t>(account.second.premiumLastDay);
+				if (base < now) {
+					base = now;
+				}
+
+				const int64_t lastDay = base + (static_cast<int64_t>(days) * 86400);
+				const int64_t purchased = static_cast<int64_t>(account.second.premiumDaysPurchased) + days;
+
+				account.second.premiumLastDay = lastDay > now ? static_cast<time_t>(lastDay) : 0;
+				account.second.premiumDaysPurchased = purchased > 0 ? static_cast<uint32_t>(purchased) : 0;
+				account.second.premiumRemainingDays = lastDay > now ? static_cast<uint32_t>((lastDay - now) / 86400) : 0;
+				break;
+			}
+
+			return true;
+		}
 		
 		bool registerCoinsTransaction(
 			const uint32_t &id,
@@ -146,6 +178,7 @@ namespace tests {
 			failSave = false;
 			failAddCoins = false;
 			failGetPassword = false;
+			failApplyPremiumDelta = false;
 			failAuthenticateFromSession = false;
 			password_ = "123456";
 
@@ -155,6 +188,7 @@ namespace tests {
 		bool failSave = false;
 		bool failAddCoins = false;
 		bool failGetPassword = false;
+		bool failApplyPremiumDelta = false;
 		bool failAuthenticateFromSession = false;
 		std::string password_ = "123456";
 		phmap::flat_hash_map<std::string, AccountInfo> accounts;
