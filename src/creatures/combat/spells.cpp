@@ -718,22 +718,27 @@ void Spell::getCombatDataAugment(const std::shared_ptr<Player> &player, CombatDa
 						break;
 					}
 					case PROFICIENCY_AUGMENTTYPE_LIFE_LEECH: {
-						const int32_t augmentValueLifeLeech = playerProficiencyAugment.value * 1000;
+						// damage.lifeLeech is in basis points: game.cpp adds it straight onto
+						// getSkillLevel(SKILL_LIFE_LEECH_AMOUNT), and player.cpp converts the equivalent non-spell
+						// proficiency perk with perkValue * 10000. augment.value is a fraction (0.12 = 12%), so the
+						// multiplier is 10000, not 1000 -- the old value delivered a tenth of the stated bonus.
+						const int32_t augmentValueLifeLeech = static_cast<int32_t>(playerProficiencyAugment.value * 10000.0f);
 						damage.lifeLeech += augmentValueLifeLeech;
 						break;
 					}
 					case PROFICIENCY_AUGMENTTYPE_MANA_LEECH: {
-						const int32_t augmentValueManaLeech = playerProficiencyAugment.value * 1000;
+						const int32_t augmentValueManaLeech = static_cast<int32_t>(playerProficiencyAugment.value * 10000.0f);
 						damage.manaLeech += augmentValueManaLeech;
 						break;
 					}
 					case PROFICIENCY_AUGMENTTYPE_CRITICAL_EXTRA_DAMAGE: {
-						const int32_t augmentValueCriticalDamage = playerProficiencyAugment.value * 1000;
+						// damage.criticalDamage is basis points too (combat.cpp: `+= 3000` is documented as +30%).
+						const int32_t augmentValueCriticalDamage = static_cast<int32_t>(playerProficiencyAugment.value * 10000.0f);
 						damage.criticalDamage += augmentValueCriticalDamage;
 						break;
 					}
 					case PROFICIENCY_AUGMENTTYPE_CRITICAL_HIT_CHANCE: {
-						const int32_t augmentValueCriticalChance = playerProficiencyAugment.value * 1000;
+						const int32_t augmentValueCriticalChance = static_cast<int32_t>(playerProficiencyAugment.value * 10000.0f);
 						damage.criticalChance += augmentValueCriticalChance;
 						break;
 					}
