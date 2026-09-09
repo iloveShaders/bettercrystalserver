@@ -1178,6 +1178,8 @@ void ItemParse::createAndRegisterScript(ItemType &itemType, pugi::xml_node attri
 				weapon->params.combatType = COMBAT_DEATHDAMAGE;
 			} else if (elementName == "holy") {
 				weapon->params.combatType = COMBAT_HOLYDAMAGE;
+			} else if (elementName == "physical") {
+				weapon->params.combatType = COMBAT_PHYSICALDAMAGE;
 			} else {
 				g_logger().warn("[{}] - wandtype '{}' does not exist", __FUNCTION__, elementName);
 			}

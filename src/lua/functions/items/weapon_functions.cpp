@@ -307,7 +307,7 @@ int WeaponFunctions::luaWeaponElement(lua_State* L) {
 	// weapon:element(combatType)
 	const WeaponShared_ptr &weapon = Lua::getUserdataShared<Weapon>(L, 1);
 	if (weapon) {
-		if (!Lua::getNumber<CombatType_t>(L, 2)) {
+		if (!Lua::isNumber(L, 2)) {
 			std::string element = Lua::getString(L, 2);
 			const std::string tmpStrValue = asLowerCaseString(element);
 			if (tmpStrValue == "earth") {
@@ -322,6 +322,8 @@ int WeaponFunctions::luaWeaponElement(lua_State* L) {
 				weapon->params.combatType = COMBAT_DEATHDAMAGE;
 			} else if (tmpStrValue == "holy") {
 				weapon->params.combatType = COMBAT_HOLYDAMAGE;
+			} else if (tmpStrValue == "physical") {
+				weapon->params.combatType = COMBAT_PHYSICALDAMAGE;
 			} else {
 				g_logger().warn("[WeaponFunctions:luaWeaponElement] - "
 				                "Type {} does not exist",
@@ -626,7 +628,7 @@ int WeaponFunctions::luaWeaponExtraElement(lua_State* L) {
 		const ItemType &it = Item::items.getItemType(id);
 		it.abilities->elementDamage = Lua::getNumber<uint16_t>(L, 2);
 
-		if (!Lua::getNumber<CombatType_t>(L, 3)) {
+		if (!Lua::isNumber(L, 3)) {
 			std::string element = Lua::getString(L, 3);
 			const std::string tmpStrValue = asLowerCaseString(element);
 			if (tmpStrValue == "earth") {
@@ -641,6 +643,8 @@ int WeaponFunctions::luaWeaponExtraElement(lua_State* L) {
 				it.abilities->elementType = COMBAT_DEATHDAMAGE;
 			} else if (tmpStrValue == "holy") {
 				it.abilities->elementType = COMBAT_HOLYDAMAGE;
+			} else if (tmpStrValue == "physical") {
+				it.abilities->elementType = COMBAT_PHYSICALDAMAGE;
 			} else {
 				g_logger().warn("[WeaponFunctions:luaWeaponExtraElement] - "
 				                "Type {} does not exist",
