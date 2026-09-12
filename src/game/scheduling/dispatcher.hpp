@@ -88,7 +88,9 @@ class Dispatcher {
 public:
 	explicit Dispatcher(ThreadPool &threadPool) :
 		threadPool(threadPool) {
-		threads.reserve(threadPool.get_thread_count() + 1);
+		// +1 for the dispatcher, plus spare slots for threads outside the pool
+		// (asio io_context / timer threads all enqueue events via getThreadTask()).
+		threads.reserve(threadPool.get_thread_count() + 9);
 		for (uint_fast16_t i = 0; i < threads.capacity(); ++i) {
 			threads.emplace_back(std::make_unique<ThreadTask>());
 		}
@@ -157,7 +159,13 @@ private:
 	thread_local static DispatcherContext dispacherContext;
 
 	const auto &getThreadTask() const {
-		return threads[ThreadPool::getThreadId()];
+		const auto threadId = ThreadPool::getThreadId();
+		// getThreadId() hands out unbounded ids; indexing past the table is UB.
+		// Any thread beyond the allocated slots shares the last one (its mutex makes that safe).
+		if (threadId < 0 || static_cast<size_t>(threadId) >= threads.size()) {
+			return threads.back();
+		}
+		return threads[threadId];
 	}
 
 	uint64_t scheduleEvent(uint32_t delay, std::function<void(void)> &&f, std::string_view context, bool cycle, bool log = true) {
