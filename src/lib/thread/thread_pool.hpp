@@ -60,6 +60,10 @@ public:
 		thread_local static int16_t id = -1;
 
 		if (id == -1) {
+			// fetch_add returns the previous value, so this is atomic as a pair.
+			// The original fetch_add-then-load could interleave and hand two
+			// threads the same id, making them share a Dispatcher slot that
+			// executeScheduledEvents() touches without holding its mutex.
 			id = lastId.fetch_add(1) + 1;
 		}
 

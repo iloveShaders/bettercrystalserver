@@ -17,353 +17,242 @@
 
 #pragma once
 
-#include "declarations.hpp"
+#include <atomic>
+#include "task.hpp"
+#include "lib/thread/thread_pool.hpp"
 
-#ifndef USE_PRECOMPILED_HEADERS
-	#include <mysql/mysql.h>
-	#include <atomic>
-	#include <mutex>
-	#include <utility>
-	#include <vector>
-#endif
+static constexpr uint16_t DISPATCHER_TASK_EXPIRATION = 2000;
+static constexpr uint16_t SCHEDULER_MINTICKS = 50;
+static constexpr uint16_t NPC_SELL_TICKS = 150;
 
-class DBResult;
-using DBResult_ptr = std::shared_ptr<DBResult>;
-
-class Database {
-public:
-	static const size_t MAX_QUERY_SIZE = 8 * 1024 * 1024; // 8 Mb -- half the default MySQL max_allowed_packet size
-
-	Database() = default;
-	~Database();
-
-	// Singleton - ensures we don't accidentally copy it.
-	Database(const Database &) = delete;
-	Database &operator=(const Database &) = delete;
-
-	static Database &getInstance();
-
-	bool connect();
-
-	bool connect(const std::string* host, const std::string* user, const std::string* password, const std::string* database, uint32_t port, const std::string* sock, uint32_t poolSize = 4);
-
-	/**
-	 * @brief Creates a backup of the database.
-	 *
-	 * This function generates a backup of the database, with options for compression.
-	 * The backup can be triggered periodically or during specific events like server loading.
-	 *
-	 * The backup operation will only execute if the configuration option `MYSQL_DB_BACKUP`
-	 * is set to true in the `config.lua` file. If this configuration is disabled, the function
-	 * will return without performing any action.
-	 *
-	 * @param compress Indicates whether the backup should be compressed.
-	 * - If `compress` is true, the backup is created during an interval-based save, which occurs every 2 hours.
-	 *   This helps prevent excessive growth in the number of backup files.
-	 * - If `compress` is false, the backup is created during the global save, which is triggered once a day when the server loads.
-	 */
-	void createDatabaseBackup(bool compress) const;
-
-	bool executeQuery(std::string_view query);
-
-	DBResult_ptr storeQuery(std::string_view query);
-
-	std::string escapeString(const std::string &s);
-
-	std::string escapeBlob(const char* s, uint32_t length);
-
-	uint64_t getLastInsertId();
-
-	/**
-	 * @brief Atomically executes an INSERT and returns the generated id in the same connection round-trip.
-	 *
-	 * Why this exists: with a connection pool, calling executeQuery() and then getLastInsertId()
-	 * is NOT safe, because the second call may acquire a different connection from the pool
-	 * (round-robin) and return that connection's LAST_INSERT_ID() — which is either 0 or, worse,
-	 * the id of an unrelated INSERT that another thread happened to run on that connection.
-	 *
-	 * This method solves the problem by executing "INSERT ... ; SELECT LAST_INSERT_ID() AS id"
-	 * in a single storeQuery() call, guaranteeing that the SELECT runs on the SAME connection
-	 * as the INSERT. The connection is acquired once, both statements execute on that pinned
-	 * connection, and the result is read before the connection is released to the pool.
-	 *
-	 * @return The generated id on success, or 0 on failure (caller must check).
-	 *
-	 * @note This MUST be used instead of executeQuery() + getLastInsertId() for any INSERT
-	 * whose auto-increment id is consumed downstream (account/player creation, guild creation,
-	 * market offers, house bids, statements, etc.).
-	 */
-	uint64_t insertAndGetId(std::string_view query);
-
-	static const char* getClientVersion() {
-		return mysql_get_client_info();
-	}
-
-	uint64_t getMaxPacketSize() const {
-		return maxPacketSize;
-	}
-
-private:
-	struct DBConnection {
-		MYSQL* handle = nullptr;
-		std::mutex mutex;
-	};
-
-	bool beginTransaction();
-	bool rollback();
-	bool commit();
-
-	static bool isRecoverableError(unsigned int error);
-
-	bool retryQuery(MYSQL* handle, std::string_view query, int retries);
-
-	// Acquire a connection from the pool (mutex locked on return).
-	// If inside a transaction, returns the pinned connection (mutex already locked).
-	DBConnection* getConnection();
-
-	// Release a connection back to the pool (unlocks mutex).
-	// If the connection is pinned by a transaction, does nothing.
-	void putConnection(DBConnection* conn);
-
-	std::vector<std::unique_ptr<DBConnection>> connections;
-	std::atomic<size_t> nextIndex { 0 };
-	uint64_t maxPacketSize = 1048576;
-
-	static thread_local DBConnection* tls_pinnedConnection;
-
-	friend class DBTransaction;
+enum class TaskGroup : int8_t {
+	ThreadPool = -1,
+	Walk,
+	WalkParallel,
+	Serial,
+	GenericParallel,
+	Last
 };
 
-constexpr auto g_database = Database::getInstance;
+enum class DispatcherType : uint8_t {
+	None,
+	Event,
+	AsyncEvent,
+	ScheduledEvent,
+	CycleEvent
+};
 
-class DBResult {
-public:
-	explicit DBResult(MYSQL_RES* res);
-	~DBResult();
+struct DispatcherContext {
+	static bool isOn();
 
-	// Non copyable
-	DBResult(const DBResult &) = delete;
-	DBResult &operator=(const DBResult &) = delete;
-
-	template <typename T>
-	T getNumber(const std::string &s) const {
-		auto it = listNames.find(s);
-		if (it == listNames.end()) {
-			g_logger().error("[DBResult::getNumber] - Column '{}' doesn't exist in the result set", s);
-			return T();
-		}
-
-		if (row[it->second] == nullptr) {
-			return T();
-		}
-
-		T data {};
-		try {
-			// Check if the type T is a enum
-			if constexpr (std::is_enum_v<T>) {
-				using underlying_type = std::underlying_type_t<T>;
-				underlying_type value = 0;
-				if constexpr (std::is_signed_v<underlying_type>) {
-					value = static_cast<underlying_type>(std::stoll(row[it->second]));
-				} else {
-					value = static_cast<underlying_type>(std::stoull(row[it->second]));
-				}
-				return static_cast<T>(value);
-			}
-			// Check if the type T is signed or unsigned
-			if constexpr (std::is_signed_v<T>) {
-				// Check if the type T is int8_t or int16_t
-				if constexpr (std::is_same_v<T, int8_t> || std::is_same_v<T, int16_t>) {
-					// Use std::stoi to convert string to int8_t
-					data = static_cast<T>(std::stoi(row[it->second]));
-				}
-				// Check if the type T is int32_t
-				else if constexpr (std::is_same_v<T, int32_t>) {
-					// Use std::stol to convert string to int32_t
-					data = static_cast<T>(std::stol(row[it->second]));
-				}
-				// Check if the type T is int64_t
-				else if constexpr (std::is_same_v<T, int64_t>) {
-					// Use std::stoll to convert string to int64_t
-					data = static_cast<T>(std::stoll(row[it->second]));
-				} else {
-					// Throws exception indicating that type T is invalid
-					g_logger().error("Invalid signed type T");
-				}
-			} else if (std::is_same<T, bool>::value) {
-				data = static_cast<T>(std::stoi(row[it->second]));
-			} else {
-				// Check if the type T is uint8_t or uint16_t or uint32_t
-				if constexpr (std::is_same_v<T, uint8_t> || std::is_same_v<T, uint16_t> || std::is_same_v<T, uint32_t>) {
-					// Use std::stoul to convert string to uint8_t
-					data = static_cast<T>(std::stoul(row[it->second]));
-				}
-				// Check if the type T is uint64_t
-				else if constexpr (std::is_same_v<T, uint64_t>) {
-					// Use std::stoull to convert string to uint64_t
-					data = static_cast<T>(std::stoull(row[it->second]));
-				} else {
-					// Send log indicating that type T is invalid
-					g_logger().error("Column '{}' has an invalid unsigned T is invalid", s);
-				}
-			}
-		} catch (std::invalid_argument &e) {
-			// Value of string is invalid
-			g_logger().error("Column '{}' has an invalid value set, error code: {}", s, e.what());
-			data = T();
-		} catch (std::out_of_range &e) {
-			// Value of string is too large to fit the range allowed by type T
-			g_logger().error("Column '{}' has a value out of range, error code: {}", s, e.what());
-			data = T();
-		}
-
-		return data;
+	bool isGroup(const TaskGroup _group) const {
+		return group == _group;
 	}
 
-	std::string getString(const std::string &s) const;
-	const char* getStream(const std::string &s, unsigned long &size) const;
-	static uint8_t getU8FromString(const std::string &string, const std::string &function);
-	static int8_t getInt8FromString(const std::string &string, const std::string &function);
+	bool isAsync() const {
+		return type == DispatcherType::AsyncEvent;
+	}
 
-	size_t countResults() const;
-	bool hasNext() const;
-	bool next();
+	auto getGroup() const {
+		return group;
+	}
+
+	auto getName() const {
+		return taskName;
+	}
+
+	auto getType() const {
+		return type;
+	}
 
 private:
-	MYSQL_RES* handle;
-	MYSQL_ROW row;
+	void reset() {
+		group = TaskGroup::ThreadPool;
+		type = DispatcherType::None;
+		taskName = "ThreadPool::call";
+	}
 
-	std::map<std::string_view, size_t> listNames;
+	DispatcherType type = DispatcherType::None;
+	TaskGroup group = TaskGroup::ThreadPool;
+	std::string_view taskName;
 
-	friend class Database;
+	friend class Dispatcher;
 };
 
 /**
- * INSERT statement.
+ * Dispatcher allow you to dispatch a task async to be executed
+ * in the dispatching thread. You can dispatch with an expiration
+ * time, after which the task will be ignored.
  */
-class DBInsert {
+class Dispatcher {
 public:
-	explicit DBInsert(std::string query);
-	void upsert(const std::vector<std::string> &columns);
-	bool addRow(std::string_view row);
-	bool addRow(std::ostringstream &row);
-	bool execute();
+	explicit Dispatcher(ThreadPool &threadPool) :
+		threadPool(threadPool) {
+		// +1 for the dispatcher, plus spare slots for threads outside the pool
+		// (asio io_context / timer threads all enqueue events via getThreadTask()).
+		threads.reserve(threadPool.get_thread_count() + 9);
+		for (uint_fast16_t i = 0; i < threads.capacity(); ++i) {
+			threads.emplace_back(std::make_unique<ThreadTask>());
+		}
+
+		scheduledTasksRef.reserve(2000);
+	}
+
+	// Ensures that we don't accidentally copy it
+	Dispatcher(const Dispatcher &) = delete;
+	Dispatcher operator=(const Dispatcher &) = delete;
+
+	static Dispatcher &getInstance();
+
+	void addEvent(std::function<void(void)> &&f, std::string_view context, uint32_t expiresAfterMs = 0);
+	void addWalkEvent(std::function<void(void)> &&f, uint32_t expiresAfterMs = 0); // No need context name
+
+	uint64_t cycleEvent(uint32_t delay, std::function<void(void)> &&f, std::string_view context) {
+		return scheduleEvent(delay, std::move(f), context, true);
+	}
+
+	uint64_t scheduleEvent(const std::shared_ptr<Task> &task);
+	uint64_t scheduleEvent(uint32_t delay, std::function<void(void)> &&f, std::string_view context) {
+		return scheduleEvent(delay, std::move(f), context, false);
+	}
+
+	void asyncEvent(std::function<void(void)> &&f, TaskGroup group = TaskGroup::GenericParallel);
+	void asyncWait(size_t size, std::function<void(size_t i)> &&f);
+
+	uint64_t asyncCycleEvent(uint32_t delay, std::function<void(void)> &&f, TaskGroup group = TaskGroup::GenericParallel) {
+		return scheduleEvent(
+			delay, [this, f = std::move(f), group] { asyncEvent([f] { f(); }, group); }, dispacherContext.taskName, true, false
+		);
+	}
+
+	uint64_t asyncScheduleEvent(uint32_t delay, std::function<void(void)> &&f, TaskGroup group = TaskGroup::GenericParallel) {
+		return scheduleEvent(
+			delay, [this, f = std::move(f), group] { asyncEvent([f] { f(); }, group); }, dispacherContext.taskName, false, false
+		);
+	}
+
+	/**
+	 * @brief Executes an action wrapped in a std::function safely on the dispatcher thread.
+	 *
+	 * This method ensures that the given function is executed on the correct thread (the dispatcher thread).
+	 * If this method is called from a different thread, it will redirect execution to the dispatcher thread,
+	 * using appropriate mechanisms (such as message queues or event loops).
+	 * If called directly from the dispatcher thread, it will execute the function immediately.
+	 *
+	 * @param action The function wrapped in a std::function<void(void)> that should be executed.
+	 *
+	 * @note This method is useful in multi-threaded applications to avoid race conditions or thread context violations.
+	 */
+	void safeCall(std::function<void(void)> &&f);
+
+	[[nodiscard]] uint64_t getDispatcherCycle() const {
+		return dispatcherCycle;
+	}
+
+	void stopEvent(uint64_t eventId);
+
+	const auto &context() const {
+		return dispacherContext;
+	}
 
 private:
-	std::vector<std::string> upsertColumns;
-	std::string query;
-	std::string values;
-	size_t length;
-};
+	thread_local static DispatcherContext dispacherContext;
 
-class DBTransaction {
-public:
-	explicit DBTransaction() = default;
+	const auto &getThreadTask() const {
+		const auto threadId = ThreadPool::getThreadId();
+		// getThreadId() hands out unbounded ids; indexing past the table is UB.
+		// Any thread beyond the allocated slots shares the last one (its mutex makes that safe).
+		if (threadId < 0 || static_cast<size_t>(threadId) >= threads.size()) {
+			return threads.back();
+		}
+		return threads[threadId];
+	}
 
-	~DBTransaction() = default;
+	uint64_t scheduleEvent(uint32_t delay, std::function<void(void)> &&f, std::string_view context, bool cycle, bool log = true) {
+		return scheduleEvent(std::make_shared<Task>(std::move(f), context, delay, cycle, log));
+	}
 
-	// non-copyable
-	DBTransaction(const DBTransaction &) = delete;
-	DBTransaction &operator=(const DBTransaction &) = delete;
+	void init();
+	void shutdown() {
+		signalSchedule.notify_all();
+	}
 
-	// non-movable
-	DBTransaction(const DBTransaction &&) = delete;
-	DBTransaction &operator=(const DBTransaction &&) = delete;
+	inline void mergeAsyncEvents();
+	inline void mergeEvents();
+	inline void __mergeEvents();
 
-	template <typename Func>
-	static bool executeWithinTransaction(const Func &toBeExecuted) {
-		bool changesExpected = toBeExecuted();
-		if (changesExpected) {
-			DBTransaction transaction;
-			try {
-				transaction.begin();
-				transaction.commit();
-				return changesExpected;
-			} catch (const std::exception &exception) {
-				transaction.rollback();
-				g_logger().error("[{}] Error occurred during transaction, error: {}", __FUNCTION__, exception.what());
-				return false;
+	inline void executeEvents(const TaskGroup startGroup = TaskGroup::Walk);
+	inline void executeScheduledEvents();
+
+	inline void executeSerialEvents(const uint8_t groupId);
+	inline void executeParallelEvents(const uint8_t groupId);
+	inline std::chrono::milliseconds timeUntilNextScheduledTask() const;
+
+	inline void checkPendingTasks() {
+		hasPendingTasks = false;
+		for (uint_fast8_t i = 0; i < static_cast<uint8_t>(TaskGroup::Last); ++i) {
+			if (!m_tasks[i].empty()) {
+				hasPendingTasks = true;
+				break;
 			}
-		} else {
-			return true;
 		}
 	}
 
-private:
-	bool begin() {
-		// Ensure that the transaction has not already been started
-		if (state != STATE_NO_START) {
-			return false;
-		}
-
-		try {
-			// Start the transaction
-			state = STATE_START;
-			return Database::getInstance().beginTransaction();
-		} catch (const std::exception &exception) {
-			// An error occurred while starting the transaction
-			state = STATE_NO_START;
-			g_logger().error("[{}] An error occurred while starting the transaction, error: {}", __FUNCTION__, exception.what());
-			return false;
+	void notify() {
+		if (!hasPendingTasks) {
+			hasPendingTasks = true;
+			signalSchedule.notify_one();
 		}
 	}
 
-	void rollback() {
-		// Ensure that the transaction has been started
-		if (state != STATE_START) {
-			return;
+	std::vector<std::pair<uint64_t, uint64_t>> generatePartition(size_t size) const {
+		if (size == 0) {
+			return {};
 		}
 
-		try {
-			// Rollback the transaction
-			state = STATE_NO_START;
-			Database::getInstance().rollback();
-		} catch (const std::exception &exception) {
-			// An error occurred while rolling back the transaction
-			g_logger().error("[{}] An error occurred while rolling back the transaction, error: {}", __FUNCTION__, exception.what());
-		}
-	}
+		const size_t threadCount = threadPool.get_thread_count();
+		std::vector<std::pair<uint64_t, uint64_t>> list;
+		list.reserve(threadCount);
 
-	void commit() {
-		// Ensure that the transaction has been started
-		if (state != STATE_START) {
-			g_logger().error("Transaction not started");
-			return;
+		const size_t sizePerBlock = (size + threadCount - 1) / threadCount;
+		for (size_t i = 0; i < size; i += sizePerBlock) {
+			list.emplace_back(i, std::min<uint64_t>(size, i + sizePerBlock));
 		}
 
-		try {
-			// Commit the transaction
-			state = STATE_COMMIT;
-			Database::getInstance().commit();
-		} catch (const std::exception &exception) {
-			// An error occurred while committing the transaction
-			state = STATE_NO_START;
-			g_logger().error("[{}] An error occurred while committing the transaction, error: {}", __FUNCTION__, exception.what());
+		return list;
+	}
+
+	uint_fast64_t dispatcherCycle = 0;
+
+	ThreadPool &threadPool;
+	std::condition_variable signalSchedule;
+	std::atomic_bool hasPendingTasks = false;
+	std::mutex dummyMutex; // This is only used for signaling the condition variable and not as an actual lock.
+
+	// Thread Events
+	struct ThreadTask {
+		ThreadTask() {
+			for (auto &task : tasks) {
+				task.reserve(2000);
+			}
+			scheduledTasks.reserve(2000);
 		}
-	}
 
-	bool isStarted() const {
-		return state == STATE_START;
-	}
-	bool isCommitted() const {
-		return state == STATE_COMMIT;
-	}
-	bool isRolledBack() const {
-		return state == STATE_NO_START;
-	}
+		std::array<std::vector<Task>, static_cast<uint8_t>(TaskGroup::Last)> tasks;
+		std::vector<std::shared_ptr<Task>> scheduledTasks;
+		std::mutex mutex;
+	};
 
-	TransactionStates_t state = STATE_NO_START;
+	std::vector<std::unique_ptr<ThreadTask>> threads;
+
+	// Main Events
+	std::array<std::vector<Task>, static_cast<uint8_t>(TaskGroup::Last)> m_tasks;
+	phmap::btree_multiset<std::shared_ptr<Task>, Task::Compare> scheduledTasks {};
+	phmap::parallel_flat_hash_map_m<uint64_t, std::shared_ptr<Task>> scheduledTasksRef {};
+
+	std::atomic<bool> asyncWaitDisabled = false;
+
+	friend class CrystalServer;
 };
 
-class DatabaseException : public std::exception {
-public:
-	explicit DatabaseException(std::string message) :
-		message(std::move(message)) { }
-
-	const char* what() const noexcept override {
-		return message.c_str();
-	}
-
-private:
-	std::string message;
-};
+constexpr auto g_dispatcher = Dispatcher::getInstance;
