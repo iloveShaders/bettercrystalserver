@@ -200,15 +200,18 @@ void Dispatcher::mergeEvents() {
 
 std::chrono::milliseconds Dispatcher::timeUntilNextScheduledTask() const {
 	constexpr auto CHRONO_0 = std::chrono::milliseconds(0);
-	constexpr auto CHRONO_MILI_MAX = std::chrono::milliseconds::max();
+	// Never wait unbounded. notify() can race with the dispatcher's `if (!hasPendingTasks)`
+	// check and be lost; because hasPendingTasks latches true, no later notify() re-signals.
+	// Capping the wait guarantees the loop re-checks its queues and self-heals.
+	constexpr auto CHRONO_MAX_WAIT = std::chrono::milliseconds(100);
 
 	if (scheduledTasks.empty()) {
-		return CHRONO_MILI_MAX;
+		return CHRONO_MAX_WAIT;
 	}
 
 	const auto &task = *scheduledTasks.begin();
 	const auto timeRemaining = std::chrono::milliseconds(task->getTime() - OTSYS_TIME());
-	return std::max<std::chrono::milliseconds>(timeRemaining, CHRONO_0);
+	return std::max<std::chrono::milliseconds>(std::min<std::chrono::milliseconds>(timeRemaining, CHRONO_MAX_WAIT), CHRONO_0);
 }
 
 void Dispatcher::addEvent(std::function<void(void)> &&f, std::string_view context, uint32_t expiresAfterMs) {
