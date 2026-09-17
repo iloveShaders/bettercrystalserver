@@ -1420,7 +1420,7 @@ void ProtocolGame::parsePacketFromDispatcher(NetworkMessage &msg, uint8_t recvby
 			parseQuickLootBlackWhitelist(msg);
 			break;
 		case 0x92:
-			parseCyclopediaMapAction(msg, recvbyte);
+			parseOpenDepotSearch();
 			break;
 		case 0x93:
 			parseCloseDepotSearch();
