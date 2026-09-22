@@ -340,6 +340,12 @@ void IOWheel::initializePaladinSpells() {
 void IOWheel::initializeSorcererSpells() {
 	m_wheelBonusData.spells.sorcerer[0].name = "Any_Special_Mage_Spell"; // Vocation Adjustment: Special Spells (replaces Magic Shield)
 	m_wheelBonusData.spells.sorcerer[0].grade[1].decrease.cooldown = 4; // I -4s cd
+	// The strike spells are gated by a SECONDARY group cooldown of the same length
+	// as their own ("special" 8s / "ultimatestrikes" 30s). applyCooldownConditions()
+	// subtracts COOLDOWN and SECONDARY_GROUP_COOLDOWN from separate boost keys, so
+	// reducing only the spell cooldown leaves the group condition gating the recast
+	// and the augment has no visible effect. Reduce both, as the Focus augment does.
+	m_wheelBonusData.spells.sorcerer[0].grade[1].decrease.secondaryGroupCooldown = 4; // I -4s secondary group cd
 	m_wheelBonusData.spells.sorcerer[0].grade[2].increase.damage = 50; // II +50% base damage
 
 	m_wheelBonusData.spells.sorcerer[1].name = "Death Echo"; // Vocation Adjustment: replaces Sap Strength
