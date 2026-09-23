@@ -11895,7 +11895,7 @@ void ProtocolGame::sendBossDifficultySelection(uint8_t selectedDifficulty, const
 		msg.addString(s);
 	}
 
-	g_logger().info("[BossDiffSel] 0x2F sel={} raceId(f3)={} banners={}", selectedDifficulty, numbers.size() > 2 ? numbers[2] : 0, banners.size());
+	g_logger().debug("[BossDiffSel] 0x2F sel={} raceId(f3)={} banners={}", selectedDifficulty, numbers.size() > 2 ? numbers[2] : 0, banners.size());
 	writeToOutputBuffer(msg);
 }
 
@@ -11917,7 +11917,6 @@ void ProtocolGame::parseBossDifficultySelection(NetworkMessage &msg) {
 
 	if (action == 0x02) {
 		// spinner preview — the window stays open, nothing to do server-side (selection is client-side)
-		g_logger().info("[BossDiffSel] select difficulty={}", difficulty);
 		return;
 	}
 	if (action == 0x00) {
@@ -11956,18 +11955,18 @@ void ProtocolGame::parseBossDifficultySelection(NetworkMessage &msg) {
 		// against whatever ceiling happened to be left in 910105.
 		if (leverItemId == 0 || leverPosition.x == 0 || leverPosition.y == 0) {
 			player->addStorageValue(910100, -1);
-			g_logger().info("[BossDiffSel] no lever context, ignoring start (difficulty={})", difficulty);
+			g_logger().debug("[BossDiffSel] no lever context, ignoring start (difficulty={})", difficulty);
 		} else {
 			player->addStorageValue(910100, difficulty);
 			g_game().playerUseItem(player->getID(), leverPosition, 0, 0, leverItemId);
-			g_logger().info("[BossDiffSel] START FIGHT difficulty={} (0..25) allowed={}", difficulty, allowedDifficulty);
+			g_logger().debug("[BossDiffSel] START FIGHT difficulty={} (0..25) allowed={}", difficulty, allowedDifficulty);
 		}
 		// --- end Lua bridge ----------------------------------------------------------
 	} else {
 		// Cancel: clear the pending selection so a later lever pull re-opens the window
 		// instead of silently starting a fight at a stale difficulty.
 		player->addStorageValue(910100, -2);
-		g_logger().info("[BossDiffSel] cancel/other action={}", action);
+		g_logger().debug("[BossDiffSel] cancel/other action={}", action);
 	}
 	// Start (after handling) or Cancel -> close the dialog
 	NetworkMessage out;
