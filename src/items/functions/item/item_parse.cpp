@@ -600,6 +600,8 @@ void ItemParse::parseSupressDrunk(const std::string &stringValue, pugi::xml_attr
 			conditionType = CONDITION_DAZZLED;
 		} else if (stringValue == "suppresscurse") {
 			conditionType = CONDITION_CURSED;
+		} else if (stringValue == "suppressfear") {
+			conditionType = CONDITION_FEARED;
 		}
 
 		itemType.getAbilities().conditionSuppressions[conditionType] = conditionType;
