@@ -124,6 +124,7 @@ const phmap::flat_hash_map<std::string, ItemParseAttributes_t> ItemParseAttribut
 	{ "suppressfreeze", ITEM_PARSE_SUPPRESSFREEZE },
 	{ "suppressdazzle", ITEM_PARSE_SUPPRESSDAZZLE },
 	{ "suppresscurse", ITEM_PARSE_SUPPRESSCURSE },
+	{ "suppressfear", ITEM_PARSE_SUPPRESSFEAR },
 	{ "field", ITEM_PARSE_FIELD },
 	{ "replaceable", ITEM_PARSE_REPLACEABLE },
 	{ "partnerdirection", ITEM_PARSE_PARTNERDIRECTION },
