@@ -143,7 +143,21 @@ HistoryMarketOfferList IOMarket::getOwnHistory(MarketAction_t action, uint32_t p
 
 	do {
 		HistoryMarketOffer offer {};
-		offer.itemId = result->getNumber<uint16_t>("itemtype");
+
+		// `itemtype` is streamed to the client verbatim as a uint16 appearance id by
+		// ProtocolGame::sendMarketBrowseOwnHistory. A row holding 0, an id above the
+		// uint16 range (int(10) UNSIGNED column, truncated silently on read), or an id
+		// with no entry in items.xml makes the client throw
+		// "TAppearanceType::ID 0 does not exist in OBJECTS!" and drop the connection -
+		// which locks the player out of the market window entirely. One bad row must
+		// not be able to do that, so skip it instead of shipping it.
+		const uint32_t rawItemType = result->getNumber<uint32_t>("itemtype");
+		if (rawItemType == 0 || rawItemType > 0xFFFF || Item::items[static_cast<uint16_t>(rawItemType)].id == 0) {
+			g_logger().warn("[IOMarket::getOwnHistory] - skipping market_history row for player {} with unusable itemtype {}", playerId, rawItemType);
+			continue;
+		}
+
+		offer.itemId = static_cast<uint16_t>(rawItemType);
 		offer.amount = result->getNumber<uint16_t>("amount");
 		offer.price = result->getNumber<uint64_t>("price");
 		offer.timestamp = result->getNumber<uint32_t>("expires_at");
