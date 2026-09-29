@@ -10748,6 +10748,15 @@ void Player::forgeFuseItems(ForgeAction_t actionType, uint16_t firstItemId, uint
 		return;
 	}
 
+	// The forged items are handed back inside an exaltation chest, which carries its own weight on top of
+	// the items it holds. Since both source items are removed before the chest is built, the net capacity
+	// requirement is exactly the empty chest. Checked here, before anything is destroyed.
+	if (getFreeCapacity() < Item::items[ITEM_EXALTATION_CHEST].weight) {
+		sendCancelMessage(RETURNVALUE_NOTENOUGHCAPACITY);
+		sendForgeError(RETURNVALUE_NOTENOUGHCAPACITY);
+		return;
+	}
+
 	uint32_t maxContainer = static_cast<uint32_t>(g_configManager().getNumber(MAX_CONTAINER));
 	auto backpack = getInventoryItem(CONST_SLOT_BACKPACK);
 	auto mainBackpack = backpack ? backpack->getContainer() : nullptr;
@@ -10777,6 +10786,27 @@ void Player::forgeFuseItems(ForgeAction_t actionType, uint16_t firstItemId, uint
 	history.success = success;
 	history.tierLoss = reduceTierLoss;
 
+	// Once a source item is removed below it is gone for good - the replacements only ever exist inside the
+	// exaltation chest, which is not attached to anything until the hand-over at the end of this function.
+	// Any bail-out in between must give the player an equivalent back.
+	const auto refundForgeSource = [this](uint16_t refundItemId, uint8_t refundTier) {
+		const auto &refundItem = Item::CreateItem(refundItemId, 1);
+		if (!refundItem) {
+			g_logger().error("[forgeFuseItems] Failed to recreate item {} to refund player {}", refundItemId, getName());
+			return;
+		}
+		if (refundTier > 0) {
+			refundItem->setTier(refundTier);
+		}
+		if (g_game().internalAddItem(static_self_cast<Player>(), refundItem, INDEX_WHEREEVER) == RETURNVALUE_NOERROR) {
+			return;
+		}
+		const auto &refundTile = getTile();
+		if (!refundTile || g_game().internalAddItem(refundTile, refundItem, INDEX_WHEREEVER, FLAG_NOLIMIT) != RETURNVALUE_NOERROR) {
+			g_logger().error("[forgeFuseItems] Failed to refund item {} to player {}", refundItemId, getName());
+		}
+	};
+
 	const auto &firstForgingItem = getForgeItemFromId(firstItemId, tier);
 	if (!firstForgingItem) {
 		g_logger().error("[Log 1] Player with name {} failed to fuse item with id {}", getName(), firstItemId);
@@ -10793,12 +10823,14 @@ void Player::forgeFuseItems(ForgeAction_t actionType, uint16_t firstItemId, uint
 	const auto &secondForgingItem = getForgeItemFromId(secondItemId, tier);
 	if (!secondForgingItem) {
 		g_logger().error("[Log 2] Player with name {} failed to fuse item with id {}", getName(), secondItemId);
+		refundForgeSource(firstItemId, tier);
 		sendForgeError(RETURNVALUE_CONTACTADMINISTRATOR);
 		return;
 	}
 	if (returnValue = g_game().internalRemoveItem(secondForgingItem, 1);
 	    returnValue != RETURNVALUE_NOERROR) {
 		g_logger().error("[Log 2] Failed to remove forge item {} from player with name {}", secondItemId, getName());
+		refundForgeSource(firstItemId, tier);
 		sendCancelMessage(getReturnMessage(returnValue));
 		sendForgeError(RETURNVALUE_CONTACTADMINISTRATOR);
 		return;
@@ -10990,10 +11022,20 @@ void Player::forgeFuseItems(ForgeAction_t actionType, uint16_t firstItemId, uint
 
 	returnValue = g_game().internalAddItem(static_self_cast<Player>(), exaltationContainer, INDEX_WHEREEVER);
 	if (returnValue != RETURNVALUE_NOERROR) {
-		g_logger().error("Failed to add exaltation chest to player with name {}", getName());
-		sendCancelMessage(getReturnMessage(returnValue));
-		sendForgeError(RETURNVALUE_CONTACTADMINISTRATOR);
-		return;
+		// The chest holds the ONLY copies of the forged items - the originals were already removed above.
+		// Returning here would drop the last reference and destroy them with it, so fall back to the ground.
+		const auto &playerTile = getTile();
+		const ReturnValue dropValue = playerTile ? g_game().internalAddItem(playerTile, exaltationContainer, INDEX_WHEREEVER, FLAG_NOLIMIT) : RETURNVALUE_NOTPOSSIBLE;
+		if (dropValue != RETURNVALUE_NOERROR) {
+			g_logger().error("Failed to add exaltation chest to player with name {}", getName());
+			sendCancelMessage(getReturnMessage(returnValue));
+			sendForgeError(RETURNVALUE_CONTACTADMINISTRATOR);
+			return;
+		}
+
+		g_logger().warn("Exaltation chest could not be added to player {} ({}), dropped on the ground instead", getName(), getReturnMessage(returnValue));
+		sendTextMessage(MESSAGE_EVENT_ADVANCE, "You did not have enough room or capacity - your exaltation chest was dropped at your feet.");
+		returnValue = RETURNVALUE_NOERROR;
 	}
 
 	history.firstItemName = firstForgingItem->getName();
@@ -11009,6 +11051,14 @@ void Player::forgeFuseItems(ForgeAction_t actionType, uint16_t firstItemId, uint
 void Player::forgeTransferItemTier(ForgeAction_t actionType, uint16_t donorItemId, uint8_t tier, uint16_t receiveItemId, bool convergence) {
 	if (getFreeBackpackSlots() == 0) {
 		sendCancelMessage(RETURNVALUE_NOTENOUGHROOM);
+		return;
+	}
+
+	// Same as the fusion path: the result comes back inside an exaltation chest, and both source items are
+	// already gone by the time it is handed over. Reject up front rather than destroying them.
+	if (getFreeCapacity() < Item::items[ITEM_EXALTATION_CHEST].weight) {
+		sendCancelMessage(RETURNVALUE_NOTENOUGHCAPACITY);
+		sendForgeError(RETURNVALUE_NOTENOUGHCAPACITY);
 		return;
 	}
 
@@ -11127,10 +11177,19 @@ void Player::forgeTransferItemTier(ForgeAction_t actionType, uint16_t donorItemI
 
 	returnValue = g_game().internalAddItem(static_self_cast<Player>(), exaltationContainer, INDEX_WHEREEVER);
 	if (returnValue != RETURNVALUE_NOERROR) {
-		g_logger().error("[Log 10] Failed to add forge item {} from player with name {}", fmt::underlying(ITEM_EXALTATION_CHEST), getName());
-		sendCancelMessage(getReturnMessage(returnValue));
-		sendForgeError(RETURNVALUE_CONTACTADMINISTRATOR);
-		return;
+		// The chest holds the only copy of the tiered item; the donor and the receiver are already removed.
+		const auto &playerTile = getTile();
+		const ReturnValue dropValue = playerTile ? g_game().internalAddItem(playerTile, exaltationContainer, INDEX_WHEREEVER, FLAG_NOLIMIT) : RETURNVALUE_NOTPOSSIBLE;
+		if (dropValue != RETURNVALUE_NOERROR) {
+			g_logger().error("[Log 10] Failed to add forge item {} from player with name {}", fmt::underlying(ITEM_EXALTATION_CHEST), getName());
+			sendCancelMessage(getReturnMessage(returnValue));
+			sendForgeError(RETURNVALUE_CONTACTADMINISTRATOR);
+			return;
+		}
+
+		g_logger().warn("Exaltation chest could not be added to player {} ({}), dropped on the ground instead", getName(), getReturnMessage(returnValue));
+		sendTextMessage(MESSAGE_EVENT_ADVANCE, "You did not have enough room or capacity - your exaltation chest was dropped at your feet.");
+		returnValue = RETURNVALUE_NOERROR;
 	}
 
 	history.firstItemName = Item::items[donorItemId].name;
