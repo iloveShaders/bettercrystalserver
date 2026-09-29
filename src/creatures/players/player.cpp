@@ -11033,7 +11033,7 @@ void Player::forgeFuseItems(ForgeAction_t actionType, uint16_t firstItemId, uint
 			return;
 		}
 
-		g_logger().warn("Exaltation chest could not be added to player {} ({}), dropped on the ground instead", getName(), getReturnMessage(returnValue));
+		g_logger().warn("[forgeFuseItems] Exaltation chest not handed to player {} ({}) - chest weight {}, free cap {}, free bp slots {}, items held {}; dropped on the ground instead", getName(), getReturnMessage(returnValue), exaltationContainer->getWeight(), getFreeCapacity(), getFreeBackpackSlots(), mainBackpack ? mainBackpack->getItemHoldingCount() : 0);
 		sendTextMessage(MESSAGE_EVENT_ADVANCE, "You did not have enough room or capacity - your exaltation chest was dropped at your feet.");
 		returnValue = RETURNVALUE_NOERROR;
 	}
@@ -11187,7 +11187,7 @@ void Player::forgeTransferItemTier(ForgeAction_t actionType, uint16_t donorItemI
 			return;
 		}
 
-		g_logger().warn("Exaltation chest could not be added to player {} ({}), dropped on the ground instead", getName(), getReturnMessage(returnValue));
+		g_logger().warn("[forgeTransferItemTier] Exaltation chest not handed to player {} ({}) - chest weight {}, free cap {}, free bp slots {}; dropped on the ground instead", getName(), getReturnMessage(returnValue), exaltationContainer->getWeight(), getFreeCapacity(), getFreeBackpackSlots());
 		sendTextMessage(MESSAGE_EVENT_ADVANCE, "You did not have enough room or capacity - your exaltation chest was dropped at your feet.");
 		returnValue = RETURNVALUE_NOERROR;
 	}
