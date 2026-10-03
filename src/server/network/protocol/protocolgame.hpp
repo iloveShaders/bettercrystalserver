@@ -139,6 +139,9 @@ private:
 	void release() override;
 
 	void checkCreatureAsKnown(uint32_t id, bool &known, uint32_t &removedKnown);
+	// True when the client has not been introduced to this creature via AddCreature, so any update
+	// packet referencing it would be discarded. The player themself is always treated as known.
+	bool isCreatureUnknownToClient(const std::shared_ptr<Creature> &creature) const;
 	void removeCreature(uint32_t id);
 
 	bool canSee(int32_t x, int32_t y, int32_t z) const;

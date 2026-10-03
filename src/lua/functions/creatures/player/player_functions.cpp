@@ -2455,7 +2455,7 @@ int PlayerFunctions::luaPlayerSetVocation(lua_State* L) {
 	}
 
 	player->setVocation(vocation->getId());
-	player->sendSkills();
+	player->sendSkillsNow();
 	player->sendStats();
 	player->sendBasicData();
 	player->wheel()->sendGiftOfLifeCooldown();
@@ -5185,7 +5185,7 @@ int PlayerFunctions::luaPlayerReloadData(lua_State* L) {
 		return 1;
 	}
 
-	player->sendSkills();
+	player->sendSkillsNow();
 	player->sendStats();
 	player->sendBasicData();
 	player->wheel()->sendGiftOfLifeCooldown();

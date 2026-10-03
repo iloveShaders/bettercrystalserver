@@ -812,11 +812,11 @@ std::unordered_set<PlayerIcon> Player::getClientIcons() {
 		if (icons.size() < 9) {
 			icons.insert(PlayerIcon::Pigeon);
 		}
-		client->sendRestingStatus(1);
+		sendRestingStatusIfChanged(1);
 
 		icons.erase(PlayerIcon::Swords);
 	} else {
-		client->sendRestingStatus(0);
+		sendRestingStatusIfChanged(0);
 	}
 
 	return icons;
@@ -2493,6 +2493,18 @@ void Player::sendBlessStatus() const {
 }
 
 void Player::sendSkills() const {
+	// Coalesce. AddPlayerSkills (0xA1) is the heaviest routine packet this server sends: it
+	// recomputes wheel stats, attack totals, imbuement damage, forge stats and the full absorb
+	// list, and the 15.30 client relayouts the entire skills panel on every one. There are 23
+	// call sites across six files and at least one producer was measured at ~90 packets/sec on a
+	// single player, so the cap belongs here rather than at each site. Player::onThink flushes
+	// at most one per think (1000ms). Anything that genuinely needs the packet in-frame calls
+	// sendSkillsNow().
+	m_skillsDirty = true;
+}
+
+void Player::sendSkillsNow() const {
+	m_skillsDirty = false;
 	if (client) {
 		client->sendSkills();
 	}
@@ -8764,10 +8776,9 @@ void Player::onThink(uint32_t interval) {
 		executeBatchInventoryUpdate();
 	}
 
-	// Flush the coalesced skills packet (see addSkillAdvance / addManaSpent).
+	// Flush the coalesced skills packet (see Player::sendSkills).
 	if (m_skillsDirty) {
-		m_skillsDirty = false;
-		sendSkills();
+		sendSkillsNow();
 	}
 
 	MessageBufferTicks += interval;
@@ -8810,6 +8821,23 @@ void Player::onThink(uint32_t interval) {
 	AutoAssist::check(getPlayer());
 
 	g_callbacks().executeCallback(EventCallback_t::playerOnThink, &EventCallback::playerOnThink, getPlayer(), interval);
+}
+
+void Player::sendRestingStatusIfChanged(int8_t protection) {
+	// getClientIcons() ran this unconditionally, so every sendIcons() dragged a 154-byte
+	// sendRestingStatus with it -- a KV read plus a string build, resending an identical value.
+	// At the measured ~90 sendIcons/sec that was 31% of one player's entire outbound traffic.
+	if (!client || m_lastRestingStatus == protection) {
+		return;
+	}
+	m_lastRestingStatus = protection;
+	client->sendRestingStatus(static_cast<uint8_t>(protection));
+}
+
+void Player::onSlotStackCountChanged() {
+	updateInventoryWeight();
+	updateItemsLight();
+	sendStats();
 }
 
 void Player::postAddNotification(const std::shared_ptr<Thing> &thing, const std::shared_ptr<Cylinder> &oldParent, int32_t index, CylinderLink_t link) {
@@ -11802,6 +11830,9 @@ void Player::onCreatureAppear(const std::shared_ptr<Creature> &creature, bool is
 	Creature::onCreatureAppear(creature, isLogin);
 
 	if (isLogin && creature == getPlayer()) {
+		// A reconnect can reuse an existing Player object, so force the next getClientIcons()
+		// to resend the resting banner to the fresh client.
+		m_lastRestingStatus = -1;
 		onEquipInventory();
 
 		const auto &outfit = Outfits::getInstance().getOutfitByLookType(getPlayer(), defaultOutfit.lookType);

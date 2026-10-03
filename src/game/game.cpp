@@ -3102,7 +3102,26 @@ std::shared_ptr<Item> Game::transformItem(std::shared_ptr<Item> item, uint16_t n
 				}
 			}
 		} else {
-			cylinder->postRemoveNotification(item, cylinder, itemIndex);
+			// An item sitting directly in an equipment slot whose id does not change is a pure
+			// stack-count update: ammo being fired, a stack of runes losing a charge. Its type,
+			// abilities and slot gates are identical before and after, so the remove/add
+			// notification pair below is NOT an equip event. Issuing it anyway made
+			// Player::postRemoveNotification / postAddNotification run the full DeEquipItem +
+			// EquipItem pair on the ammo slot for every single shot -- 2x sendSkills (0xA1,
+			// 192B), 2x sendIcons (0xA2, each dragging a 154B sendRestingStatus), 2x
+			// sendInventoryIds and 2x playerOnInventoryUpdate. Measured at ~90 skills packets a
+			// second on one shooting player, which is what collapsed client FPS with the skills
+			// tab open. Only the carried weight and light actually changed, so apply those
+			// directly. Any id change, or any cylinder that is not the player himself (ground,
+			// containers, quivers), keeps the original path untouched.
+			const bool decaysToNewType = item->getDecaying() > DECAYING_FALSE && item->getDuration() <= 1 && newType.decayTo;
+			const bool keepsSameId = !decaysToNewType && curType.id == newType.id;
+			const auto &slotOwner = keepsSameId && cylinder->getCreature() ? cylinder->getCreature()->getPlayer() : nullptr;
+
+			if (!slotOwner) {
+				cylinder->postRemoveNotification(item, cylinder, itemIndex);
+			}
+
 			uint16_t itemId = item->getID();
 			int32_t count = item->getSubType();
 
@@ -3125,7 +3144,11 @@ std::shared_ptr<Item> Game::transformItem(std::shared_ptr<Item> item, uint16_t n
 			}
 
 			cylinder->updateThing(item, itemId, count);
-			cylinder->postAddNotification(item, cylinder, itemIndex);
+			if (slotOwner) {
+				slotOwner->onSlotStackCountChanged();
+			} else {
+				cylinder->postAddNotification(item, cylinder, itemIndex);
+			}
 
 			std::shared_ptr<Item> quiver = cylinder->getItem();
 			if (quiver && quiver->isQuiver()

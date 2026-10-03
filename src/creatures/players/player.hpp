@@ -1050,6 +1050,13 @@ public:
 	void onEquipInventory();
 	void onDeEquipInventory();
 
+	// Cheap half of a postAdd/postRemoveNotification pair, for an in-place stack-count update
+	// on an item worn in an equipment slot (see Game::transformItem). The carried weight and
+	// light changed; the item's type, abilities and slot gates did not.
+	void onSlotStackCountChanged();
+	// Sends sendRestingStatus only when the PZ state actually flipped.
+	void sendRestingStatusIfChanged(int8_t protection);
+
 	void onAttackedCreatureDisappear(bool isLogout) override;
 	void onFollowCreatureDisappear(bool isLogout) override;
 
@@ -1100,6 +1107,9 @@ public:
 	void sendBasicData() const;
 	void sendBlessStatus() const;
 	void sendSkills() const;
+	// Sends AddPlayerSkills (0xA1) immediately instead of coalescing it. Only for the few places
+	// that need the packet in-frame; everything else should use sendSkills().
+	void sendSkillsNow() const;
 	void sendTextMessage(MessageClasses mclass, const std::string &message) const;
 	void sendTextMessage(const TextMessage &message) const;
 	void sendReLoginWindow(uint8_t unfairFightReduction) const;
@@ -2033,7 +2043,10 @@ private:
 	// Coalesced skills-packet flag: addSkillAdvance/addManaSpent set this instead of calling
 	// sendSkills() per action; Player::onThink flushes it once per think. Prevents the 0xA1
 	// skills-panel rebuild storm that tanked client FPS with the skills tab open while hunting.
-	bool m_skillsDirty = false;
+	mutable bool m_skillsDirty = false;
+	// -1 = nothing sent yet. sendRestingStatus is a 154-byte packet with a KV read and a string
+	// build, and getClientIcons() used to emit it on every single sendIcons() call.
+	int8_t m_lastRestingStatus = -1;
 	int64_t lastWalking = 0;
 	uint64_t asyncOngoingTasks = 0;
 

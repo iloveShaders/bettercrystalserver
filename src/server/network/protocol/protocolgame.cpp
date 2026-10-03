@@ -1818,6 +1818,25 @@ void ProtocolGame::GetFloorDescription(NetworkMessage &msg, int32_t x, int32_t y
 	}
 }
 
+bool ProtocolGame::isCreatureUnknownToClient(const std::shared_ptr<Creature> &creature) const {
+	// A creature is only drawable by the client once AddCreature has introduced it. canSee() is a
+	// position test and says nothing about that: a creature can be inside the viewport while its
+	// AddCreature has not been sent yet, after it was evicted by the MAX_KNOWN_CREATURES (1300)
+	// overflow in checkCreatureAsKnown, or in the tick between RemoveCreature and the spectator
+	// lists catching up. Update packets sent in those windows are discarded by the client, which
+	// logs "updateOrCreateCreatureFromProtobuf: no creature with id N found" for each one --
+	// measured at 1,568 and 4,882 occurrences in two players' client.log, bursting to 257 in a
+	// single second for one id. Nothing is lost by dropping them: AddCreature carries health,
+	// outfit, light, skull, shield, type, icon and speed, so the client gets the current state the
+	// moment the creature is actually introduced.
+	//
+	// The player's own id is deliberately exempt -- sendAddCreature only calls
+	// checkCreatureAsKnown() in its `creature != player` branch, so the player is never a member of
+	// its own knownCreatureSet and guarding on membership alone would silently kill their own
+	// health bar, speed and light updates.
+	return creature && creature != player && !knownCreatureSet.contains(creature->getID());
+}
+
 void ProtocolGame::checkCreatureAsKnown(uint32_t id, bool &known, uint32_t &removedKnown) {
 	auto [_, inserted] = knownCreatureSet.insert(id);
 	if (!inserted) {
@@ -3952,7 +3971,7 @@ void ProtocolGame::sendChannelEvent(uint16_t channelId, const std::string &playe
 }
 
 void ProtocolGame::sendCreatureOutfit(const std::shared_ptr<Creature> &creature, const Outfit_t &outfit) {
-	if (!canSee(creature)) {
+	if (!canSee(creature) || isCreatureUnknownToClient(creature)) {
 		return;
 	}
 
@@ -3971,7 +3990,7 @@ void ProtocolGame::sendCreatureOutfit(const std::shared_ptr<Creature> &creature,
 }
 
 void ProtocolGame::sendCreatureLight(const std::shared_ptr<Creature> &creature) {
-	if (!canSee(creature)) {
+	if (!canSee(creature) || isCreatureUnknownToClient(creature)) {
 		return;
 	}
 
@@ -4021,7 +4040,7 @@ void ProtocolGame::addCreatureIcon(NetworkMessage &msg, const std::shared_ptr<Cr
 }
 
 void ProtocolGame::sendCreatureIcon(const std::shared_ptr<Creature> &creature) {
-	if (!creature || !player || oldProtocol) {
+	if (!creature || !player || oldProtocol || isCreatureUnknownToClient(creature)) {
 		return;
 	}
 
@@ -4053,7 +4072,7 @@ void ProtocolGame::sendTibiaTime(int32_t time) {
 }
 
 void ProtocolGame::sendCreatureWalkthrough(const std::shared_ptr<Creature> &creature, bool walkthrough) {
-	if (!canSee(creature)) {
+	if (!canSee(creature) || isCreatureUnknownToClient(creature)) {
 		return;
 	}
 
@@ -4065,7 +4084,7 @@ void ProtocolGame::sendCreatureWalkthrough(const std::shared_ptr<Creature> &crea
 }
 
 void ProtocolGame::sendCreatureShield(const std::shared_ptr<Creature> &creature) {
-	if (!canSee(creature)) {
+	if (!canSee(creature) || isCreatureUnknownToClient(creature)) {
 		return;
 	}
 
@@ -4077,7 +4096,7 @@ void ProtocolGame::sendCreatureShield(const std::shared_ptr<Creature> &creature)
 }
 
 void ProtocolGame::sendCreatureEmblem(const std::shared_ptr<Creature> &creature) {
-	if (!creature || !canSee(creature) || oldProtocol) {
+	if (!creature || !canSee(creature) || oldProtocol || isCreatureUnknownToClient(creature)) {
 		return;
 	}
 
@@ -4099,7 +4118,7 @@ void ProtocolGame::sendCreatureEmblem(const std::shared_ptr<Creature> &creature)
 }
 
 void ProtocolGame::sendCreatureSkull(const std::shared_ptr<Creature> &creature) {
-	if (g_game().getWorldType() != WORLDTYPE_OPEN) {
+	if (g_game().getWorldType() != WORLDTYPE_OPEN || isCreatureUnknownToClient(creature)) {
 		return;
 	}
 
@@ -4115,6 +4134,10 @@ void ProtocolGame::sendCreatureSkull(const std::shared_ptr<Creature> &creature) 
 }
 
 void ProtocolGame::sendCreatureType(const std::shared_ptr<Creature> &creature, uint8_t creatureType) {
+	if (isCreatureUnknownToClient(creature)) {
+		return;
+	}
+
 	NetworkMessage msg;
 	msg.addByte(0x95);
 	msg.add<uint32_t>(creature->getID());
@@ -4135,7 +4158,7 @@ void ProtocolGame::sendCreatureType(const std::shared_ptr<Creature> &creature, u
 }
 
 void ProtocolGame::sendCreatureSquare(const std::shared_ptr<Creature> &creature, SquareColor_t markType, SquareColor_t weaponType) {
-	if (!canSee(creature)) {
+	if (!canSee(creature) || isCreatureUnknownToClient(creature)) {
 		return;
 	}
 
@@ -7845,6 +7868,10 @@ void ProtocolGame::sendCancelTarget() {
 }
 
 void ProtocolGame::sendChangeSpeed(const std::shared_ptr<Creature> &creature, uint16_t speed) {
+	if (isCreatureUnknownToClient(creature)) {
+		return;
+	}
+
 	NetworkMessage msg;
 	msg.addByte(0x8F);
 	msg.add<uint32_t>(creature->getID());
@@ -7987,7 +8014,7 @@ void ProtocolGame::removeMagicEffect(const Position &pos, uint16_t type) {
 }
 
 void ProtocolGame::sendCreatureHealth(const std::shared_ptr<Creature> &creature) {
-	if (creature->isHealthHidden()) {
+	if (creature->isHealthHidden() || isCreatureUnknownToClient(creature)) {
 		return;
 	}
 
