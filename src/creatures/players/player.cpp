@@ -6060,6 +6060,11 @@ std::vector<std::shared_ptr<Item>> Player::getEquippedItems() const {
 	};
 
 	std::vector<std::shared_ptr<Item>> valid_items;
+	// Reserve up front: without it the emplace_back loop below reallocates at 1, 2, 4 and 8
+	// elements, so four heap allocations per call. This runs inside getReflectFlat(),
+	// getSpecializedMagicLevel(), getCleavePercent(), getPerfectShotDamage() and the magic shield
+	// helpers, which the combat path calls on every damage event taken and dealt.
+	valid_items.reserve(valid_slots.size());
 	for (const auto &slot : valid_slots) {
 		const auto &item = inventory[slot];
 		if (!item) {
@@ -8832,9 +8837,16 @@ void Player::sendRestingStatusIfChanged(int8_t protection) {
 }
 
 void Player::onSlotStackCountChanged() {
+	// Charges on a worn amulet or ring are the item's subtype, and consuming one does not change
+	// its weight -- so for the Player::blockHit / getReflectFlat / getSpecializedMagicLevel charge
+	// path this would otherwise push a stats packet per absorbed hit for a value that never moved.
+	// updateItemsLight() already gates its own send on the light actually changing.
+	const uint32_t previousWeight = inventoryWeight;
 	updateInventoryWeight();
 	updateItemsLight();
-	sendStats();
+	if (inventoryWeight != previousWeight) {
+		sendStats();
+	}
 }
 
 void Player::postAddNotification(const std::shared_ptr<Thing> &thing, const std::shared_ptr<Cylinder> &oldParent, int32_t index, CylinderLink_t link) {
