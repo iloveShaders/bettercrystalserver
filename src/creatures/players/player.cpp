@@ -967,8 +967,19 @@ void Player::updateInventoryImbuement() {
 	bool isInFightMode = hasCondition(CONDITION_INFIGHT);
 	bool nonAggressiveFightOnly = g_configManager().getBoolean(TOGGLE_IMBUEMENT_NON_AGGRESSIVE_FIGHT_ONLY);
 
-	// Iterate through all items in the player's inventory
-	for (const auto &[slodNumber, item] : getAllSlotItems()) {
+	// Iterate the equipped slots directly (upstream PR #959). getAllSlotItems() built and threw
+	// away a phmap::flat_hash_map on every call, and this runs once per second for every online
+	// player. The shared_ptr is COPIED rather than bound by reference into the live inventory
+	// array, because the loop body calls removeItemImbuementStats() and
+	// updateImbuementTrackerStats(), which send packets -- a reference into inventory[] would
+	// dangle the moment anything in that path ever replaces the slot. One refcount bump per slot
+	// per second is still far cheaper than the map this replaces.
+	for (uint8_t slotId = CONST_SLOT_FIRST; slotId <= CONST_SLOT_LAST; ++slotId) {
+		const auto item = inventory[slotId];
+		if (!item) {
+			continue;
+		}
+
 		// Iterate through all imbuement slots on the item
 		for (uint8_t slotid = 0; slotid < item->getImbuementSlot(); slotid++) {
 			ImbuementInfo imbuementInfo;
@@ -1014,20 +1025,6 @@ void Player::updateInventoryImbuement() {
 			}
 		}
 	}
-}
-
-phmap::flat_hash_map<uint8_t, std::shared_ptr<Item>> Player::getAllSlotItems() const {
-	phmap::flat_hash_map<uint8_t, std::shared_ptr<Item>> itemMap;
-	for (uint8_t i = CONST_SLOT_FIRST; i <= CONST_SLOT_LAST; ++i) {
-		const auto &item = inventory[i];
-		if (!item) {
-			continue;
-		}
-
-		itemMap[i] = item;
-	}
-
-	return itemMap;
 }
 
 uint16_t Player::getLoyaltySkill(skills_t skill) const {

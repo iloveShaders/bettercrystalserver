@@ -122,19 +122,19 @@ std::shared_ptr<Item> Item::CreateItem(const uint16_t type, uint16_t count /*= 0
 	return newItem;
 }
 
-bool Item::hasImbuementAttribute(const std::string &attributeSlot) const {
-	// attributeSlot = ITEM_IMBUEMENT_SLOT + slot id
-	return getCustomAttribute(attributeSlot) != nullptr;
-}
-
 bool Item::getImbuementInfo(uint8_t slot, ImbuementInfo* imbuementInfo) const {
-	std::string attributeSlot = std::to_string(ITEM_IMBUEMENT_SLOT + slot);
-	if (!hasImbuementAttribute(attributeSlot)) {
+	// One lookup, not two (upstream PR #959). This used to call hasImbuementAttribute() and then
+	// getCustomAttribute() again, so every call built the key with std::to_string twice and ran
+	// asLowerCaseString -- which takes its argument BY VALUE, i.e. a full string copy plus a
+	// transform -- and a hash-map find, twice over. calculateAbsorbValues() calls this for every
+	// imbuement slot of every equipped item while building AddPlayerSkills, so the duplicate work
+	// was not free. hasImbuementAttribute() had no other caller and was removed with it.
+	const CustomAttribute* attribute = getCustomAttribute(std::to_string(ITEM_IMBUEMENT_SLOT + slot));
+	if (!attribute) {
 		return false;
 	}
 
-	const CustomAttribute* attribute = getCustomAttribute(std::to_string(ITEM_IMBUEMENT_SLOT + slot));
-	const auto info = attribute ? attribute->getAttribute<uint32_t>() : 0;
+	const auto info = attribute->getAttribute<uint32_t>();
 	imbuementInfo->imbuement = g_imbuements().getImbuement(info & 0xFF);
 	imbuementInfo->duration = info >> 8;
 	return imbuementInfo->duration && imbuementInfo->imbuement;
