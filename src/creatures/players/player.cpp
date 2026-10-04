@@ -10830,8 +10830,12 @@ void Player::forgeFuseItems(ForgeAction_t actionType, uint16_t firstItemId, uint
 	// Once a source item is removed below it is gone for good - the replacements only ever exist inside the
 	// exaltation chest, which is not attached to anything until the hand-over at the end of this function.
 	// Any bail-out in between must give the player an equivalent back.
-	const auto refundForgeSource = [this](uint16_t refundItemId, uint8_t refundTier) {
-		const auto &refundItem = Item::CreateItem(refundItemId, 1);
+	//
+	// clone() rather than CreateItem: CreateItem builds a bare item from the item id and drops the whole
+	// attribute map with it - custom attributes, imbuements, a custom name and description. clone() copies
+	// attributePtr, so a refund hands back what the player actually lost rather than a stripped replacement.
+	const auto refundForgeSource = [this](const std::shared_ptr<Item> &sourceItem, uint16_t refundItemId, uint8_t refundTier) {
+		const auto &refundItem = sourceItem ? sourceItem->clone() : Item::CreateItem(refundItemId, 1);
 		if (!refundItem) {
 			g_logger().error("[forgeFuseItems] Failed to recreate item {} to refund player {}", refundItemId, getName());
 			return;
@@ -10864,14 +10868,14 @@ void Player::forgeFuseItems(ForgeAction_t actionType, uint16_t firstItemId, uint
 	const auto &secondForgingItem = getForgeItemFromId(secondItemId, tier);
 	if (!secondForgingItem) {
 		g_logger().error("[Log 2] Player with name {} failed to fuse item with id {}", getName(), secondItemId);
-		refundForgeSource(firstItemId, tier);
+		refundForgeSource(firstForgingItem, firstItemId, tier);
 		sendForgeError(RETURNVALUE_CONTACTADMINISTRATOR);
 		return;
 	}
 	if (returnValue = g_game().internalRemoveItem(secondForgingItem, 1);
 	    returnValue != RETURNVALUE_NOERROR) {
 		g_logger().error("[Log 2] Failed to remove forge item {} from player with name {}", secondItemId, getName());
-		refundForgeSource(firstItemId, tier);
+		refundForgeSource(firstForgingItem, firstItemId, tier);
 		sendCancelMessage(getReturnMessage(returnValue));
 		sendForgeError(RETURNVALUE_CONTACTADMINISTRATOR);
 		return;
@@ -10890,7 +10894,11 @@ void Player::forgeFuseItems(ForgeAction_t actionType, uint16_t firstItemId, uint
 		return;
 	}
 
-	const auto &firstForgedItem = Item::CreateItem(firstItemId, 1);
+	// Clone the source rather than building a fresh item from its id. internalRemoveItem above only detached
+	// firstForgingItem from its parent - the shared_ptr held here still owns it, so its attributes are intact
+	// and readable. Cloning carries them onto the forged item; setTier below overwrites the inherited tier.
+	// Without this the forge silently strips every custom attribute, imbuement, name and description on a fuse.
+	const auto &firstForgedItem = firstForgingItem->clone();
 	if (!firstForgedItem) {
 		g_logger().error("[Log 3] Player with name {} failed to fuse item with id {}", getName(), firstItemId);
 		sendForgeError(RETURNVALUE_CONTACTADMINISTRATOR);
@@ -10932,7 +10940,7 @@ void Player::forgeFuseItems(ForgeAction_t actionType, uint16_t firstItemId, uint
 		history.cost = cost;
 	} else {
 		firstForgedItem->setTier(tier);
-		const auto &secondForgedItem = Item::CreateItem(secondItemId, 1);
+		const auto &secondForgedItem = secondForgingItem->clone();
 		if (!secondForgedItem) {
 			g_logger().error("[Log 4] Player with name {} failed to fuse item with id {}", getName(), secondItemId);
 			sendForgeError(RETURNVALUE_CONTACTADMINISTRATOR);
@@ -11180,7 +11188,9 @@ void Player::forgeTransferItemTier(ForgeAction_t actionType, uint16_t donorItemI
 		return;
 	}
 
-	const auto &newReceiveItem = Item::CreateItem(receiveItemId, 1);
+	// Clone the receiver so the transferred tier lands on the player's actual item instead of a bare copy.
+	// receiveItem was detached by internalRemoveItem above but is still owned by the shared_ptr here.
+	const auto &newReceiveItem = receiveItem->clone();
 	if (!newReceiveItem) {
 		g_logger().error("[Log 6] Player with name {} failed to fuse item with id {}", getName(), receiveItemId);
 		sendForgeError(RETURNVALUE_CONTACTADMINISTRATOR);
