@@ -3375,6 +3375,18 @@ void Game::playerQuickLootCorpse(const std::shared_ptr<Player> &player, const st
 
 std::shared_ptr<Container> Game::findManagedContainer(const std::shared_ptr<Player> &player, bool &fallbackConsumed, ObjectCategory_t category, bool isLootContainer) {
 	auto lootContainer = player->getManagedContainer(category, isLootContainer);
+
+	// Nothing assigned for this category in "Manage Loot Containers": prefer the
+	// Loot Pouch (ITEM_GOLD_POUCH) before falling back to the main backpack.
+	// Without this, !autoloot dumps everything into the main backpack for every
+	// player who never configured the loot containers by hand. Gated on the pouch
+	// being allowed to hold more than gold, so it matches the server's own config.
+	// fallbackConsumed is deliberately left untouched: if the pouch fills up,
+	// processLootItems can still overflow into the main backpack.
+	if (!lootContainer && isLootContainer && (g_configManager().getBoolean(TOGGLE_GOLD_POUCH_ALLOW_ANYTHING) || g_configManager().getBoolean(TOGGLE_GOLD_POUCH_QUICKLOOT_ONLY))) {
+		lootContainer = player->getLootPouch();
+	}
+
 	if (!lootContainer && player->quickLootFallbackToMainContainer && !fallbackConsumed && isLootContainer) {
 		auto fallbackItem = player->getInventoryItem(CONST_SLOT_BACKPACK);
 		auto mainBackpack = fallbackItem ? fallbackItem->getContainer() : nullptr;
