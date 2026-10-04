@@ -631,6 +631,14 @@ void Npc::onPlayerSellItem(const std::shared_ptr<Player> &player, uint16_t itemI
 
 	const uint32_t willRemove = std::min<uint32_t>(amount, eligibleCount);
 	if (willRemove == 0) {
+		// Nothing eligible: tiered, imbued, a non-empty container, or worn in an equipment slot.
+		// This used to return in silence, so the client kept the row in the sell list and the player
+		// read it as the NPC being broken. onPlayerSellAllLoot calls this once per item id with
+		// parent set, so only the single-item path says anything -- otherwise emptying a loot pouch
+		// would spam one line per unsellable stack.
+		if (!parent) {
+			player->sendTextMessage(MESSAGE_FAILURE, "You cannot sell tiered, imbued or equipped items.");
+		}
 		return;
 	}
 

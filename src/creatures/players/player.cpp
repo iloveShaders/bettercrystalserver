@@ -5999,8 +5999,12 @@ std::vector<std::shared_ptr<Item>> Player::getAllInventoryItems(bool ignoreEquip
 			continue;
 		}
 
-		// Only get equiped items if ignored equipped is false
-		if (!ignoreEquiped) {
+		// Only get equiped items if ignored equipped is false.
+		// ignoreItemWithTier was only ever applied to the container contents below, so a tiered item
+		// worn in an equipment slot still reached getAllSaleItemIdAndCount and was listed with a count
+		// in the NPC sell window. Npc::onPlayerSellItem then refused it silently, which reads as a
+		// broken trade window rather than as a guard.
+		if (!ignoreEquiped && !(ignoreItemWithTier && item->getTier() > 0)) {
 			itemVector.emplace_back(item);
 		}
 		if (const auto &container = item->getContainer()) {

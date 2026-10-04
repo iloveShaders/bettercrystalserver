@@ -5723,6 +5723,13 @@ void Game::playerSellItem(uint32_t playerId, uint16_t itemId, uint8_t count, uin
 		return;
 	}
 
+	// Equipped gear is never sellable to an NPC, whatever the client's "ignore equipped" checkbox
+	// says. ignoreEquipped arrives straight off the wire in ProtocolGame::parsePlayerSellOnShop and
+	// is the only thing stopping Player::getInventoryItemsFromId from handing an equipment-slot item
+	// to the merchant, so a cleared checkbox -- or a client that simply sends 0 -- sells the armour
+	// off the player's back. Backpack contents are unaffected: the flag suppresses inventory[slot]
+	// itself, never the containers hanging off those slots.
+	ignoreEquipped = true;
 	merchant->onPlayerSellItem(player, it.id, count, amount, ignoreEquipped);
 	player->setNextExAction(OTSYS_TIME() + g_configManager().getNumber(UI_ACTIONS_DELAY_INTERVAL) - 10);
 }
