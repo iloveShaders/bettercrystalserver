@@ -3483,10 +3483,13 @@ void ProtocolGame::parseBestiarySendCreatures(NetworkMessage &msg) {
 		}
 
 		// 15.25 (sommerrelease26): the e2a4a1 client reads a new per-creature byte right after the
-		// race id (before progress). It appears to be a "known/unlocked" flag, so derive it from the
-		// kill progress (0 keeps the silhouette, 1 reveals the entry). The progress block also gained
-		// an extra trailing byte (sent as 0 until its meaning is confirmed).
-		newmsg.addByte(progress > 0 ? 1 : 0);
+		// race id (before progress). In 15.30 this is isLeaderKilled on the client's TQmlMonsterRace
+		// model -- "leader monster" is CipSoft's internal name for the Echo Warden -- and it draws the
+		// Echo Warden charm-reward badge on the entry. It was previously guessed to be an
+		// "unlocked" flag and derived from kill progress, which put the badge on every entry the
+		// player had ever killed. It is per-race Echo Warden state and nothing to do with progress.
+		// The progress block also gained an extra trailing byte (sent as 0 until its meaning is confirmed).
+		newmsg.addByte(g_iobestiary().hasKilledLeaderMonster(player, it_.second) ? 1 : 0);
 		newmsg.addByte(progress);
 		if (progress > 0) {
 			newmsg.addByte(occurrence);
