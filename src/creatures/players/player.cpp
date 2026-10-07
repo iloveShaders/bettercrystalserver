@@ -2388,6 +2388,15 @@ void Player::sendIcons() {
 		iconSet = std::unordered_set<PlayerIcon>(tempVector.begin(), tempVector.end());
 	}
 
+	// Skip an unchanged set. getClientIcons() above is still called unconditionally because it
+	// also drives sendRestingStatusIfChanged(), which has its own cache.
+	if (m_lastSentIconsValid && iconSet == m_lastSentIcons && iconBakragore == m_lastSentIconBakragore) {
+		return;
+	}
+	m_lastSentIcons = iconSet;
+	m_lastSentIconBakragore = iconBakragore;
+	m_lastSentIconsValid = true;
+
 	client->sendIcons(iconSet, iconBakragore);
 }
 
@@ -3100,6 +3109,13 @@ void Player::onChangeZone(ZoneType_t zone) {
 	wheel()->sendGiftOfLifeCooldown();
 	g_game().updateCreatureWalkthrough(static_self_cast<Player>());
 	sendIcons();
+	// Crossing a PZ border genuinely changes the skills the panel shows: PlayerWheel::onThink
+	// zeroes every wheel major stat on the way in, and the forced call above recomputes Battle
+	// Instinct / Positional Tactics / Ballistic Mastery on the way out. Both report through
+	// sendSkills(), which is coalesced to one flush per onThink -- so the panel kept the old
+	// numbers for up to a second past the border and then snapped, which read as a glitch.
+	// Zone changes are rare, so this one goes out in frame.
+	sendSkillsNow();
 	g_events().eventPlayerOnChangeZone(static_self_cast<Player>(), zone);
 
 	g_callbacks().executeCallback(EventCallback_t::playerOnChangeZone, &EventCallback::playerOnChangeZone, getPlayer(), zone);
@@ -11862,6 +11878,7 @@ void Player::onCreatureAppear(const std::shared_ptr<Creature> &creature, bool is
 		// A reconnect can reuse an existing Player object, so force the next getClientIcons()
 		// to resend the resting banner to the fresh client.
 		m_lastRestingStatus = -1;
+		m_lastSentIconsValid = false;
 		onEquipInventory();
 
 		const auto &outfit = Outfits::getInstance().getOutfitByLookType(getPlayer(), defaultOutfit.lookType);

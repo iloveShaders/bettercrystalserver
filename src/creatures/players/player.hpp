@@ -2045,6 +2045,16 @@ private:
 	// -1 = nothing sent yet. sendRestingStatus is a 154-byte packet with a KV read and a string
 	// build, and getClientIcons() used to emit it on every single sendIcons() call.
 	int8_t m_lastRestingStatus = -1;
+	// Last icon set actually pushed to the client. sendIcons() has many callers and several fire
+	// with an unchanged set -- crossing a PZ border sends it two or three times identically,
+	// because CONDITION_PACIFIED (added on PZ exit) carries no icon at all. Each 0xA2 reflows the
+	// client side panel, so the redundant ones showed up as a multi-step stutter.
+	std::unordered_set<PlayerIcon> m_lastSentIcons;
+	// Value-initialised, not IconBakragore::None: player.hpp only has the opaque declaration
+	// (line 88-89), so the type is complete but its enumerators are not in scope here. {} is 0,
+	// which is None anyway, and m_lastSentIconsValid means the initial value is never compared.
+	IconBakragore m_lastSentIconBakragore {};
+	bool m_lastSentIconsValid = false;
 	int64_t lastWalking = 0;
 	uint64_t asyncOngoingTasks = 0;
 
