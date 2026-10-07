@@ -1071,6 +1071,13 @@ bool ConditionAttributes::setParam(ConditionParam_t param, int32_t value) {
 			return true;
 		}
 
+		// Flat, and deliberately NOT clamped: a negative value takes
+		// capacity away, which the percent variant above cannot express.
+		case CONDITION_PARAM_STAT_CAPACITY: {
+			stats[STAT_CAPACITY] = value;
+			return true;
+		}
+
 		case CONDITION_PARAM_BUFF_HEALINGRECEIVED: {
 			buffsPercent[BUFF_HEALINGRECEIVED] = std::max<int32_t>(0, value);
 			return true;

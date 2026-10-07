@@ -237,6 +237,14 @@ enum ConditionParam_t {
 	CONDITION_PARAM_CHARM_CHANCE_MODIFIER = 82,
 	CONDITION_PARAM_BUFF_HEALINGRECEIVED = 83,
 	CONDITION_PARAM_FOODTICKS = 84,
+	// Flat capacity, in the same hundredths-of-an-ounce unit as item weight
+	// and Player::capacity. The PERCENT variant above has existed all along
+	// but it is a share of current capacity and clamped to >= 0, so there
+	// was no way to grant a fixed amount or to take any away.
+	// ConditionAttributes::updateStats/endCondition already apply and
+	// reverse stats[STAT_CAPACITY] symmetrically, and Player::getCapacity()
+	// already sums varStats[STAT_CAPACITY], so only setParam was missing.
+	CONDITION_PARAM_STAT_CAPACITY = 85,
 };
 
 enum stats_t {
