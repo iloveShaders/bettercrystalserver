@@ -1036,18 +1036,30 @@ uint16_t Player::getLoyaltySkill(skills_t skill) const {
 		return skills[skill].level;
 	}
 
-	absl::uint128 tries = skills[skill].tries;
-	const absl::uint128 totalTries = vocation->getTotalSkillTries(skill, skills[skill].level) + tries;
+	// The bonus is derived from the tries BANKED at the current skill level only. The player's
+	// progress inside the current level (skills[skill].tries) is deliberately excluded.
+	//
+	// Including it made this projection step in lockstep with the base level: the loop spent the
+	// player's own in-level tries to cross the first boundary, so the returned level advanced at
+	// exactly the same instant skills[skill].level did. The client renders the loyalty column as
+	// getLoyaltySkill() - getBaseSkill() (protocolgame.cpp AddPlayerSkills), so every skill
+	// advance dropped the displayed "+N loyalty" by exactly one, and it only came back once the
+	// player had re-ground most of the next -- larger -- level. At 25% loyalty on a 1.1 skill
+	// multiplier that recovery point sat ~65% into the level, i.e. hundreds of thousands of hits.
+	//
+	// Banked tries are a strictly increasing function of the skill level, so the number of whole
+	// levels the bonus buys is monotonically non-decreasing: N is now constant for the whole of a
+	// skill level and can never regress on an advance.
+	const absl::uint128 totalTries = vocation->getTotalSkillTries(skill, skills[skill].level);
 	absl::uint128 loyaltyTries = (totalTries * getLoyaltyBonus()) / 100;
-	while ((tries + loyaltyTries) >= nextReqTries) {
-		loyaltyTries -= nextReqTries - tries;
+	while (loyaltyTries >= nextReqTries) {
+		loyaltyTries -= nextReqTries;
 		level++;
-		tries = 0;
 
 		currReqTries = nextReqTries;
 		nextReqTries = vocation->getReqSkillTries(skill, level + 1);
 		if (currReqTries >= nextReqTries) {
-			loyaltyTries = 0;
+			// player has reached max skill
 			break;
 		}
 	}
@@ -7567,18 +7579,20 @@ uint32_t Player::getLoyaltyMagicLevel() const {
 		return level;
 	}
 
-	absl::uint128 spent = manaSpent;
-	const absl::uint128 totalMana = vocation->getTotalMana(level) + spent;
+	// manaSpent (progress inside the current magic level) is excluded for exactly the reason
+	// documented in Player::getLoyaltySkill: counting it made the loyalty magic level advance in
+	// lockstep with the base magic level, so the "+N loyalty" shown next to magic level dropped by
+	// one on every magic level advance. Banked mana only grows, so N never regresses now.
+	const absl::uint128 totalMana = vocation->getTotalMana(level);
 	absl::uint128 loyaltyMana = (totalMana * getLoyaltyBonus()) / 100;
-	while ((spent + loyaltyMana) >= nextReqMana) {
-		loyaltyMana -= nextReqMana - spent;
+	while (loyaltyMana >= nextReqMana) {
+		loyaltyMana -= nextReqMana;
 		level++;
-		spent = 0;
 
 		currReqMana = nextReqMana;
 		nextReqMana = vocation->getReqMana(level + 1);
 		if (currReqMana >= nextReqMana) {
-			loyaltyMana = 0;
+			// player has reached max magic level
 			break;
 		}
 	}

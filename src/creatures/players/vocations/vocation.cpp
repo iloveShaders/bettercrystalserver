@@ -400,6 +400,9 @@ absl::uint128 Vocation::getTotalMana(uint32_t magLevel) {
 	for (uint32_t i = 1; i <= magLevel; ++i) {
 		totalMana += getReqMana(i);
 	}
+	// cacheManaTotal was read above but never populated, so every call re-summed 1..magLevel.
+	// getTotalSkillTries caches the same way; this makes the mana path match it.
+	cacheManaTotal[magLevel] = totalMana;
 	return totalMana;
 }
 
