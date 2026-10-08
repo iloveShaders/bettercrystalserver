@@ -2821,13 +2821,36 @@ void ProtocolGame::parseBestiarysendMonsterData(NetworkMessage &msg) {
 	newmsg.add<uint16_t>(mtype->info.bestiarySecondUnlock);
 	newmsg.add<uint16_t>(mtype->info.bestiaryToUnlock);
 
-	newmsg.addByte(mtype->info.bestiaryStars);
+	// 15.30: the Echo Warden ("leader monster") field belongs HERE -- directly after the three
+	// unlock thresholds and BEFORE the difficulty byte. That is the client's own field order on
+	// TQmlMonsterRace: ...details1Kills, details2Kills, details3Kills, isLeaderKilled,
+	// monsterDifficulty, monsterRarity...
+	//
+	// It used to be missing from this packet entirely, with a filler byte sent after the
+	// occurrence instead. The byte COUNT happened to be right, so loot still parsed and nothing
+	// looked broken, but every field in between was read one slot early:
+	//   isLeaderKilled   <- bestiaryStars      (>= 1 for every creature, so the Echo Warden badge
+	//                                           drew on every entry and the tooltip's charm-point
+	//                                           count showed the star rating)
+	//   monsterDifficulty <- bestiaryOccurrence (0 for common creatures -> no stars, "Harmless")
+	//   monsterRarity     <- the filler 0
+	//
+	// The value is the Charm Points this player earned from that creature's first Echo Warden
+	// (the client renders it as the count in the badge tooltip), and 0 when they have not killed
+	// one -- which is what hides the badge.
+	uint8_t leaderCharmPoints = 0;
+	if (g_iobestiary().hasKilledLeaderMonster(player, mtype->name)) {
+		const uint32_t earned = g_iobestiary().getLeaderMonsterCharmPoints(mtype);
+		leaderCharmPoints = static_cast<uint8_t>(earned > 0 ? earned : 1);
+	}
+	newmsg.addByte(leaderCharmPoints);
 
-	// 15.25 (sommerrelease26): in the e2a4a1 client everything past the stars byte is gated on
-	// currentLevel != 0, and the occurrence byte is now followed by an extra (unconfirmed) byte.
+	newmsg.addByte(mtype->info.bestiaryStars); // monsterDifficulty
+
+	// 15.25 (sommerrelease26): in the e2a4a1 client everything past the difficulty byte is gated
+	// on currentLevel != 0.
 	if (currentLevel != 0) {
-		newmsg.addByte(mtype->info.bestiaryOccurrence);
-		newmsg.addByte(0);
+		newmsg.addByte(mtype->info.bestiaryOccurrence); // monsterRarity
 
 		std::vector<LootBlock> lootList = mtype->info.lootItems;
 		newmsg.addByte(lootList.size());
