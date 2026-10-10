@@ -460,58 +460,73 @@ void Npc::onPlayerSellAllLoot(uint32_t playerId, uint16_t itemId, bool ignore, u
 		const auto preSize = container->size();
 		const uint64_t preTotal = totalPrice;
 
-		bool hasSellable = false;
 		const auto &shopVector = getShopItemVector(player->getGUID());
-		for (ContainerIterator it = container->iterator(); it.hasNext(); it.advance()) {
-			const auto &item = *it;
+
+		// One definition of "sellable from this pouch", shared by the scan below and the
+		// batch builder. It must match what onPlayerSellItem actually accepts -- including
+		// the direct-parent requirement -- or the two disagree and the sale reports a
+		// failure it cannot explain.
+		const std::shared_ptr<Cylinder> pouchCylinder = container;
+		const auto isSellableHere = [&](const std::shared_ptr<Item> &item) {
 			if (!item) {
-				continue;
+				return false;
 			}
 			uint32_t sellPriceCandidate = 0;
-			const ItemType &itemType = Item::items[item->getID()];
 			for (const ShopBlock &shopBlock : shopVector) {
-				if (itemType.id == shopBlock.itemId && shopBlock.itemSellPrice != 0) {
+				if (item->getID() == shopBlock.itemId && shopBlock.itemSellPrice != 0) {
 					sellPriceCandidate = shopBlock.itemSellPrice;
 					break;
 				}
 			}
 			if (sellPriceCandidate == 0) {
-				continue;
+				return false;
 			}
 			if (item->getTier() > 0 || item->hasImbuements()) {
-				continue;
+				return false;
 			}
 			if (const auto &child = item->getContainer()) {
 				if (child->size() > 0) {
-					continue;
+					return false;
 				}
 			}
 			if (!item->hasMarketAttributes()) {
-				continue;
+				return false;
 			}
-			hasSellable = true;
-			break;
+			// container->iterator() recurses to maxContainerDepth, but onPlayerSellItem only
+			// accepts items whose DIRECT parent is the pouch. Without this test a bag nested
+			// in the pouch fills the batch with items that are then all rejected, so nothing
+			// sells and the sale blames bag space.
+			if (item->getParent() != pouchCylinder) {
+				return false;
+			}
+			return true;
+		};
+
+		bool hasSellable = false;
+		for (ContainerIterator it = container->iterator(); it.hasNext(); it.advance()) {
+			if (isSellableHere(*it)) {
+				hasSellable = true;
+				break;
+			}
 		}
 
 		phmap::flat_hash_map<uint16_t, uint16_t> toSell;
-		uint32_t MAX_BATCH_SIZE = 10;
+		constexpr uint32_t MAX_BATCH_SIZE = 100;
 		uint32_t processedCount = 0;
 		bool hasMore = false;
 
-		for (ContainerIterator it = container->iterator(); it.hasNext() && !hasMore; it.advance()) {
+		for (ContainerIterator it = container->iterator(); it.hasNext(); it.advance()) {
 			const auto &item = *it;
-			if (!item) {
+			// Only queue what can actually be sold. Previously every item was queued, so a
+			// run of unsellable items at the head of the pouch consumed the whole batch,
+			// nothing sold, and the progress guard below then refused to reschedule -- the
+			// sale could never step past the blockage.
+			if (!isSellableHere(item)) {
 				continue;
 			}
 
 			toSell[item->getID()] += item->getItemAmount();
-			if (item->isStackable()) {
-				MAX_BATCH_SIZE = 100;
-				processedCount++;
-			} else {
-				MAX_BATCH_SIZE = 10;
-				processedCount += item->getItemAmount();
-			}
+			processedCount += item->isStackable() ? 1 : item->getItemAmount();
 
 			if (processedCount >= MAX_BATCH_SIZE) {
 				hasMore = true;
@@ -558,11 +573,18 @@ void Npc::onPlayerSellAllLoot(uint32_t playerId, uint16_t itemId, bool ignore, u
 					ss << "You have no sellable items in your loot pouch.";
 					player->sendTextMessage(MESSAGE_FAILURE, ss.str());
 				} else {
-					ss << "You don't have enough space. Free up space in your bag.";
+					if (getCurrency() == ITEM_GOLD_COIN && !g_configManager().getBoolean(AUTOBANK)) {
+						ss << "You don't have enough space. Free up space in your bag.";
+					} else {
+						ss << "Some items in your loot pouch could not be sold.";
+					}
 					player->sendTextMessage(MESSAGE_FAILURE, ss.str());
 				}
 			} else {
-				ss << "Sale stopped. Some items in your loot bag could not be sold. Make sure you have enough space in your bag.";
+				ss << "Sale stopped. Some items in your loot pouch could not be sold.";
+				if (getCurrency() == ITEM_GOLD_COIN && !g_configManager().getBoolean(AUTOBANK)) {
+					ss << " Make sure you have enough space in your bag.";
+				}
 				player->sendTextMessage(MESSAGE_ADMINISTRATOR, ss.str());
 				ss.str("");
 				ss.clear();
