@@ -601,7 +601,10 @@ void Npc::onPlayerSellAllLoot(uint32_t playerId, uint16_t itemId, bool ignore, u
 			}
 		}
 
-		player->openPlayerContainers();
+		// false: the default path force-closes every container slot that is not held in an
+		// inventory slot, which shut the player's depot, locker, corpse and ground-bag
+		// windows every single time they emptied a loot pouch.
+		player->openPlayerContainers(false);
 	}
 }
 

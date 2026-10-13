@@ -1021,7 +1021,7 @@ public:
 	void sendInventoryItem(Slots_t slot, const std::shared_ptr<Item> &item) const;
 	void sendInventoryIds() const;
 
-	void openPlayerContainers();
+	void openPlayerContainers(bool closeUnlistedSlots = true);
 
 	// Quickloot
 	void sendLootContainers() const;

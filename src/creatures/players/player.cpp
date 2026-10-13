@@ -11635,7 +11635,7 @@ uint8_t Player::getOpenedContainersLimit() const {
 	return getOperatingSystem() < CLIENTOS_OTCLIENT_LINUX ? 32 : 254;
 }
 
-void Player::openPlayerContainers() {
+void Player::openPlayerContainers(bool closeUnlistedSlots /* = true */) {
 	// skip if client lost connection
 	if (!client) {
 		return;
@@ -11675,10 +11675,18 @@ void Player::openPlayerContainers() {
 		}
 	}
 
-	// fix missing containers for qt client
-	if (getOperatingSystem() < CLIENTOS_OTCLIENT_LINUX) {
+	// Fix missing containers for the qt client: it keeps whatever container slots it had,
+	// so when its view is rebuilt from scratch the unused ones must be cleared explicitly.
+	//
+	// This is only correct while rebuilding. openContainersList above is built purely from
+	// containers sitting in INVENTORY slots, so anything else the player legitimately has
+	// open - a depot, a locker, a corpse, a bag on the ground - is absent from it and gets
+	// force-closed. Mid-session refreshes pass false so they stop shutting those windows.
+	if (closeUnlistedSlots && getOperatingSystem() < CLIENTOS_OTCLIENT_LINUX) {
 		for (uint32_t i = 0; i < getOpenedContainersLimit(); ++i) {
-			if (!openContainersList[i + 1]) {
+			// find(), not operator[]: the latter inserted a null entry for every unused slot.
+			const auto listedSlot = openContainersList.find(i + 1);
+			if (listedSlot == openContainersList.end() || !listedSlot->second) {
 				client->sendEmptyContainer(i);
 				client->sendCloseContainer(i);
 			}
