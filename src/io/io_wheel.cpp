@@ -144,6 +144,61 @@ namespace InternalPlayerWheel {
 	}
 
 	/**
+	 * @brief Folds every lower grade into the requested one.
+	 *
+	 * Wheel grades are cumulative: reaching Grade II means Grade I was bought too.
+	 * But registerWheelSpellTable() only writes a boost for the grade that declares
+	 * it, and getCombatDataSpell() / applyCooldownConditions() read
+	 * getWheelOfDestinyBoost(..., spellGrade) for the CURRENT grade alone. So any
+	 * entry that grants one thing at Grade I and something else at Grade II lost the
+	 * Grade I bonus the moment the player reached Grade II -- investing further in
+	 * the wheel made the spell strictly worse. That hit 19 entries, among them every
+	 * "-Xs cooldown at Grade I" augment (Forked Spells, Death Echo, Groundshaker,
+	 * Strong Ethereal Spear, Mystic Repulse, the Special Mage Spells).
+	 *
+	 * A field set on the higher grade always wins; only unset (0) fields inherit, so
+	 * an entry that restates a value with a bigger number keeps the bigger number.
+	 * Area / additional target / duration are not handled here -- those never reach
+	 * the Spell object and are already folded in checkSpellArea() and
+	 * checkSpellAdditionalTarget().
+	 */
+	template <typename DataType>
+	auto mergeLowerGrades(const DataType &data, size_t gradeIndex) {
+		auto merged = data.grade[gradeIndex];
+		for (size_t lower = gradeIndex; lower-- > 1;) {
+			const auto &prev = data.grade[lower];
+			if (merged.increase.damage == 0) {
+				merged.increase.damage = prev.increase.damage;
+			}
+			if (merged.increase.heal == 0) {
+				merged.increase.heal = prev.increase.heal;
+			}
+			if (merged.increase.criticalDamage == 0) {
+				merged.increase.criticalDamage = prev.increase.criticalDamage;
+			}
+			if (merged.increase.criticalChance == 0) {
+				merged.increase.criticalChance = prev.increase.criticalChance;
+			}
+			if (merged.decrease.cooldown == 0) {
+				merged.decrease.cooldown = prev.decrease.cooldown;
+			}
+			if (merged.decrease.manaCost == 0) {
+				merged.decrease.manaCost = prev.decrease.manaCost;
+			}
+			if (merged.decrease.secondaryGroupCooldown == 0) {
+				merged.decrease.secondaryGroupCooldown = prev.decrease.secondaryGroupCooldown;
+			}
+			if (merged.leech.life == 0) {
+				merged.leech.life = prev.leech.life;
+			}
+			if (merged.leech.mana == 0) {
+				merged.leech.mana = prev.leech.mana;
+			}
+		}
+		return merged;
+	}
+
+	/**
 	 * @brief Helper function to bind member functions with placeholders.
 	 *
 	 * This function takes an object and a member function and returns a callable object
@@ -169,7 +224,7 @@ bool IOWheel::initializeGlobalData(bool reload /* = false*/) {
 	// Register spells for druid
 	for (const auto &data : getWheelBonusData().spells.druid) {
 		for (size_t i = 1; i < 3; ++i) {
-			const auto &grade = data.grade[i];
+			const auto grade = InternalPlayerWheel::mergeLowerGrades(data, i);
 			InternalPlayerWheel::registerWheelSpellTable(grade, data.name, static_cast<WheelSpellGrade_t>(i));
 		}
 	}
@@ -177,7 +232,7 @@ bool IOWheel::initializeGlobalData(bool reload /* = false*/) {
 	// Register spells for knight
 	for (const auto &data : getWheelBonusData().spells.knight) {
 		for (size_t i = 1; i < 3; ++i) {
-			const auto &grade = data.grade[i];
+			const auto grade = InternalPlayerWheel::mergeLowerGrades(data, i);
 			InternalPlayerWheel::registerWheelSpellTable(grade, data.name, static_cast<WheelSpellGrade_t>(i));
 		}
 	}
@@ -185,7 +240,7 @@ bool IOWheel::initializeGlobalData(bool reload /* = false*/) {
 	// Register spells for paladin
 	for (const auto &data : getWheelBonusData().spells.paladin) {
 		for (size_t i = 1; i < 3; ++i) {
-			const auto &grade = data.grade[i];
+			const auto grade = InternalPlayerWheel::mergeLowerGrades(data, i);
 			InternalPlayerWheel::registerWheelSpellTable(grade, data.name, static_cast<WheelSpellGrade_t>(i));
 		}
 	}
@@ -193,7 +248,7 @@ bool IOWheel::initializeGlobalData(bool reload /* = false*/) {
 	// Register spells for sorcerer
 	for (const auto &data : getWheelBonusData().spells.sorcerer) {
 		for (size_t i = 1; i < 3; ++i) {
-			const auto &grade = data.grade[i];
+			const auto grade = InternalPlayerWheel::mergeLowerGrades(data, i);
 			InternalPlayerWheel::registerWheelSpellTable(grade, data.name, static_cast<WheelSpellGrade_t>(i));
 		}
 	}
@@ -201,7 +256,7 @@ bool IOWheel::initializeGlobalData(bool reload /* = false*/) {
 	// Register spells for monk
 	for (const auto &data : getWheelBonusData().spells.monk) {
 		for (size_t i = 1; i < 3; ++i) {
-			const auto &grade = data.grade[i];
+			const auto grade = InternalPlayerWheel::mergeLowerGrades(data, i);
 			InternalPlayerWheel::registerWheelSpellTable(grade, data.name, static_cast<WheelSpellGrade_t>(i));
 		}
 	}
@@ -282,6 +337,14 @@ void IOWheel::initializeDruidSpells() {
 	m_wheelBonusData.spells.druid[2].name = "Any_Forked_Spell"; // Vocation Adjustment: Forked Spells (replaces Nature's Embrace, not in the new wheel)
 	m_wheelBonusData.spells.druid[2].grade[1].decrease.cooldown = 2; // I -2s cd
 	m_wheelBonusData.spells.druid[2].grade[2].increase.aditionalTarget = 1; // II +1 target (forked_*.lua reads getWheelSpellAdditionalTarget)
+	// The Forked spells were the only druid entry with no damage component, and no
+	// supreme gem modifier exists for them either (WheelGemSupremeModifier_t has no
+	// Forked_* value), so nothing anywhere fed damage.damageMultiplier for them.
+	// NOTE: getCombatDataSpell() reads getWheelOfDestinyBoost(DAMAGE, spellGrade) for
+	// the CURRENT grade only - it does not accumulate across grades - so the value has
+	// to be restated on grade II or reaching it would drop the grade I bonus.
+	m_wheelBonusData.spells.druid[2].grade[1].increase.damage = 5; // I +5% base damage
+	m_wheelBonusData.spells.druid[2].grade[2].increase.damage = 8; // II +8% base damage (restated, not additive)
 
 	m_wheelBonusData.spells.druid[3].name = "Terra Wave";
 	m_wheelBonusData.spells.druid[3].grade[1].increase.damage = static_cast<int>(std::round(6.5));
