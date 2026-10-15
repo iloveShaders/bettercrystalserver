@@ -1071,8 +1071,17 @@ void WeaponWand::configureWeapon(const ItemType &it) {
 	Weapon::configureWeapon(it);
 }
 
-int32_t WeaponWand::getWeaponDamage(const std::shared_ptr<Player> &player, const std::shared_ptr<Creature> &, const std::shared_ptr<Item> &, bool maxDamage /* = false*/) const {
-	return maxDamage ? -maxChange : -normal_random(minChange, maxChange);
+int32_t WeaponWand::getWeaponDamage(const std::shared_ptr<Player> &player, const std::shared_ptr<Creature> &, const std::shared_ptr<Item> &item, bool maxDamage /* = false*/) const {
+	// A wand's damage is the flat minChange/maxChange pair from its weapon
+	// script, and the item was ignored outright - the parameter was not even
+	// named - so any attack value carried by the wand never reached combat.
+	// WeaponMelee runs item->getAttack() through the skill formula; a wand has
+	// no weapon skill to run it through (getWeaponSkill has no WEAPON_WAND
+	// case), so the attack is added straight onto the roll instead. Wands and
+	// rods have no attack value of their own in items.xml, which makes this
+	// exactly the granted bonus and nothing else.
+	const int32_t attackBonus = item ? std::max<int32_t>(0, item->getAttack()) : 0;
+	return maxDamage ? -(maxChange + attackBonus) : -(normal_random(minChange, maxChange) + attackBonus);
 }
 
 int16_t WeaponWand::getElementDamageValue() const {
