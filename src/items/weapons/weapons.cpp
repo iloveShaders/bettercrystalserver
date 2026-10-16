@@ -206,9 +206,36 @@ int32_t Weapon::playerWeaponCheck(const std::shared_ptr<Player> &player, const s
 }
 
 bool Weapon::useWeapon(const std::shared_ptr<Player> &player, const std::shared_ptr<Item> &item, const std::shared_ptr<Creature> &target) const {
-	const int32_t damageModifier = playerWeaponCheck(player, target, item->getShootRange());
+	int32_t damageModifier = playerWeaponCheck(player, target, item->getShootRange());
 	if (damageModifier == 0) {
 		return false;
+	}
+
+	// playerWeaponCheck compares against getReqLevel(), which is fixed on the
+	// item TYPE when the weapon registers - it cannot see that this particular
+	// weapon has been ground from 38 attack up to 238. getEffectiveReqLevel()
+	// charges for that surplus, so an over-grown weapon simply stops working
+	// until its wielder is big enough to carry it.
+	//
+	// For a distance weapon the engine hands this function the AMMO rather than
+	// the bow - Player::getWeapon() walks the quiver - so testing `item` alone
+	// would let a ground-up bow through behind an ordinary arrow. Take whichever
+	// of the two demands more. getWeapon(true) ignores ammo and returns the
+	// thing actually in hand.
+	uint32_t requiredLevel = item->getEffectiveReqLevel();
+	const auto &handWeapon = player->getWeapon(true);
+	if (handWeapon && handWeapon != item) {
+		requiredLevel = std::max<uint32_t>(requiredLevel, handWeapon->getEffectiveReqLevel());
+	}
+
+	// Same penalty shape as the vanilla level check above: nothing at all, or
+	// half for a weapon that was flagged wieldUnproperly.
+	if (!player->hasFlag(PlayerFlags_t::IgnoreWeaponCheck)
+	    && player->getLevel() < requiredLevel) {
+		damageModifier = isWieldedUnproperly() ? damageModifier / 2 : 0;
+		if (damageModifier == 0) {
+			return false;
+		}
 	}
 
 	internalUseWeapon(player, item, target, damageModifier);

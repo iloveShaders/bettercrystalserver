@@ -1672,8 +1672,13 @@ Item::getDescriptions(const ItemType &it, const std::shared_ptr<Item> &item /*= 
 			descriptions.emplace_back("Required", "Premium");
 		}
 
-		if (it.minReqLevel != 0) {
-			descriptions.emplace_back("Required Level", std::to_string(it.minReqLevel));
+		// THIS item's requirement, not the type's - otherwise an affixed weapon
+		// advertises the 25 it was printed with while refusing to swing. Tested
+		// on the computed value so a weapon whose type had no requirement still
+		// shows the one its attack has earned it.
+		const uint32_t effectiveReqLevel = item ? item->getEffectiveReqLevel() : it.minReqLevel;
+		if (effectiveReqLevel != 0) {
+			descriptions.emplace_back("Required Level", std::to_string(effectiveReqLevel));
 		}
 
 		if (it.minReqMagicLevel != 0) {
@@ -2103,6 +2108,40 @@ Item::getDescriptions(const ItemType &it, const std::shared_ptr<Item> &item /*= 
 	}
 	descriptions.shrink_to_fit();
 	return descriptions;
+}
+
+// An affixed weapon's attack is unbounded - the merge path grants +1 on every
+// fusion, so farming duplicates of one class id walks a sword from 38 attack to
+// 238 - but minReqLevel is baked into the item TYPE at load (item_parse.cpp
+// copies it off the Weapon registration), so that sword still reads "level 25"
+// and still swings at level 25.
+//
+// Charge for the surplus. Every point of attack the item carries beyond what
+// its type ships with, past a free allowance, raises the level it demands:
+//
+//   affixAttackFreeAttack  points of surplus that cost nothing (drop rolls
+//                          top out at +5, so an ordinary affixed weapon is
+//                          untouched)
+//   affixAttackLevelScale  player levels charged per point beyond that
+//
+// Both live in config.lua, so the curve is tunable with a restart rather than
+// a recompile.
+uint32_t Item::getEffectiveReqLevel() const {
+	const ItemType &it = items[id];
+	uint32_t reqLevel = it.minReqLevel;
+
+	const auto scale = g_configManager().getNumber(AFFIX_ATTACK_LEVEL_SCALE);
+	if (scale <= 0) {
+		return reqLevel;
+	}
+
+	const auto freeAttack = g_configManager().getNumber(AFFIX_ATTACK_FREE_ATTACK);
+	const int64_t surplusAttack = static_cast<int64_t>(getAttack()) - it.attack - freeAttack;
+	if (surplusAttack > 0) {
+		reqLevel += static_cast<uint32_t>(surplusAttack * scale);
+	}
+
+	return reqLevel;
 }
 
 std::string Item::parseImbuementDescription(const std::shared_ptr<Item> &item) {
@@ -3333,7 +3372,7 @@ std::string Item::getDescription(const ItemType &it, int32_t lookDistance, const
 		}
 
 		if (it.wieldInfo & WIELDINFO_LEVEL) {
-			s << " of level " << it.minReqLevel << " or higher";
+			s << " of level " << (item ? item->getEffectiveReqLevel() : it.minReqLevel) << " or higher";
 		}
 
 		if (it.wieldInfo & WIELDINFO_MAGLV) {

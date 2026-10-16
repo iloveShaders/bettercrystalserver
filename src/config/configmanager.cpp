@@ -296,6 +296,8 @@ bool ConfigManager::load() {
 	loadIntConfig(L, FORGE_INFLUENCED_CREATURES_LIMIT, "forgeInfluencedLimit", 300);
 	loadIntConfig(L, FORGE_MAX_DUST, "forgeMaxDust", 225);
 	loadIntConfig(L, FORGE_MAX_ITEM_TIER, "forgeMaxItemTier", 10);
+	loadIntConfig(L, AFFIX_ATTACK_LEVEL_SCALE, "affixAttackLevelScale", 10);
+	loadIntConfig(L, AFFIX_ATTACK_FREE_ATTACK, "affixAttackFreeAttack", 10);
 	loadIntConfig(L, FORGE_MAX_SLIVERS, "forgeMaxSlivers", 7);
 	loadIntConfig(L, FORGE_MIN_SLIVERS, "forgeMinSlivers", 3);
 	loadIntConfig(L, FORGE_SLIVER_AMOUNT, "forgeSliverAmount", 3);

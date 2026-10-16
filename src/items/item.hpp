@@ -425,6 +425,11 @@ public:
 		}
 		return items[id].extraDefense;
 	}
+
+	// The level THIS item demands, which is not the one its type shipped
+	// with: an affixed weapon's attack grows without bound while minReqLevel
+	// is fixed at load. Defined in item.cpp because it reads the config.
+	uint32_t getEffectiveReqLevel() const;
 	std::vector<std::shared_ptr<AugmentInfo>> getAugments() const {
 		return items[id].augments;
 	}
