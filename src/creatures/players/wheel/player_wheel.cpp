@@ -2255,13 +2255,16 @@ uint8_t PlayerWheel::getOptions(uint32_t ownerId) const {
 		return 0;
 	}
 
-	// Check if is in the temple range (we assume the temple is within the range of 10 sqms)
+	// Vocation Adjustment: ANY protection zone allows full editing (increase and
+	// decrease), not only the 10-sqm radius around a town temple.
+	//
+	// This is a DELIBERATE DIVERGENCE from global Tibia, which restricts revoking
+	// points to a temple -- tibia.com manual, Characters section: "if you like to
+	// remove promotion points or reset your Wheel of Destiny, your character needs
+	// to be in a temple". To restore global behaviour, put back the per-town loop
+	// over g_game().map.towns.getTowns() with Position::areInRange<1, 10>().
 	if (m_player.getZoneType() == ZONE_PROTECTION) {
-		for (const auto &[townid, town] : g_game().map.towns.getTowns()) {
-			if (Position::areInRange<1, 10>(town->getTemplePosition(), m_player.getPosition())) {
-				return 1;
-			}
-		}
+		return 1;
 	}
 
 	return 2;
