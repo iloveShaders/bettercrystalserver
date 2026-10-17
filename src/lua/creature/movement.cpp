@@ -539,6 +539,30 @@ uint32_t MoveEvent::EquipItem(const std::shared_ptr<MoveEvent> &moveEvent, const
 		}
 	}
 
+	// The block above is gated on getWieldInfo(), so an item that declares no
+	// requirement of its own skips every check in it - which is most armour.
+	// An affixed piece grows armour, defense and attack without bound while
+	// minReqLevel stays whatever the type shipped with, often nothing at all,
+	// so the demand has to be computed from THIS item rather than read off
+	// the type. Item::getEffectiveReqLevel does that.
+	//
+	// Deliberately only where the affixes raised it ABOVE the type's own
+	// requirement. Applying it unconditionally would start refusing ordinary
+	// weapons that vanilla happily lets you hold and merely zeroes the damage
+	// of, which is a rule change nobody asked for.
+	if (!player->hasFlag(PlayerFlags_t::IgnoreWeaponCheck)) {
+		const uint32_t effectiveReqLevel = item->getEffectiveReqLevel();
+		if (effectiveReqLevel > Item::items[item->getID()].minReqLevel
+		    && player->getLevel() < effectiveReqLevel) {
+			// isCheck runs on validation passes as well, and messaging there
+			// would fire several times for a single drag.
+			if (!isCheck) {
+				player->sendCancelMessage(RETURNVALUE_NOTENOUGHLEVEL);
+			}
+			return 0;
+		}
+	}
+
 	if (isCheck) {
 		return 1;
 	}

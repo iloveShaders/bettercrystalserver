@@ -2135,10 +2135,24 @@ uint32_t Item::getEffectiveReqLevel() const {
 		return reqLevel;
 	}
 
-	const auto freeAttack = g_configManager().getNumber(AFFIX_ATTACK_FREE_ATTACK);
-	const int64_t surplusAttack = static_cast<int64_t>(getAttack()) - it.attack - freeAttack;
-	if (surplusAttack > 0) {
-		reqLevel += static_cast<uint32_t>(surplusAttack * scale);
+	// Attack is not the only thing the affixes grow. An armour piece gains +1
+	// armour per item level, a shield gains defense, and a wand's granted
+	// defense is written to EXTRA defense because that is the only channel
+	// Player::getDefense still reads once a spellbook is in the other hand.
+	// Charging for attack alone left every one of those completely ungated -
+	// and armour is the worst case, because most armour declares no required
+	// level at all, so nothing else was stopping a level 8 from wearing it.
+	//
+	// The LARGEST surplus, never the sum: one item level often raises two of
+	// these at once and must not be charged for twice.
+	int64_t surplus = static_cast<int64_t>(getAttack()) - it.attack;
+	surplus = std::max<int64_t>(surplus, static_cast<int64_t>(getArmor()) - it.armor);
+	surplus = std::max<int64_t>(surplus, static_cast<int64_t>(getDefense()) - it.defense);
+	surplus = std::max<int64_t>(surplus, static_cast<int64_t>(getExtraDefense()) - it.extraDefense);
+
+	surplus -= g_configManager().getNumber(AFFIX_ATTACK_FREE_ATTACK);
+	if (surplus > 0) {
+		reqLevel += static_cast<uint32_t>(surplus * scale);
 	}
 
 	return reqLevel;
