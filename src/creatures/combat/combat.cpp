@@ -1537,6 +1537,23 @@ bool Combat::doCombatChain(const std::shared_ptr<Creature> &caster, const std::s
 
 						CombatDamage damage = combat->getCombatDamage(caster, nextTarget);
 						damage.affected = affected;
+
+						// Chain hops bypass doCombatHealth(), and applyExtensions() -- called
+						// ONLY from CombatFunc(), doCombatHealth() and doCombatMana() -- is the
+						// single place a player attack's critical hit is rolled. getCombatDamage()
+						// above happily accumulates damage.criticalChance / criticalDamage from the
+						// wheel and gear, but nothing ever read them on this path, so NO chain spell
+						// could ever crit (Forked Glacier/Thorns, Executioner's Throw, Divine Dazzle,
+						// Chivalrous Challenge, Lightning) and Fatal, Low Blow, Savage Blow and the
+						// weapon-proficiency crit perks were dead on them too.
+						//
+						// One-element vector: each hop is its own hit with its own damage roll, so it
+						// gets its own crit roll, and applyExtensions() writes the result back into
+						// `damage` when targets.size() == 1 (isSingleCombat) -- the same contract
+						// doCombatHealth() relies on.
+						std::vector<std::shared_ptr<Creature>> affectedTargets { nextTarget };
+						Combat::applyExtensions(caster, affectedTargets, damage, combat->params);
+
 						Combat::CombatHealthFunc(caster, nextTarget, combat->params, &damage);
 						if (combat->params.targetCallback) {
 							combat->params.targetCallback->onTargetCombat(caster, nextTarget);
