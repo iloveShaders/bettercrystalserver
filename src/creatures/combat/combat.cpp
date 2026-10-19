@@ -1539,18 +1539,18 @@ bool Combat::doCombatChain(const std::shared_ptr<Creature> &caster, const std::s
 						damage.affected = affected;
 
 						// Chain hops bypass doCombatHealth(), and applyExtensions() -- called
-					    // ONLY from CombatFunc(), doCombatHealth() and doCombatMana() -- is the
-					    // single place a player attack's critical hit is rolled. getCombatDamage()
-					    // above happily accumulates damage.criticalChance / criticalDamage from the
-					    // wheel and gear, but nothing ever read them on this path, so NO chain spell
-					    // could ever crit (Forked Glacier/Thorns, Executioner's Throw, Divine Dazzle,
-					    // Chivalrous Challenge, Lightning) and Fatal, Low Blow, Savage Blow and the
-					    // weapon-proficiency crit perks were dead on them too.
-					    //
-					    // One-element vector: each hop is its own hit with its own damage roll, so it
-					    // gets its own crit roll, and applyExtensions() writes the result back into
-					    // `damage` when targets.size() == 1 (isSingleCombat) -- the same contract
-					    // doCombatHealth() relies on.
+						// ONLY from CombatFunc(), doCombatHealth() and doCombatMana() -- is the
+						// single place a player attack's critical hit is rolled. getCombatDamage()
+						// above happily accumulates damage.criticalChance / criticalDamage from the
+						// wheel and gear, but nothing ever read them on this path, so NO chain spell
+						// could ever crit (Forked Glacier/Thorns, Executioner's Throw, Divine Dazzle,
+						// Chivalrous Challenge, Lightning) and Fatal, Low Blow, Savage Blow and the
+						// weapon-proficiency crit perks were dead on them too.
+						//
+						// One-element vector: each hop is its own hit with its own damage roll, so it
+						// gets its own crit roll, and applyExtensions() writes the result back into
+						// `damage` when targets.size() == 1 (isSingleCombat) -- the same contract
+						// doCombatHealth() relies on.
 						std::vector<std::shared_ptr<Creature>> affectedTargets { nextTarget };
 						Combat::applyExtensions(caster, affectedTargets, damage, combat->params);
 
@@ -2762,7 +2762,17 @@ void MagicField::onStepInField(const std::shared_ptr<Creature> &creature) {
 
 void Combat::applyExtensions(const std::shared_ptr<Creature> &caster, const std::vector<std::shared_ptr<Creature>> &targets, CombatDamage &damage, const CombatParams &params) {
 	metrics::method_latency measure(__METRICS_METHOD_NAME__);
-	if (damage.extension || !caster || damage.primary.type == COMBAT_HEALING) {
+	// COMBAT_NONE must bail out alongside healing. A damage-less combat has nothing to
+	// crit, and the two proficiency lookups below index int32_t[COMBAT_COUNT] arrays with
+	// combatTypeToIndex(primary.type), which RETURNS COMBAT_NONE (255) on an unmapped
+	// type -- a raw out-of-bounds read 255 ints past a 14-int array, feeding garbage in as
+	// crit chance / crit extra damage.
+	//
+	// Reachable since doCombatChain() started calling this: the pure-support chain spells
+	// (Divine Dazzle, Chivalrous Challenge) set only COMBAT_PARAM_CHAIN_EFFECT and no
+	// COMBAT_PARAM_TYPE, so their primary.type is COMBAT_NONE. primary.type is never
+	// reassigned after this point, so guarding here covers both lookups.
+	if (damage.extension || !caster || damage.primary.type == COMBAT_HEALING || damage.primary.type == COMBAT_NONE) {
 		return;
 	}
 
