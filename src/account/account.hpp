@@ -54,6 +54,20 @@ public:
 	uint8_t removeCoins(const uint8_t &type, const uint32_t &amount, const std::string &detail = "REMOVE Coins");
 
 	/**
+	 * @brief Removes coins from the account across two distinct coin types.
+	 *
+	 * Takes from primaryType first, then the remainder from secondaryType, atomically.
+	 *
+	 * WARNING: this is an ADDITIONAL overload. The 3-parameter version above must stay --
+	 * luaPlayerRemoveTibiaCoins and luaPlayerRemoveTransferableCoins still call it with
+	 * 2 arguments. Replacing it instead of adding this one breaks the build with
+	 * "'Account::removeCoins': function does not take 2 arguments".
+	 *
+	 * @return AccountErrors_t AccountErrors_t::Ok(0) Success, otherwise Fail.
+	 */
+	uint8_t removeCoins(const uint8_t &primaryType, const uint8_t &secondaryType, const uint32_t &amount, const std::string &detail = "REMOVE Coins");
+
+	/**
 	 * @brief Registers a coin transaction.
 	 *
 	 * @param type Type of the coin
