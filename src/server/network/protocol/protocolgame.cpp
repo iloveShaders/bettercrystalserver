@@ -60,6 +60,7 @@
 #include "io/ioweeklytasks.hpp"
 #include "items/items_classification.hpp"
 #include "items/weapons/weapons.hpp"
+#include "lua/creature/actions.hpp"
 #include "lua/creature/creatureevent.hpp"
 #include "lua/modules/modules.hpp"
 #include "server/network/message/outputmessage.hpp"
@@ -11996,12 +11997,30 @@ void ProtocolGame::parseBossDifficultySelection(NetworkMessage &msg) {
 		// or any future caller) leaves no lever context, and arming the storage there would make
 		// the player's NEXT genuine lever pull skip openDifficultySelection and start a fight
 		// against whatever ceiling happened to be left in 910105.
-		if (leverItemId == 0 || leverPosition.x == 0 || leverPosition.y == 0) {
+		std::shared_ptr<Item> leverItem = nullptr;
+		if (leverItemId != 0) {
+			const auto &leverTile = g_game().map.getTile(leverPosition);
+			if (leverTile) {
+				leverItem = g_game().findItemOfType(leverTile, leverItemId, false, -1);
+			}
+		}
+		if (!leverItem) {
 			player->addStorageValue(910100, -1);
 			g_logger().debug("[BossDiffSel] no lever context, ignoring start (difficulty={})", difficulty);
 		} else {
 			player->addStorageValue(910100, difficulty);
-			g_game().playerUseItem(player->getID(), leverPosition, 0, 0, leverItemId);
+			// g_actions().useItem, NOT g_game().playerUseItem. playerUseItem runs
+			// Actions::canUse first, which requires the player to be ADJACENT to the item
+			// (areInRange<1,1>, actions.cpp:194). Only one of a lever's five standing tiles is
+			// ever adjacent to the lever, so for four players out of five the Start Fight
+			// button did nothing: the call either bounced with TOOFARAWAY, or queued an
+			// autowalk that dragged the puller off their tile and failed BossLever:onUse's
+			// participant check on arrival. Either way the fight only began when the player
+			// pulled the lever by hand a second time, which is the bug that was reported.
+			// The proximity check is already satisfied implicitly -- the player had to reach
+			// this lever to open the window in the first place -- so skipping it is correct
+			// rather than merely convenient. useItem itself applies the normal action cooldown.
+			g_actions().useItem(player, leverPosition, 0, leverItem, false);
 			g_logger().debug("[BossDiffSel] START FIGHT difficulty={} (0..25) allowed={}", difficulty, allowedDifficulty);
 		}
 		// --- end Lua bridge ----------------------------------------------------------
