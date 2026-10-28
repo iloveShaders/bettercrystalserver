@@ -6180,6 +6180,54 @@ std::shared_ptr<Item> Player::getForgeItemFromId(uint16_t itemId, uint8_t tier) 
 	return nullptr;
 }
 
+// Which tier 0 copy should RECEIVE a transferred tier.
+//
+// getForgeItemFromId() returns the first match in inventory order, which is
+// fine when every copy of an item id is identical. It is not fine here: a
+// copy can carry custom attributes that took real grinding (class id, item
+// level, merges, sockets), so "the first one" put the tier on whichever
+// plain copy happened to sit earlier in the pack while the invested one was
+// left untouched - and to the player that reads as the transfer silently
+// doing nothing.
+//
+// Pick the most invested copy instead: the largest surplus of attack, armor,
+// defense or extra defense over the item TYPE's own values, which is exactly
+// what levelling and merging raise. The LARGEST of the four rather than
+// their sum, since one item level often lifts two at once. A wand's granted
+// defense lands in extra defense, which is why that one is in the list.
+//
+// Nothing is lost either way - forgeTransferItemTier clones the receiver and
+// Item::clone() deep-copies the whole attribute block - this only decides
+// WHICH copy ends up wearing the tier.
+std::shared_ptr<Item> Player::getForgeReceiveItemFromId(uint16_t itemId) const {
+	const ItemType &it = Item::items[itemId];
+	std::shared_ptr<Item> best = nullptr;
+	int64_t bestSurplus = std::numeric_limits<int64_t>::min();
+
+	for (const auto &item : getAllInventoryItems(true)) {
+		if (item->hasImbuements()) {
+			continue;
+		}
+		if (item->getID() != itemId || item->getTier() != 0) {
+			continue;
+		}
+
+		int64_t surplus = static_cast<int64_t>(item->getAttack()) - it.attack;
+		surplus = std::max<int64_t>(surplus, static_cast<int64_t>(item->getArmor()) - it.armor);
+		surplus = std::max<int64_t>(surplus, static_cast<int64_t>(item->getDefense()) - it.defense);
+		surplus = std::max<int64_t>(surplus, static_cast<int64_t>(item->getExtraDefense()) - it.extraDefense);
+
+		// Strictly greater, so an equal-surplus tie keeps the earlier copy and
+		// the old first-match behaviour is preserved where no copy is invested.
+		if (surplus > bestSurplus) {
+			bestSurplus = surplus;
+			best = item;
+		}
+	}
+
+	return best;
+}
+
 std::shared_ptr<Thing> Player::getThing(size_t index) const {
 	if (index >= CONST_SLOT_FIRST && index <= CONST_SLOT_LAST) {
 		return inventory[index];
@@ -11197,7 +11245,11 @@ void Player::forgeTransferItemTier(ForgeAction_t actionType, uint16_t donorItemI
 		return;
 	}
 
-	const auto &receiveItem = getForgeItemFromId(receiveItemId, 0);
+	// Best tier 0 copy, not merely the first - see getForgeReceiveItemFromId.
+	// Safe to run after the donor was removed above: the donor is tier >= 1 and
+	// this only ever considers tier 0, so the two can never resolve to the
+	// same item even when donorItemId == receiveItemId.
+	const auto &receiveItem = getForgeReceiveItemFromId(receiveItemId);
 	if (!receiveItem) {
 		g_logger().error("[Log 2] Player with name {} failed to transfer item with id {}", getName(), receiveItemId);
 		sendForgeError(RETURNVALUE_CONTACTADMINISTRATOR);

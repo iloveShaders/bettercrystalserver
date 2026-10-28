@@ -1906,6 +1906,7 @@ private:
 	std::map<uint16_t, uint16_t> &getAllSaleItemIdAndCount(std::map<uint16_t, uint16_t> &countMap) const;
 	void getAllItemTypeCountAndSubtype(std::map<uint32_t, uint32_t> &countMap) const;
 	std::shared_ptr<Item> getForgeItemFromId(uint16_t itemId, uint8_t tier) const;
+	std::shared_ptr<Item> getForgeReceiveItemFromId(uint16_t itemId) const;
 	std::shared_ptr<Thing> getThing(size_t index) const override;
 
 	void internalAddThing(const std::shared_ptr<Thing> &thing) override;
