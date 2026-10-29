@@ -9171,6 +9171,29 @@ void Game::checkLight() {
 	}
 	if (currentLightState != lightState) {
 		currentLightState = lightState;
+
+		// Day/night flip: despawn creatures whose respawn period no longer matches their floor.
+		// Monster::onThink() already performs this canSpawn() check, but setIdle(true) takes idle
+		// monsters off the creature-check list, so onThink() never runs for them. The wrong-period
+		// set therefore lingers until a player walks into view and wakes it -- which players see as
+		// monsters vanishing on screen, and lets them be killed in the meantime. Sweeping here makes
+		// the flip immediate and independent of where players happen to be standing.
+		// Collect first, then remove: removeCreature() erases from the monsters map inline via
+		// Monster::removeList() -> Game::removeMonster(), which would invalidate this iterator.
+		std::vector<std::shared_ptr<Monster>> periodDespawnList;
+		for (const auto &[monsterId, monster] : getMonsters()) {
+			if (!monster || monster->isRemoved()) {
+				continue;
+			}
+			const auto &mType = monster->getMonsterType();
+			if (mType && !mType->canSpawn(monster->getPosition())) {
+				periodDespawnList.emplace_back(monster);
+			}
+		}
+		for (const auto &monster : periodDespawnList) {
+			removeCreature(monster);
+		}
+
 		for (const auto &[eventName, globalEvent] : g_globalEvents().getEventMap(GLOBALEVENT_PERIODCHANGE)) {
 			globalEvent->executePeriodChange(lightState, lightInfo);
 		}
