@@ -6180,35 +6180,37 @@ std::shared_ptr<Item> Player::getForgeItemFromId(uint16_t itemId, uint8_t tier) 
 	return nullptr;
 }
 
-// Which tier 0 copy should RECEIVE a transferred tier.
+// Which copy of a given item id and tier the forge should pick.
 //
 // getForgeItemFromId() returns the first match in inventory order, which is
 // fine when every copy of an item id is identical. It is not fine here: a
 // copy can carry custom attributes that took real grinding (class id, item
-// level, merges, sockets), so "the first one" put the tier on whichever
-// plain copy happened to sit earlier in the pack while the invested one was
-// left untouched - and to the player that reads as the transfer silently
-// doing nothing.
+// level, merges, sockets), and the forge keeps the attributes of exactly ONE
+// of the two items it consumes - forgeFuseItems clones firstForgingItem and
+// forgeTransferItemTier clones the receiver. First-match order therefore made
+// the kept attributes depend on pack order, which is why players worked out
+// that the item they wanted to keep had to sit in the first slot of the main
+// backpack for the forge to behave.
 //
-// Pick the most invested copy instead: the largest surplus of attack, armor,
-// defense or extra defense over the item TYPE's own values, which is exactly
-// what levelling and merging raise. The LARGEST of the four rather than
-// their sum, since one item level often lifts two at once. A wand's granted
-// defense lands in extra defense, which is why that one is in the list.
+// Rank by how much has been invested instead: the largest surplus of attack,
+// armor, defense or extra defense over the item TYPE's own values, which is
+// exactly what levelling and merging raise. The LARGEST of the four rather
+// than their sum, since one item level often lifts two at once. A wand's
+// granted defense lands in extra defense, which is why that one is here too.
 //
-// Nothing is lost either way - forgeTransferItemTier clones the receiver and
-// Item::clone() deep-copies the whole attribute block - this only decides
-// WHICH copy ends up wearing the tier.
-std::shared_ptr<Item> Player::getForgeReceiveItemFromId(uint16_t itemId) const {
+// mostInvested = true picks the copy whose attributes should SURVIVE. Pass
+// false for the copy about to be consumed, so the spare that gets eaten is
+// the plainest one the player owns rather than their second best.
+std::shared_ptr<Item> Player::getForgeItemByInvestment(uint16_t itemId, uint8_t tier, bool mostInvested) const {
 	const ItemType &it = Item::items[itemId];
-	std::shared_ptr<Item> best = nullptr;
-	int64_t bestSurplus = std::numeric_limits<int64_t>::min();
+	std::shared_ptr<Item> chosen = nullptr;
+	int64_t chosenSurplus = 0;
 
 	for (const auto &item : getAllInventoryItems(true)) {
 		if (item->hasImbuements()) {
 			continue;
 		}
-		if (item->getID() != itemId || item->getTier() != 0) {
+		if (item->getID() != itemId || item->getTier() != tier) {
 			continue;
 		}
 
@@ -6217,15 +6219,16 @@ std::shared_ptr<Item> Player::getForgeReceiveItemFromId(uint16_t itemId) const {
 		surplus = std::max<int64_t>(surplus, static_cast<int64_t>(item->getDefense()) - it.defense);
 		surplus = std::max<int64_t>(surplus, static_cast<int64_t>(item->getExtraDefense()) - it.extraDefense);
 
-		// Strictly greater, so an equal-surplus tie keeps the earlier copy and
-		// the old first-match behaviour is preserved where no copy is invested.
-		if (surplus > bestSurplus) {
-			bestSurplus = surplus;
-			best = item;
+		// Strict either way, so an equal-surplus tie keeps the earlier copy and
+		// the old first-match behaviour is preserved wherever no copy is any
+		// more invested than another.
+		if (!chosen || (mostInvested ? surplus > chosenSurplus : surplus < chosenSurplus)) {
+			chosenSurplus = surplus;
+			chosen = item;
 		}
 	}
 
-	return best;
+	return chosen;
 }
 
 std::shared_ptr<Thing> Player::getThing(size_t index) const {
@@ -10936,7 +10939,10 @@ void Player::forgeFuseItems(ForgeAction_t actionType, uint16_t firstItemId, uint
 		}
 	};
 
-	const auto &firstForgingItem = getForgeItemFromId(firstItemId, tier);
+	// The forged result is a clone of THIS item (see further down), so its
+	// attributes are the ones that live through the fusion - pick the most
+	// invested copy rather than whichever sits earliest in the backpack.
+	const auto &firstForgingItem = getForgeItemByInvestment(firstItemId, tier, true);
 	if (!firstForgingItem) {
 		g_logger().error("[Log 1] Player with name {} failed to fuse item with id {}", getName(), firstItemId);
 		sendForgeError(RETURNVALUE_CONTACTADMINISTRATOR);
@@ -10949,7 +10955,10 @@ void Player::forgeFuseItems(ForgeAction_t actionType, uint16_t firstItemId, uint
 		sendForgeError(RETURNVALUE_CONTACTADMINISTRATOR);
 		return;
 	}
-	const auto &secondForgingItem = getForgeItemFromId(secondItemId, tier);
+	// This one is consumed and its attributes are discarded, so take the
+	// LEAST invested spare. The first item is already removed above, so it
+	// cannot be picked again here.
+	const auto &secondForgingItem = getForgeItemByInvestment(secondItemId, tier, false);
 	if (!secondForgingItem) {
 		g_logger().error("[Log 2] Player with name {} failed to fuse item with id {}", getName(), secondItemId);
 		refundForgeSource(firstForgingItem, firstItemId, tier);
@@ -11245,11 +11254,11 @@ void Player::forgeTransferItemTier(ForgeAction_t actionType, uint16_t donorItemI
 		return;
 	}
 
-	// Best tier 0 copy, not merely the first - see getForgeReceiveItemFromId.
+	// Best tier 0 copy, not merely the first - see getForgeItemByInvestment.
 	// Safe to run after the donor was removed above: the donor is tier >= 1 and
 	// this only ever considers tier 0, so the two can never resolve to the
 	// same item even when donorItemId == receiveItemId.
-	const auto &receiveItem = getForgeReceiveItemFromId(receiveItemId);
+	const auto &receiveItem = getForgeItemByInvestment(receiveItemId, 0, true);
 	if (!receiveItem) {
 		g_logger().error("[Log 2] Player with name {} failed to transfer item with id {}", getName(), receiveItemId);
 		sendForgeError(RETURNVALUE_CONTACTADMINISTRATOR);

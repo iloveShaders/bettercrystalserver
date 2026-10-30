@@ -7160,6 +7160,25 @@ void ProtocolGame::parseForgeEnter(NetworkMessage &msg) {
 		return;
 	}
 
+	// The client can send a bare 0xBF with no body at all. That is harmless in
+	// itself, but getByte() on an exhausted buffer returns 0 - which IS
+	// ForgeAction_t::FUSION - so the parse fell straight into the fusion branch
+	// below, logged five "Not enough data to read a byte" errors in a row and
+	// then attempted a fusion of item id 0.
+	//
+	// Nothing was ever spent by that: the dust and core checks in
+	// forgeFuseItems are comparisons rather than deductions, and the item
+	// lookup fails ahead of anything being removed. But it filled the log with
+	// errors that read exactly like a real forge failure, which is worse than
+	// the no-op it actually was.
+	//
+	// canRead() is the same predicate getByte() itself uses, so this catches
+	// precisely the case that was erroring and nothing else. Every read below
+	// is now guarded before it is attempted rather than after it has failed.
+	if (!msg.canRead(1)) {
+		return;
+	}
+
 	// 0xBF -> 0 = fusion, 1 = transfer, 2 = dust to sliver, 3 = sliver to core, 4 = increase dust limit
 	const auto actionType = static_cast<ForgeAction_t>(msg.getByte());
 
@@ -7169,6 +7188,10 @@ void ProtocolGame::parseForgeEnter(NetworkMessage &msg) {
 	uint16_t secondItem = 0;
 
 	if (actionType == ForgeAction_t::FUSION || actionType == ForgeAction_t::TRANSFER) {
+		// convergence(1) + first item(2) + tier(1) + second item(2)
+		if (!msg.canRead(6)) {
+			return;
+		}
 		convergence = msg.getByte();
 		firstItem = msg.get<uint16_t>();
 		tier = msg.getByte();
@@ -7176,6 +7199,11 @@ void ProtocolGame::parseForgeEnter(NetworkMessage &msg) {
 	}
 
 	if (actionType == ForgeAction_t::FUSION) {
+		// A convergence fusion carries neither trailing byte and reads neither,
+		// so only the ordinary path needs the extra two.
+		if (!convergence && !msg.canRead(2)) {
+			return;
+		}
 		const bool usedCore = convergence ? false : msg.getByte();
 		const bool reduceTierLoss = convergence ? false : msg.getByte();
 		g_game().playerForgeFuseItems(player->getID(), actionType, firstItem, tier, secondItem, usedCore, reduceTierLoss, convergence);
