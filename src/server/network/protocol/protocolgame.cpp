@@ -7173,8 +7173,19 @@ void ProtocolGame::parseForgeEnter(NetworkMessage &msg) {
 	// the no-op it actually was.
 	//
 	// canRead() is the same predicate getByte() itself uses, so this catches
-	// precisely the case that was erroring and nothing else. Every read below
-	// is now guarded before it is attempted rather than after it has failed.
+	// precisely the case that was erroring and nothing else.
+	//
+	// ONE byte, and no more. An earlier version of this also asserted the
+	// payload LAYOUT below - canRead(6) for the item block and canRead(2) for
+	// the trailing fusion bytes - which was a mistake. That layout was
+	// inferred from the reads already in this function, not from the client,
+	// and nothing here can verify what the 15.30 client actually puts on the
+	// wire for each forge action. If it ever differs by a byte, those guards
+	// would SILENTLY drop a legitimate forge request and the player would
+	// simply see the forge do nothing - a far worse failure than the log spam
+	// they were added to stop. The reads below tolerate a short packet on
+	// their own: getByte() returns 0 and logs, which is noisy but harmless,
+	// and the item lookups fail before anything is spent or destroyed.
 	if (!msg.canRead(1)) {
 		return;
 	}
@@ -7188,10 +7199,6 @@ void ProtocolGame::parseForgeEnter(NetworkMessage &msg) {
 	uint16_t secondItem = 0;
 
 	if (actionType == ForgeAction_t::FUSION || actionType == ForgeAction_t::TRANSFER) {
-		// convergence(1) + first item(2) + tier(1) + second item(2)
-		if (!msg.canRead(6)) {
-			return;
-		}
 		convergence = msg.getByte();
 		firstItem = msg.get<uint16_t>();
 		tier = msg.getByte();
@@ -7199,11 +7206,6 @@ void ProtocolGame::parseForgeEnter(NetworkMessage &msg) {
 	}
 
 	if (actionType == ForgeAction_t::FUSION) {
-		// A convergence fusion carries neither trailing byte and reads neither,
-		// so only the ordinary path needs the extra two.
-		if (!convergence && !msg.canRead(2)) {
-			return;
-		}
 		const bool usedCore = convergence ? false : msg.getByte();
 		const bool reduceTierLoss = convergence ? false : msg.getByte();
 		g_game().playerForgeFuseItems(player->getID(), actionType, firstItem, tier, secondItem, usedCore, reduceTierLoss, convergence);
