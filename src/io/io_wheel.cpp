@@ -297,11 +297,13 @@ void IOWheel::initializeDruidSpells() {
 	// The Forked spells were the only druid entry with no damage component, and no
 	// supreme gem modifier exists for them either (WheelGemSupremeModifier_t has no
 	// Forked_* value), so nothing anywhere fed damage.damageMultiplier for them.
-	// NOTE: getCombatDataSpell() reads getWheelOfDestinyBoost(DAMAGE, spellGrade) for
-	// the CURRENT grade only - it does not accumulate across grades - so the value has
-	// to be restated on grade II or reaching it would drop the grade I bonus.
+	// Grade values ADD UP: getWheelOfDestinyBoost() returns regularBoost + upgradedBoost
+	// once the grade is UPGRADED (spells.cpp:635), so grade II delivers 5 + 8 = 13% in
+	// total - the same convention as Heal Friend (4/6 = 10%) and Divine Barrage
+	// (10/15 = 25%). An earlier comment here claimed the values had to be restated
+	// because the boost was read per-grade; that was wrong.
 	m_wheelBonusData.spells.druid[2].grade[1].increase.damage = 5; // I +5% base damage
-	m_wheelBonusData.spells.druid[2].grade[2].increase.damage = 8; // II +8% base damage (restated, not additive)
+	m_wheelBonusData.spells.druid[2].grade[2].increase.damage = 8; // II +8% more (13% total)
 
 	m_wheelBonusData.spells.druid[3].name = "Terra Wave";
 	m_wheelBonusData.spells.druid[3].grade[1].increase.damage = static_cast<int>(std::round(6.5));
@@ -409,8 +411,13 @@ void IOWheel::initializeMonkSpells() {
 	m_wheelBonusData.spells.monk[3].grade[2].increase.damage = 15;
 
 	m_wheelBonusData.spells.monk[4].name = "Thousand Fist Blows"; // Vocation Adjustment: replaces Sweeping Takedown
-	m_wheelBonusData.spells.monk[4].grade[1].increase.criticalDamage = 40; // I +40% crit extra damage
-	m_wheelBonusData.spells.monk[4].grade[2].decrease.cooldown = 6; // II -6s cd
+	// Monk Adjustments changelog: "Wheel of Destiny Augment I: Cooldown reduced by 4
+	// seconds instead of 6 seconds". So the cooldown cut is Augment I, not II, and it
+	// is -4s, not -6s; the crit moves to Augment II. The same announcement cut the base
+	// cooldown 12 -> 8, applied in thousand_fist_blows.lua. Mystic Repulse carries the
+	// identical two lines in that changelog.
+	m_wheelBonusData.spells.monk[4].grade[1].decrease.cooldown = 4; // I -4s cd
+	m_wheelBonusData.spells.monk[4].grade[2].increase.criticalDamage = 40; // II +40% crit extra damage
 }
 
 bool IOWheel::isMaxPointAddedToSlot(const std::shared_ptr<Player> &player, uint16_t points, WheelSlots_t slotType) const {
