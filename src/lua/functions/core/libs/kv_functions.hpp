@@ -39,6 +39,7 @@ private:
 	static int luaKVScoped(lua_State* L);
 	static int luaKVSet(lua_State* L);
 	static int luaKVGet(lua_State* L);
+	static int luaKVGetTimestamp(lua_State* L);
 	static int luaKVKeys(lua_State* L);
 	static int luaKVRemove(lua_State* L);
 

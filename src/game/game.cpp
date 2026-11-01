@@ -11678,6 +11678,48 @@ void Game::sendUpdateCreature(const std::shared_ptr<Creature> &creature) {
 	}
 }
 
+// Echo Raids. One uniform random sample over every live monster on the map, built the
+// same way updateForgeableMonsters() builds the forge pool: no geography, no player
+// proximity, every floor, caves included. The policy filters (bestiary stars, bestiary
+// occurrence, protection zone / house tiles, creatures an echo raid itself spawned) stay
+// in Lua so they can be retuned without a recompile; this drops only what Lua cannot see
+// cheaply across the whole map - summons, existing forge monsters, and monsters with no
+// tile (removed, or in transit).
+std::vector<uint32_t> Game::getRandomMonsters(uint32_t count) {
+	std::vector<uint32_t> result;
+	if (count == 0) {
+		return result;
+	}
+	result.reserve(count);
+
+	// Reservoir sampling: a single O(n) pass that is uniform over every eligible monster
+	// and never materialises a copy of the monster list.
+	uint32_t seen = 0;
+	for (const auto &[monsterId, monster] : monsters) {
+		if (!monster || monster->getMaster() || monster->getForgeStack() > 0) {
+			continue;
+		}
+
+		const auto monsterTile = monster->getTile();
+		if (!monsterTile || monsterTile->hasFlag(TILESTATE_NOLOGOUT)) {
+			continue;
+		}
+
+		++seen;
+		if (result.size() < count) {
+			result.emplace_back(monsterId);
+			continue;
+		}
+
+		const auto roll = static_cast<uint32_t>(uniform_random(0, static_cast<int32_t>(seen) - 1));
+		if (roll < count) {
+			result[roll] = monsterId;
+		}
+	}
+
+	return result;
+}
+
 // Percentage of each spawn's slots that may be forge (influenced/fiendish)
 // monsters at once. Caps forge monsters per spawn so the global budget spreads
 // evenly across the map instead of concentrating in farmed spawns, while quiet

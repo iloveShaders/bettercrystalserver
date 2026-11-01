@@ -742,6 +742,11 @@ public:
 	uint32_t getFiendishLimit() const;
 	uint32_t getInfluencedLimit() const;
 
+	// Echo Raids: uniform random sample over every live monster on the map, built the same
+	// way updateForgeableMonsters() builds the forge pool - no geography, no player
+	// proximity, every floor. Policy filters stay in Lua (see data-global/lib/core/echo_warden.lua).
+	std::vector<uint32_t> getRandomMonsters(uint32_t count);
+
 	bool addInfluencedMonster(const std::shared_ptr<Monster> &monster, bool ignoreLimit = false);
 	void sendUpdateCreature(const std::shared_ptr<Creature> &creature);
 	std::shared_ptr<Item> wrapItem(const std::shared_ptr<Item> &item, const std::shared_ptr<House> &house);

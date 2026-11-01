@@ -98,6 +98,7 @@ void GameFunctions::init(lua_State* L) {
 	Lua::registerMethod(L, "Game", "getNormalizedPlayerName", GameFunctions::luaGameGetNormalizedPlayerName);
 	Lua::registerMethod(L, "Game", "getNormalizedGuildName", GameFunctions::luaGameGetNormalizedGuildName);
 
+	Lua::registerMethod(L, "Game", "getRandomMonsters", GameFunctions::luaGameGetRandomMonsters);
 	Lua::registerMethod(L, "Game", "addInfluencedMonster", GameFunctions::luaGameAddInfluencedMonster);
 	Lua::registerMethod(L, "Game", "removeInfluencedMonster", GameFunctions::luaGameRemoveInfluencedMonster);
 	Lua::registerMethod(L, "Game", "getInfluencedMonsters", GameFunctions::luaGameGetInfluencedMonsters);
@@ -912,6 +913,23 @@ int GameFunctions::luaGameGetNormalizedGuildName(lua_State* L) {
 		Lua::pushString(L, guild->getName());
 	} else {
 		lua_pushnil(L);
+	}
+	return 1;
+}
+
+int GameFunctions::luaGameGetRandomMonsters(lua_State* L) {
+	// Game.getRandomMonsters(count)
+	// Uniform random sample of live monsters from the WHOLE map (every floor, no geography).
+	// Returns a table of monster ids; resolve with Monster(id). Used by the Echo Raid pool.
+	const auto count = Lua::getNumber<uint32_t>(L, 1, 1);
+	const auto monsterIds = g_game().getRandomMonsters(count);
+
+	lua_createtable(L, static_cast<int>(monsterIds.size()), 0);
+	int index = 0;
+	for (const auto monsterId : monsterIds) {
+		++index;
+		lua_pushnumber(L, monsterId);
+		lua_rawseti(L, -2, index);
 	}
 	return 1;
 }

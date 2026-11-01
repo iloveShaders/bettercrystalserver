@@ -28,6 +28,7 @@ void KVFunctions::init(lua_State* L) {
 	Lua::registerMethod(L, "kv", "scoped", KVFunctions::luaKVScoped);
 	Lua::registerMethod(L, "kv", "set", KVFunctions::luaKVSet);
 	Lua::registerMethod(L, "kv", "get", KVFunctions::luaKVGet);
+	Lua::registerMethod(L, "kv", "getTimestamp", KVFunctions::luaKVGetTimestamp);
 	Lua::registerMethod(L, "kv", "keys", KVFunctions::luaKVKeys);
 	Lua::registerMethod(L, "kv", "remove", KVFunctions::luaKVRemove);
 
@@ -35,6 +36,7 @@ void KVFunctions::init(lua_State* L) {
 	Lua::registerMethod(L, "KV", "scoped", KVFunctions::luaKVScoped);
 	Lua::registerMethod(L, "KV", "set", KVFunctions::luaKVSet);
 	Lua::registerMethod(L, "KV", "get", KVFunctions::luaKVGet);
+	Lua::registerMethod(L, "KV", "getTimestamp", KVFunctions::luaKVGetTimestamp);
 	Lua::registerMethod(L, "KV", "keys", KVFunctions::luaKVKeys);
 	Lua::registerMethod(L, "KV", "remove", KVFunctions::luaKVRemove);
 }
@@ -98,6 +100,31 @@ int KVFunctions::luaKVGet(lua_State* L) {
 
 	if (valueWrapper.has_value()) {
 		pushValueWrapper(L, *valueWrapper);
+	} else {
+		lua_pushnil(L);
+	}
+	return 1;
+}
+
+int KVFunctions::luaKVGetTimestamp(lua_State* L) {
+	// KV.getTimestamp(key) | scopedKV:getTimestamp(key)
+	// Milliseconds since the epoch at which this key was last written, or nil when the key does
+	// not exist. Every ValueWrapper constructor substitutes getTimeMsNow() when it is built with
+	// timestamp 0 (value_wrapper.cpp), which is the case for every write from Lua and from C++,
+	// so a stored key always carries a real write time. Used to tell apart state written before
+	// and after a given fix went live - see the Echo Warden charm backfill.
+	std::optional<ValueWrapper> valueWrapper;
+	const auto key = Lua::getString(L, -1);
+	if (Lua::isUserdata(L, 1)) {
+		const auto &scopedKV = Lua::getUserdataShared<KV>(L, 1);
+		valueWrapper = scopedKV->get(key);
+	} else {
+		valueWrapper = g_kv().get(key);
+	}
+
+	if (valueWrapper.has_value()) {
+		// a double holds a millisecond epoch exactly (well under 2^53)
+		lua_pushnumber(L, static_cast<double>(valueWrapper->getTimestamp()));
 	} else {
 		lua_pushnil(L);
 	}

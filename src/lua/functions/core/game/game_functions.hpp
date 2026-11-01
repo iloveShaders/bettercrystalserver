@@ -78,6 +78,8 @@ private:
 	static int luaGameHasEffect(lua_State* L);
 	static int luaGameHasDistanceEffect(lua_State* L);
 
+	static int luaGameGetRandomMonsters(lua_State* L);
+
 	static int luaGameAddInfluencedMonster(lua_State* L);
 	static int luaGameRemoveInfluencedMonster(lua_State* L);
 	static int luaGameGetInfluencedMonsters(lua_State* L);
