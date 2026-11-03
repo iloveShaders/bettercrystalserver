@@ -74,7 +74,9 @@ std::optional<ValueWrapper> KVStore::get(const std::string &key, bool forceLoad 
 		} else {
 			// Cache negative lookups so repeated get() of an absent key does not
 			// re-run a synchronous MySQL SELECT on the dispatcher thread every call.
-			setLocked(key, ValueWrapper::deleted());
+			// absent() and not deleted(): no row exists behind this key, so saveAll()
+			// must skip it instead of emitting a DELETE for it on every save.
+			setLocked(key, ValueWrapper::absent());
 		}
 		return value;
 	}

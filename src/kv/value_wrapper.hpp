@@ -46,6 +46,23 @@ public:
 		return wrapper;
 	}
 
+	// A key that was looked up and found to have no row in the database. It is cached in
+	// the store like a deleted value, so repeated get() calls do not re-run the SELECT,
+	// but it must never be written back: there is no row to DELETE. Without this
+	// distinction every negative lookup cost one unbatched DELETE query on every server
+	// save for as long as the entry stayed resident, and a system that probes many absent
+	// keys per login (the discovery map checks 207 of them) made that enormous.
+	static ValueWrapper absent() {
+		ValueWrapper wrapper;
+		wrapper.deleted_ = true;
+		wrapper.absent_ = true;
+		return wrapper;
+	}
+
+	bool isAbsent() const {
+		return absent_;
+	}
+
 	template <typename T>
 	T get() const {
 		static_assert(std::is_same_v<T, StringType> || std::is_same_v<T, BooleanType> || std::is_same_v<T, IntType> || std::is_same_v<T, DoubleType> || std::is_same_v<T, ArrayType> || std::is_same_v<T, MapType>, "Invalid type T");
@@ -124,6 +141,9 @@ private:
 	ValueVariant data_;
 	uint64_t timestamp_ = 0;
 	bool deleted_ = false;
+	// Set only by absent(): deleted_ with no row behind it, so saves must skip it entirely
+	// rather than issuing a DELETE. See absent() above.
+	bool absent_ = false;
 
 	template <typename Iter>
 	static MapType createMapFromRange(Iter begin, Iter end, uint64_t timestamp) {

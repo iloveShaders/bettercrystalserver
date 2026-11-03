@@ -75,6 +75,15 @@ bool KVSQL::save(const std::string &key, const ValueWrapper &value) {
 }
 
 bool KVSQL::prepareSave(const std::string &key, const ValueWrapper &value, DBInsert &update) const {
+	// Negative-lookup cache entry (see ValueWrapper::absent): nothing was ever stored
+	// under this key, so there is no row to delete and nothing worth serializing. Checked
+	// before toProto so a save pays for neither. saveAll() walks the entire resident
+	// store, so without this every key any system ever probed and found missing cost one
+	// round-trip DELETE on every single server save.
+	if (value.isAbsent()) {
+		return true;
+	}
+
 	const auto protoValue = ProtoSerializable::toProto(value);
 	std::string data;
 	if (!protoValue.SerializeToString(&data)) {
