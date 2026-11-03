@@ -105,6 +105,12 @@ public:
 
 	void setDeleted(bool deleted) {
 		deleted_ = deleted;
+		// absent_ means "deleted because the database has no row for this key". Any explicit
+		// change of the deletion state means the wrapper is being repurposed, so that marker
+		// no longer holds. Without clearing it, setDeleted(false) would leave a live value
+		// that KVSQL::prepareSave still skips - it would silently never persist. absent()
+		// sets both members directly and so is unaffected by this.
+		absent_ = false;
 	}
 
 	bool isDeleted() const {
