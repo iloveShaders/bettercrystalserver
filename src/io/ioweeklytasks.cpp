@@ -653,27 +653,46 @@ void IOWeeklyTasks::buyShopOffer(const std::shared_ptr<Player> &player, uint8_t 
 			break;
 		}
 		case HUNTING_SHOP_OFFER_ITEM_DOUBLE: {
-			// Beds and similar double items: send a single decoration kit for the primary part (headboard).
-			// When unwrapped in a house, the game places both parts automatically.
+			// Two-part furniture (beds). The offer carries BOTH ids and the client draws both
+			// sprites, so both parts have to be delivered. Nothing in the engine materialises a
+			// bed's partner on unwrap: the "unWrapId" custom attribute holds exactly one item id
+			// (set the same way in Game::createItemBatch and Game::addItemStoreInbox), and
+			// BedItem::getNextBedItem() only LOOKS UP an already existing bed item on the
+			// neighbouring tile. Sending one kit therefore gave the player half a bed.
 			auto inbox = player->getInbox();
 			if (!inbox) {
 				g_logger().warn("[IOWeeklyTasks::buyShopOffer] - Player {} has no inbox", player->getName());
 				player->sendMessageDialog("Your inbox is not available. Please relog and try again.");
 				break;
 			}
-			auto item = createItemForInbox(static_cast<uint16_t>(offer.looktypeOrItemId));
-			if (!item) {
-				g_logger().warn("[IOWeeklyTasks::buyShopOffer] - Failed to create item with id {}", offer.looktypeOrItemId);
-				player->sendMessageDialog("Failed to create item. Please contact an administrator.");
+
+			std::vector<uint16_t> partIds { static_cast<uint16_t>(offer.looktypeOrItemId) };
+			if (offer.itemId2 != 0) {
+				partIds.emplace_back(static_cast<uint16_t>(offer.itemId2));
+			}
+
+			bool deliveredAllParts = true;
+			for (const auto partId : partIds) {
+				auto item = createItemForInbox(partId);
+				if (!item) {
+					g_logger().warn("[IOWeeklyTasks::buyShopOffer] - Failed to create item with id {}", partId);
+					deliveredAllParts = false;
+					continue;
+				}
+
+				uint32_t remainderCount = 0;
+				auto ret = g_game().internalAddItem(std::static_pointer_cast<Cylinder>(inbox), item, INDEX_WHEREEVER, FLAG_NOLIMIT, false, remainderCount);
+				if (ret != RETURNVALUE_NOERROR) {
+					g_logger().warn("[IOWeeklyTasks::buyShopOffer] - Failed to add item {} to inbox of {}: {}", partId, player->getName(), static_cast<int>(ret));
+					deliveredAllParts = false;
+				}
+			}
+
+			if (!deliveredAllParts) {
+				player->sendMessageDialog("Part of this offer could not be delivered to your inbox. Please contact an administrator.");
 				break;
 			}
-			uint32_t remainderCount = 0;
-			auto ret = g_game().internalAddItem(std::static_pointer_cast<Cylinder>(inbox), item, INDEX_WHEREEVER, FLAG_NOLIMIT, false, remainderCount);
-			if (ret != RETURNVALUE_NOERROR) {
-				g_logger().warn("[IOWeeklyTasks::buyShopOffer] - Failed to add item {} to inbox of {}: {}", offer.looktypeOrItemId, player->getName(), static_cast<int>(ret));
-				player->sendMessageDialog("Failed to deliver item to your inbox.");
-				break;
-			}
+
 			player->sendTextMessage(MESSAGE_STATUS, "You have purchased: " + offer.name + ". Check your Store inbox.");
 			break;
 		}
