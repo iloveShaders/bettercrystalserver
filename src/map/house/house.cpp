@@ -318,11 +318,47 @@ bool House::transferToDepot(const std::shared_ptr<Player> &player, const std::sh
 		return false;
 	}
 
+	std::unordered_set<std::shared_ptr<Player>> playersToSave = { player };
+
+	auto deliver = [&](const ItemList &list) {
+		for (const auto &item : list) {
+			const auto &fromCylinder = item->getParent();
+			if (!fromCylinder) {
+				g_logger().warn("[{}] item '{}' has no parent, skipping transfer", __FUNCTION__, item->getName());
+				continue;
+			}
+
+			std::shared_ptr<Player> targetPlayer = player;
+
+			if (item->hasOwner() && !item->isOwner(targetPlayer)) {
+				const auto &itemOwner = g_game().getPlayerByGUID(item->getOwnerId(), true);
+				if (itemOwner) {
+					targetPlayer = itemOwner;
+					playersToSave.insert(targetPlayer);
+				} else {
+					// The recorded owner no longer exists (deleted character). Skipping would
+					// strand the item in a house that nobody owns, so fall back to the house owner.
+					g_logger().warn("[{}] owner of item '{}' (GUID: {}) not found, transferring to house owner '{}'", __FUNCTION__, item->getName(), item->getOwnerId(), player->getName());
+				}
+			}
+
+			g_game().internalMoveItem(fromCylinder, targetPlayer->getInbox(), INDEX_WHEREEVER, item, item->getItemCount(), nullptr, FLAG_NOLIMIT);
+		}
+	};
+
+	// Pass 1: loose items and the contents of containers. Wrapable items are deferred,
+	// because wrapItem() replaces the object on the tile and destroys it: wrapping a
+	// container here would orphan every child queued below (getParent() == nullptr,
+	// "[Game::internalMoveItem] fromCylinder is nullptr") and silently delete them.
 	ItemList moveItemList;
+	ItemList wrapList;
 	if (const TileItemVector* items = tile->getItemList()) {
 		for (const auto &item : *items) {
 			if (item->isWrapable()) {
-				handleWrapableItem(moveItemList, item, player, tile);
+				if (item->isWrapContainer()) {
+					handleContainer(moveItemList, item);
+				}
+				wrapList.push_back(item);
 			} else if (item->isPickupable()) {
 				moveItemList.push_back(item);
 			} else {
@@ -330,25 +366,15 @@ bool House::transferToDepot(const std::shared_ptr<Player> &player, const std::sh
 			}
 		}
 	}
+	deliver(moveItemList);
 
-	std::unordered_set<std::shared_ptr<Player>> playersToSave = { player };
-
-	for (const auto &item : moveItemList) {
-		std::shared_ptr<Player> targetPlayer = player;
-
-		if (item->hasOwner() && !item->isOwner(targetPlayer)) {
-			const auto &itemOwner = g_game().getPlayerByGUID(item->getOwnerId(), true);
-			if (itemOwner) {
-				targetPlayer = itemOwner;
-				playersToSave.insert(targetPlayer);
-			} else {
-				g_logger().warn("[{}] owner of item '{}' (GUID: {}) not found, skipping transfer", __FUNCTION__, item->getName(), item->getOwnerId());
-				continue;
-			}
-		}
-
-		g_game().internalMoveItem(item->getParent(), targetPlayer->getInbox(), INDEX_WHEREEVER, item, item->getItemCount(), nullptr, FLAG_NOLIMIT);
+	// Pass 2: the containers are empty now, so wrapping them is safe.
+	ItemList kitList;
+	for (const auto &item : wrapList) {
+		handleWrapableItem(kitList, item, player, tile);
 	}
+	deliver(kitList);
+
 	for (const auto &playerToSave : playersToSave) {
 		g_saveManager().savePlayer(playerToSave);
 	}
@@ -396,12 +422,14 @@ void House::setNewOwnership() {
 }
 
 void House::handleWrapableItem(ItemList &moveItemList, const std::shared_ptr<Item> &item, const std::shared_ptr<Player> &player, const std::shared_ptr<HouseTile> &houseTile) const {
-	if (item->isWrapContainer()) {
-		g_logger().debug("[{}] found wrapable item '{}'", __FUNCTION__, item->getName());
-		handleContainer(moveItemList, item);
+	// Container contents are drained by the caller before this runs: wrapping replaces
+	// the object on the tile and destroys it, taking anything still inside with it.
+	const auto &newItem = g_game().wrapItem(item, houseTile->getHouse());
+	if (!newItem) {
+		g_logger().warn("[{}] failed to wrap item - player name: {} item id: {} position: {}", __FUNCTION__, player->getName(), item->getID(), houseTile->getPosition().toString());
+		return;
 	}
 
-	const auto &newItem = g_game().wrapItem(item, houseTile->getHouse());
 	if (newItem->isRemoved() && !newItem->getParent()) {
 		g_logger().warn("[{}] item removed during wrapping - check ground type - player name: {} item id: {} position: {}", __FUNCTION__, player->getName(), item->getID(), houseTile->getPosition().toString());
 		return;

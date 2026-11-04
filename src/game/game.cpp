@@ -4931,7 +4931,9 @@ std::shared_ptr<Item> Game::wrapItem(const std::shared_ptr<Item> &item, const st
 		newItem->setAttribute(ItemAttribute_t::AMOUNT, amount);
 	}
 
-	newItem->setAttribute(ItemAttribute_t::OWNER, item->getAttribute<uint16_t>(ItemAttribute_t::OWNER));
+	// OWNER holds a player GUID and is read back as uint32_t (Item::getOwnerId), so it
+	// must be carried over at full width - truncating to uint16_t corrupts any GUID > 65535.
+	newItem->setAttribute(ItemAttribute_t::OWNER, item->getAttribute<uint32_t>(ItemAttribute_t::OWNER));
 	if (const int64_t storeAttribute = item->getAttribute<int64_t>(ItemAttribute_t::STORE); storeAttribute > 0) {
 		newItem->setAttribute(ItemAttribute_t::STORE, storeAttribute);
 	}
@@ -4946,7 +4948,7 @@ void Game::unwrapItem(const std::shared_ptr<Item> &item, uint16_t unWrapId, cons
 		return;
 	}
 
-	const uint16_t ownerAttr = item->getAttribute<uint16_t>(ItemAttribute_t::OWNER);
+	const uint32_t ownerAttr = item->getAttribute<uint32_t>(ItemAttribute_t::OWNER);
 	const int64_t storeAttr = item->getAttribute<int64_t>(ItemAttribute_t::STORE);
 	const uint16_t amountAttr = item->getAttribute<uint16_t>(ItemAttribute_t::AMOUNT);
 	const uint16_t amount = amountAttr ? amountAttr : 1;
