@@ -1531,6 +1531,25 @@ bool Combat::doCombatChain(const std::shared_ptr<Creature> &caster, const std::s
 					    // from the previous hop. Use chainEffect (COMBAT_PARAM_CHAIN_EFFECT),
 					    // NOT impactEffect: spells such as Chivalrous Challenge and Divine
 					    // Dazzle set only the chain effect and no impact effect.
+						// COMBAT_PARAM_DISTANCEEFFECT is drawn only on the non-chain paths
+						// (doTargetCombat / doAreaCombat / postCombatEffects), so NO chain spell
+						// has ever rendered a missile. That goes unnoticed on most of them because
+						// doChainEffect() paints the chain effect on every tile of the path, which
+						// already reads as a projectile (Lightning's sparks, Forked Glacier's ice,
+						// Forked Thorns' thorns). Executioner's Throw is the exception: blood on
+						// the ground looks nothing like a thrown weapon.
+						//
+						// Deliberately restricted to CONST_ANI_WEAPONTYPE. It is the only distance
+						// effect a chain effect cannot stand in for, and the only one no chain
+						// spell already fakes -- widening this to every distanceEffect would give
+						// the elemental chain spells a real missile ON TOP of their existing
+						// trail. Resolved per caster inside addDistanceEffect (axe / sword / club),
+						// and each hop flies from its own origin, so the weapon follows the chain:
+						// caster -> 1st target -> 2nd -> ...
+						if (combat->params.distanceEffect == CONST_ANI_WEAPONTYPE) {
+							Combat::addDistanceEffect(caster, origin, nextTarget->getPosition(), combat->params.distanceEffect);
+						}
+
 						if (combat->params.chainEffect != CONST_ME_NONE) {
 							Combat::doChainEffect(origin, nextTarget->getPosition(), combat->params.chainEffect);
 						}
