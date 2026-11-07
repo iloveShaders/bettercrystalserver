@@ -6122,24 +6122,18 @@ void ProtocolGame::sendShop(const std::shared_ptr<Npc> &npc) {
 	uint16_t itemsToSend = std::min<size_t>(shoplist.size(), std::numeric_limits<uint16_t>::max());
 	msg.add<uint16_t>(itemsToSend);
 
-	// Initialize before the loop to avoid database overload on each iteration
-	auto talkactionHidden = player->kv()->get("npc-shop-hidden-sell-item");
-	// Initialize the inventoryMap outside the loop to avoid creation on each iteration
-	std::map<uint16_t, uint16_t> inventoryMap;
-	player->getAllSaleItemIdAndCount(inventoryMap);
+	// The "!hiddenshop" talkaction used to blank out every sell-only row the player was not
+	// carrying, while itemsToSend above still counted those rows. The client cannot resolve item
+	// id 0, so it dropped them and the trade window looked truncated. The flag it read lived in
+	// the player's persistent KV, so a single "!hiddenshop on" silently broke every sell-only
+	// NPC for that character forever -- across logout and restart -- with nothing in the UI to
+	// explain it. The talkaction is gone and the filter with it; any "npc-shop-hidden-sell-item"
+	// rows still in kv_store are now inert and need no migration. Dropping the filter also drops
+	// the full inventory walk (getAllSaleItemIdAndCount) that ran on every shop open.
 	uint16_t i = 0;
 	for (const ShopBlock &shopBlock : shoplist) {
 		if (++i > itemsToSend) {
 			break;
-		}
-
-		// Hidden sell items from the shop if they are not in the player's inventory
-		if (talkactionHidden && talkactionHidden->get<bool>()) {
-			const auto &foundItem = inventoryMap.find(shopBlock.itemId);
-			if (foundItem == inventoryMap.end() && shopBlock.itemSellPrice > 0 && shopBlock.itemBuyPrice == 0) {
-				AddHiddenShopItem(msg);
-				continue;
-			}
 		}
 
 		AddShopItem(msg, shopBlock);
