@@ -540,7 +540,6 @@ private:
 	void MoveDownCreature(NetworkMessage &msg, const std::shared_ptr<Creature> &creature, const Position &newPos, const Position &oldPos);
 
 	// shop
-	void AddHiddenShopItem(NetworkMessage &msg);
 	void AddShopItem(NetworkMessage &msg, const ShopBlock &shopBlock);
 
 	// otclient

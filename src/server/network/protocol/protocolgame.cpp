@@ -6119,28 +6119,39 @@ void ProtocolGame::sendShop(const std::shared_ptr<Npc> &npc) {
 	}
 
 	const auto &shoplist = npc->getShopItemVector(player->getGUID());
-	uint16_t itemsToSend = std::min<size_t>(shoplist.size(), std::numeric_limits<uint16_t>::max());
-	msg.add<uint16_t>(itemsToSend);
 
-	// The "!hiddenshop" talkaction used to blank out every sell-only row the player was not
-	// carrying, while itemsToSend above still counted those rows. The client cannot resolve item
-	// id 0, so it dropped them and the trade window looked truncated. The flag it read lived in
-	// the player's persistent KV, so a single "!hiddenshop on" silently broke every sell-only
-	// NPC for that character forever -- across logout and restart -- with nothing in the UI to
-	// explain it. The talkaction is gone and the filter with it; any "npc-shop-hidden-sell-item"
-	// rows still in kv_store are now inert and need no migration. Dropping the filter also drops
-	// the full inventory walk (getAllSaleItemIdAndCount) that ran on every shop open.
-	uint16_t i = 0;
+	// Both of this packet's hide paths used to emit a blank row (item id 0, no name, no price)
+	// while the row count written below still counted it. The client cannot resolve item id 0, so
+	// it dropped those rows and the trade window looked truncated -- for a fully gated shop such
+	// as Grizzly Adams' hunting-task list, completely empty.
+	//
+	// The "!hiddenshop" talkaction was one such path and is gone: it kept a persistent
+	// per-character KV flag that any player could set, so one use silently broke every sell-only
+	// NPC for that character across logout and restart. Leftover "npc-shop-hidden-sell-item" rows
+	// in kv_store are inert and need no migration.
+	//
+	// The storage gate is the other path, and it is applied HERE rather than in AddShopItem --
+	// before the count is written -- so the count always matches the rows actually sent and a
+	// gated row is simply absent instead of blank.
+	std::vector<const ShopBlock*> visibleShop;
+	visibleShop.reserve(shoplist.size());
 	for (const ShopBlock &shopBlock : shoplist) {
-		if (++i > itemsToSend) {
-			break;
+		if (shopBlock.itemStorageKey != 0 && player->getStorageValue(shopBlock.itemStorageKey) < shopBlock.itemStorageValue) {
+			continue;
 		}
 
-		AddShopItem(msg, shopBlock);
+		visibleShop.emplace_back(&shopBlock);
+	}
+
+	const uint16_t itemsToSend = static_cast<uint16_t>(std::min<size_t>(visibleShop.size(), std::numeric_limits<uint16_t>::max()));
+	msg.add<uint16_t>(itemsToSend);
+
+	for (uint16_t i = 0; i < itemsToSend; ++i) {
+		AddShopItem(msg, *visibleShop[i]);
 	}
 
 	writeToOutputBuffer(msg);
-	g_logger().debug("ProtocolGame::sendShop - Time: {} ms, shop items: {}", brenchmark.duration(), shoplist.size());
+	g_logger().debug("ProtocolGame::sendShop - Time: {} ms, shop items: {} of {}", brenchmark.duration(), itemsToSend, shoplist.size());
 }
 
 void ProtocolGame::sendCloseShop() {
@@ -10115,23 +10126,10 @@ void ProtocolGame::MoveDownCreature(NetworkMessage &msg, const std::shared_ptr<C
 	GetMapDescription(oldPos.x - MAP_MAX_CLIENT_VIEW_PORT_X, oldPos.y + (MAP_MAX_CLIENT_VIEW_PORT_Y + 1), newPos.z, ((MAP_MAX_CLIENT_VIEW_PORT_X + 1) * 2), 1, msg);
 }
 
-void ProtocolGame::AddHiddenShopItem(NetworkMessage &msg) {
-	// Empty bytes from AddShopItem
-	msg.add<uint16_t>(0);
-	msg.addByte(0);
-	msg.addString(std::string());
-	msg.add<uint32_t>(0);
-	msg.add<uint32_t>(0);
-	msg.add<uint32_t>(0);
-}
-
 void ProtocolGame::AddShopItem(NetworkMessage &msg, const ShopBlock &shopBlock) {
-	// Sends the item information empty if the player doesn't have the storage to buy/sell a certain item
-	if (shopBlock.itemStorageKey != 0 && player->getStorageValue(shopBlock.itemStorageKey) < shopBlock.itemStorageValue) {
-		AddHiddenShopItem(msg);
-		return;
-	}
-
+	// Storage-gated rows are filtered out in sendShop, before the row count is written, so every
+	// block that reaches here is meant to be visible. There is deliberately no blank-row path:
+	// writing a row the client cannot resolve is what made gated shops look truncated or empty.
 	const ItemType &it = Item::items[shopBlock.itemId];
 	msg.add<uint16_t>(shopBlock.itemId);
 	if (it.isSplash() || it.isFluidContainer()) {
