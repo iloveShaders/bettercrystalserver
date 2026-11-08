@@ -2167,7 +2167,21 @@ ReturnValue Game::checkMoveItemToCylinder(const std::shared_ptr<Player> &player,
 
 		if (item->isStoreItem() && !containerToStow) {
 			bool isValidMoveItem = false;
-			auto fromHouseTile = fromCylinder->getTile();
+			// This gate exists to stop a non-owner carrying store-bought furniture out of
+			// someone else's house, so it must only consider a house the item is actually
+			// LYING in. Item::getTile() walks up to the holder and then one step further,
+			// so for anything in the player's own inventory or store inbox it returns the
+			// tile the PLAYER is standing on. The effect was that while a player stood
+			// anywhere inside a house they are not the owner of -- including a house owned
+			// by another character on their own account, since houseOwnedByAccount is off --
+			// every store item in their store inbox became unmovable, even into the depot,
+			// with "Sorry, not possible." An item the player is holding is not in the house,
+			// so it is exempt; one lying on a house tile (loose or in a bag on the floor)
+			// still has no holding player and is still checked.
+			std::shared_ptr<Tile> fromHouseTile = nullptr;
+			if (!item->getHoldingPlayer()) {
+				fromHouseTile = fromCylinder->getTile();
+			}
 			auto house = fromHouseTile ? fromHouseTile->getHouse() : nullptr;
 			const auto minRequired = (item->getID() == ITEM_DECORATION_KIT) ? HOUSE_SUBOWNER : HOUSE_OWNER;
 			if (house && house->getHouseAccessLevel(player) < minRequired) {
