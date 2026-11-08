@@ -609,10 +609,10 @@ void IOWeeklyTasks::buyShopOffer(const std::shared_ptr<Player> &player, uint8_t 
 
 	player->useTaskHuntingPoints(actualPrice);
 
-	// Helper: create an item suitable for the inbox (decoration kit if not pickupable)
-	auto createItemForInbox = [](uint16_t itemId) -> std::shared_ptr<Item> {
+	// Helper: create an item suitable for the store inbox (decoration kit if not pickupable)
+	auto createItemForInbox = [](uint16_t itemId, uint16_t itemCount) -> std::shared_ptr<Item> {
 		// First try with createWrappableItem=true (handles wrapable items automatically)
-		auto item = Item::CreateItem(itemId, 1, nullptr, true);
+		auto item = Item::CreateItem(itemId, itemCount, nullptr, true);
 		if (!item) {
 			return nullptr;
 		}
@@ -628,25 +628,52 @@ void IOWeeklyTasks::buyShopOffer(const std::shared_ptr<Player> &player, uint8_t 
 		return kit;
 	};
 
+	// Helper: deliver `total` units of `itemId` into the given container. A stackable item
+	// is split across stacks of at most its stack size; a non-stackable one (the golden raid
+	// token among them) is delivered as `total` separate items, because handing a count to
+	// Item::CreateItem would set CHARGES on it rather than a quantity.
+	auto deliverUnits = [&createItemForInbox, &player](const std::shared_ptr<Container> &container, uint16_t itemId, uint16_t total) -> bool {
+		const ItemType &itemType = Item::items[itemId];
+		uint16_t perStack = 1;
+		if (itemType.stackable && itemType.stackSize > 0) {
+			perStack = itemType.stackSize;
+		}
+
+		uint32_t remaining = std::max<uint16_t>(1, total);
+		while (remaining > 0) {
+			const auto chunk = static_cast<uint16_t>(std::min<uint32_t>(remaining, perStack));
+			const auto &item = createItemForInbox(itemId, chunk);
+			if (!item) {
+				g_logger().warn("[IOWeeklyTasks::buyShopOffer] - Failed to create item with id {}", itemId);
+				return false;
+			}
+
+			uint32_t remainderCount = 0;
+			const auto ret = g_game().internalAddItem(std::static_pointer_cast<Cylinder>(container), item, INDEX_WHEREEVER, FLAG_NOLIMIT, false, remainderCount);
+			if (ret != RETURNVALUE_NOERROR) {
+				g_logger().warn("[IOWeeklyTasks::buyShopOffer] - Failed to add item {} to store inbox of {}: {}", itemId, player->getName(), static_cast<int>(ret));
+				return false;
+			}
+
+			remaining -= chunk;
+		}
+		return true;
+	};
+
 	switch (offer.offerType) {
 		case HUNTING_SHOP_OFFER_ITEM: {
-			auto item = createItemForInbox(static_cast<uint16_t>(offer.looktypeOrItemId));
-			if (!item) {
-				g_logger().warn("[IOWeeklyTasks::buyShopOffer] - Failed to create item with id {}", offer.looktypeOrItemId);
-				player->sendMessageDialog("Failed to create item. Please contact an administrator.");
+			// Deliver to the STORE inbox, which is where the confirmation message below tells
+			// the player to look. getInbox() is the ordinary inbox (player_inboxitems, "Your
+			// Inbox" inside the depot locker) -- a different container entirely, so every
+			// purchase silently landed somewhere the player was never pointed at.
+			const auto &storeInbox = player->getStoreInbox();
+			if (!storeInbox) {
+				g_logger().warn("[IOWeeklyTasks::buyShopOffer] - Player {} has no store inbox", player->getName());
+				player->sendMessageDialog("Your store inbox is not available. Please relog and try again.");
 				break;
 			}
-			auto inbox = player->getInbox();
-			if (!inbox) {
-				g_logger().warn("[IOWeeklyTasks::buyShopOffer] - Player {} has no inbox", player->getName());
-				player->sendMessageDialog("Your inbox is not available. Please relog and try again.");
-				break;
-			}
-			uint32_t remainderCount = 0;
-			auto ret = g_game().internalAddItem(std::static_pointer_cast<Cylinder>(inbox), item, INDEX_WHEREEVER, FLAG_NOLIMIT, false, remainderCount);
-			if (ret != RETURNVALUE_NOERROR) {
-				g_logger().warn("[IOWeeklyTasks::buyShopOffer] - Failed to add item {} to inbox of {}: {}", offer.looktypeOrItemId, player->getName(), static_cast<int>(ret));
-				player->sendMessageDialog("Failed to deliver item to your inbox.");
+			if (!deliverUnits(storeInbox, static_cast<uint16_t>(offer.looktypeOrItemId), offer.count)) {
+				player->sendMessageDialog("Failed to deliver item to your store inbox. Please contact an administrator.");
 				break;
 			}
 			player->sendTextMessage(MESSAGE_STATUS, "You have purchased: " + offer.name + ". Check your Store inbox.");
@@ -659,10 +686,10 @@ void IOWeeklyTasks::buyShopOffer(const std::shared_ptr<Player> &player, uint8_t 
 			// (set the same way in Game::createItemBatch and Game::addItemStoreInbox), and
 			// BedItem::getNextBedItem() only LOOKS UP an already existing bed item on the
 			// neighbouring tile. Sending one kit therefore gave the player half a bed.
-			auto inbox = player->getInbox();
-			if (!inbox) {
-				g_logger().warn("[IOWeeklyTasks::buyShopOffer] - Player {} has no inbox", player->getName());
-				player->sendMessageDialog("Your inbox is not available. Please relog and try again.");
+			const auto &storeInbox = player->getStoreInbox();
+			if (!storeInbox) {
+				g_logger().warn("[IOWeeklyTasks::buyShopOffer] - Player {} has no store inbox", player->getName());
+				player->sendMessageDialog("Your store inbox is not available. Please relog and try again.");
 				break;
 			}
 
@@ -673,23 +700,13 @@ void IOWeeklyTasks::buyShopOffer(const std::shared_ptr<Player> &player, uint8_t 
 
 			bool deliveredAllParts = true;
 			for (const auto partId : partIds) {
-				auto item = createItemForInbox(partId);
-				if (!item) {
-					g_logger().warn("[IOWeeklyTasks::buyShopOffer] - Failed to create item with id {}", partId);
-					deliveredAllParts = false;
-					continue;
-				}
-
-				uint32_t remainderCount = 0;
-				auto ret = g_game().internalAddItem(std::static_pointer_cast<Cylinder>(inbox), item, INDEX_WHEREEVER, FLAG_NOLIMIT, false, remainderCount);
-				if (ret != RETURNVALUE_NOERROR) {
-					g_logger().warn("[IOWeeklyTasks::buyShopOffer] - Failed to add item {} to inbox of {}: {}", partId, player->getName(), static_cast<int>(ret));
+				if (!deliverUnits(storeInbox, partId, offer.count)) {
 					deliveredAllParts = false;
 				}
 			}
 
 			if (!deliveredAllParts) {
-				player->sendMessageDialog("Part of this offer could not be delivered to your inbox. Please contact an administrator.");
+				player->sendMessageDialog("Part of this offer could not be delivered to your store inbox. Please contact an administrator.");
 				break;
 			}
 
@@ -800,6 +817,14 @@ void IOWeeklyTasks::initializeShopOffers() {
 
 			lua_getfield(L, -1, "price");
 			offer.price = static_cast<uint32_t>(lua_tointeger(L, -1));
+			lua_pop(L, 1);
+
+			// Units delivered per purchase. This field was not read at all, so an offer
+			// written as `count = 10` was accepted silently and then handed over 1 item.
+			lua_getfield(L, -1, "count");
+			if (lua_isnumber(L, -1)) {
+				offer.count = static_cast<uint16_t>(std::clamp<int64_t>(lua_tointeger(L, -1), 1, std::numeric_limits<uint16_t>::max()));
+			}
 			lua_pop(L, 1);
 
 			// Validate mount looktype

@@ -95,6 +95,7 @@ struct HuntingTaskShopOffer {
 	uint8_t addon = 0; // Only for outfits (type 2)
 	uint32_t itemId2 = 0; // Only for item double (type 3)
 	uint32_t price = 0; // In hunting task points
+	uint16_t count = 1; // Units delivered per purchase (item types 0 and 3); 1 when omitted
 };
 
 // Weekly task difficulty multiplier (protocol value sent to client)
