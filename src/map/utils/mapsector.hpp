@@ -56,10 +56,30 @@ struct Floor {
 		return z;
 	}
 
+	// Serialises MapCache::getOrCreateTileFromCache for this floor.
+	//
+	// Deliberately NOT the shared_mutex below. That one is taken and released
+	// INSIDE each of the four accessors above, so getOrCreateTileFromCache holds
+	// no lock ACROSS its read-then-build-then-publish sequence: two threads can
+	// both read a non-null tile cache for the same (x, y), both build a complete
+	// Tile, and both publish -- dropping one Tile with all of its items, and
+	// calling startDecaying() twice, concurrently, on the same items. Re-locking
+	// the shared_mutex around the whole sequence is not an option, since
+	// std::shared_mutex is not recursive and the accessors would deadlock
+	// against it.
+	//
+	// Recursive because the materialisation body is free to reach back into
+	// Map::getTile() for another tile on this same floor.
+	std::recursive_mutex &getCreateMutex() const {
+		return createMutex;
+	}
+
 private:
 	std::pair<std::shared_ptr<Tile>, std::shared_ptr<BasicTile>> tiles[SECTOR_SIZE][SECTOR_SIZE] = {};
 
 	mutable std::shared_mutex mutex;
+
+	mutable std::recursive_mutex createMutex;
 
 	uint8_t z { 0 };
 };

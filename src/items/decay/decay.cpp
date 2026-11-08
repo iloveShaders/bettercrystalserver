@@ -31,8 +31,13 @@ void Decay::startDecay(const std::shared_ptr<Item> &item, int32_t duration) {
 		return;
 	}
 
+	std::scoped_lock lock(decayMutex);
+	startDecayLocked(item, duration);
+}
+
+void Decay::startDecayLocked(const std::shared_ptr<Item> &item, int32_t duration) {
 	if (item->hasAttribute(ItemAttribute_t::DURATION_TIMESTAMP)) {
-		stopDecay(item, item->getAttribute<int64_t>(ItemAttribute_t::DURATION_TIMESTAMP));
+		stopDecayLocked(item, item->getAttribute<int64_t>(ItemAttribute_t::DURATION_TIMESTAMP));
 	}
 
 	int64_t timestamp = OTSYS_TIME() + static_cast<int64_t>(duration);
@@ -59,6 +64,11 @@ void Decay::stopDecay(const std::shared_ptr<Item> &item, int64_t timestamp) {
 		return;
 	}
 
+	std::scoped_lock lock(decayMutex);
+	stopDecayLocked(item, timestamp);
+}
+
+void Decay::stopDecayLocked(const std::shared_ptr<Item> &item, int64_t timestamp) {
 	auto it = decayMap.find(timestamp);
 	if (it != decayMap.end()) {
 		std::vector<std::shared_ptr<Item>> &decayItems = it->second;
@@ -97,19 +107,27 @@ void Decay::checkDecay() {
 	std::vector<std::shared_ptr<Item>> tempItems;
 	tempItems.reserve(32); // Small preallocation
 
-	auto it = decayMap.begin(), end = decayMap.end();
-	while (it != end) {
-		if (it->first > timestamp) {
-			break;
-		}
+	{
+		std::scoped_lock lock(decayMutex);
 
-		// Iterating here is unsafe so let's copy our items into temporary vector
-		std::vector<std::shared_ptr<Item>> &decayItems = it->second;
-		tempItems.insert(tempItems.end(), decayItems.begin(), decayItems.end());
-		it = decayMap.erase(it);
+		auto it = decayMap.begin(), end = decayMap.end();
+		while (it != end) {
+			if (it->first > timestamp) {
+				break;
+			}
+
+			// Iterating here is unsafe so let's copy our items into temporary vector
+			std::vector<std::shared_ptr<Item>> &decayItems = it->second;
+			tempItems.insert(tempItems.end(), decayItems.begin(), decayItems.end());
+			it = decayMap.erase(it);
+		}
 	}
 
-	for (const auto item : tempItems) {
+	// Deliberately OUTSIDE the lock: internalDecayItem reaches transformItem /
+	// internalRemoveItem, which call back into startDecay. Holding decayMutex
+	// here would self-deadlock. tempItems owns a reference to every item, so
+	// nothing it touches can be freed underneath us while we work through it.
+	for (const auto &item : tempItems) {
 		if (!item->canDecay()) {
 			item->setDuration(item->getDuration());
 			item->setDecaying(DECAYING_FALSE);
@@ -119,9 +137,20 @@ void Decay::checkDecay() {
 		}
 	}
 
-	if (it != end) {
+	// Re-read the earliest pending entry rather than reusing the iterator from
+	// above: the loop we just ran, and any parallel thread, may have inserted
+	// something sooner. The max() below floors a now-overdue entry at one tick.
+	int64_t nextTimestamp = 0;
+	{
+		std::scoped_lock lock(decayMutex);
+		if (!decayMap.empty()) {
+			nextTimestamp = decayMap.begin()->first;
+		}
+	}
+
+	if (nextTimestamp != 0) {
 		eventId = g_dispatcher().scheduleEvent(
-			std::max<int32_t>(SCHEDULER_MINTICKS, static_cast<int32_t>(it->first - timestamp)), [this] { checkDecay(); }, "Decay::checkDecay"
+			std::max<int32_t>(SCHEDULER_MINTICKS, static_cast<int32_t>(nextTimestamp - timestamp)), [this] { checkDecay(); }, "Decay::checkDecay"
 		);
 	}
 }

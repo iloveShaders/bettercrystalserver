@@ -106,6 +106,23 @@ std::shared_ptr<Item> MapCache::createItem(const std::shared_ptr<BasicItem> &Bas
 }
 
 std::shared_ptr<Tile> MapCache::getOrCreateTileFromCache(const std::shared_ptr<Floor> &floor, uint16_t x, uint16_t y) {
+	// Fast path, no lock: this tile is already materialised and there is nothing
+	// to build. Map::getTile() routes EVERY tile lookup in the engine through
+	// here, so this branch has to stay cheap -- it is all but a handful of the
+	// calls. It is safe unlocked because the publish order at the bottom of this
+	// function is setTile() FIRST and setTileCache(nullptr) SECOND, so a null
+	// cache implies the tile is already in place; each accessor takes the floor's
+	// shared_mutex on its own.
+	if (!floor->getTileCache(x, y)) {
+		return floor->getTile(x, y);
+	}
+
+	// Slow path: first touch of this tile, so it has to be built, and exactly one
+	// thread may do that. See the comment on Floor::getCreateMutex().
+	std::scoped_lock lock(floor->getCreateMutex());
+
+	// Re-check under the lock -- another thread may have materialised this tile
+	// while we waited for it.
 	const auto &cachedTile = floor->getTileCache(x, y);
 	const auto oldTile = floor->getTile(x, y);
 	if (!cachedTile) {
