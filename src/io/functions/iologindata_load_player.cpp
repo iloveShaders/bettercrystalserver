@@ -68,6 +68,26 @@ void IOLoginDataLoad::loadItems(ItemsMap &itemsMap, const DBResult_ptr &result, 
 						g_logger().warn("[{}] - Failed to deserialize item attributes {}, from player {}, from account id {}", __FUNCTION__, item->getID(), player->getName(), player->getAccountId());
 						continue;
 					}
+					// ATTR_OWNER is persisted and never cleared. Loot ownership only means
+					// something while the item still lies on the ground: once it sits in a
+					// player's own inventory, depot, inbox or store inbox, a tag naming anyone
+					// else is dead data -- but not harmless data. Player::queryAdd,
+					// Container::queryAdd, DepotChest::queryAdd and Game::checkMoveItemToCylinder
+					// all reject a non-owner, so such an item can never be moved again, anywhere,
+					// not even into the depot, and the player only ever sees "This item is not
+					// yours." That is what strands store inbox / daily reward items when a
+					// character is re-created under another account: the tag still carries the
+					// old GUID. Item::setOwner(Creature) stores the GUID, but Lua
+					// item:setOwner(creatureId) can leave the runtime id (getFirstID() + guid),
+					// so both forms are accepted as "this player".
+					if (item->hasOwner()) {
+						const auto ownerId = item->getOwnerId();
+						if (ownerId != player->getGUID() && ownerId != Player::getFirstID() + player->getGUID()) {
+							g_logger().info("[{}] - Clearing stale owner id {} from item {} (sid {}) of player {}", __FUNCTION__, ownerId, item->getID(), sid, player->getName());
+							item->removeAttribute(ItemAttribute_t::OWNER);
+						}
+					}
+
 					itemsMap[sid] = std::make_pair(item, pid);
 				} else {
 					g_logger().warn("[{}] - Failed to create item of type {} for player {}, from account id {}", __FUNCTION__, type, player->getName(), player->getAccountId());
