@@ -199,6 +199,7 @@ void PlayerFunctions::init(lua_State* L) {
 
 	Lua::registerMethod(L, "Player", "getSkillLevel", PlayerFunctions::luaPlayerGetSkillLevel);
 	Lua::registerMethod(L, "Player", "getEffectiveSkillLevel", PlayerFunctions::luaPlayerGetEffectiveSkillLevel);
+	Lua::registerMethod(L, "Player", "getDefenseEquipment", PlayerFunctions::luaPlayerGetDefenseEquipment);
 	Lua::registerMethod(L, "Player", "getSkillPercent", PlayerFunctions::luaPlayerGetSkillPercent);
 	Lua::registerMethod(L, "Player", "getSkillTries", PlayerFunctions::luaPlayerGetSkillTries);
 	Lua::registerMethod(L, "Player", "addSkillTries", PlayerFunctions::luaPlayerAddSkillTries);
@@ -2115,6 +2116,33 @@ int PlayerFunctions::luaPlayerGetEffectiveSkillLevel(lua_State* L) {
 	} else {
 		lua_pushnil(L);
 	}
+	return 1;
+}
+
+int PlayerFunctions::luaPlayerGetDefenseEquipment(lua_State* L) {
+	// player:getDefenseEquipment()
+	// The DISPLAYED equipment defence: the exact value the client is sent as the second
+	// field of DefenceValueStats (see sendCyclopediaCharacterCombatStats in
+	// protocolgame.cpp), so Lua and the character window can never disagree.
+	//
+	// On the shield branch Player::getDefenseEquipment() sums, in this order:
+	//   shield->getDefense()  -- read off the ITEM, so affix/imbuement defence surplus
+	//                            counts (ItemType::defense is the bare type value and does not)
+	//   x130% for a real shield, x160% for a spellbook (combat-mode removal compensation)
+	//   + equippedWeaponProficiency.defense        -- Proficiency perk
+	//   + weapon->getExtraDefense()                -- the "+3" of a magic sword's "Def:48 +3"
+	//   + equippedWeaponProficiency.weaponShieldMod -- Proficiency perk
+	//   + Wheel "Combat Mastery" DEFENSE major stat (only while shield defence > 0)
+	//
+	// Exposed for the knight shield spells (Shield Bash / Shield Slam), whose damage is
+	// defined against displayed defence; rebuilding that sum in Lua loses most of the terms.
+	const auto &player = Lua::getUserdataShared<Player>(L, 1);
+	if (!player) {
+		lua_pushnil(L);
+		return 1;
+	}
+
+	lua_pushnumber(L, player->getDefenseEquipment());
 	return 1;
 }
 
