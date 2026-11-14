@@ -7892,8 +7892,6 @@ bool Game::combatChangeHealth(const std::shared_ptr<Creature> &attacker, const s
 			if (damage.critical) {
 				addMagicEffect(targetPos, CONST_ME_CRITICAL_DAMAGE, attacker);
 			}
-			if (targetPlayer) {
-				targetPlayer->updateImpactTracker(COMBAT_HEALING, realHealthChange);
 				// Impact Analyser: the healing a player does, on themselves or on others
 				if (attackerPlayer) {
 					attackerPlayer->updateImpactTracker(COMBAT_HEALING, realHealthChange);
