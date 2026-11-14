@@ -2676,7 +2676,7 @@ void PlayerWheel::loadPlayerBonusData() {
 	registerPlayerBonusData();
 
 	printPlayerWheelMethodsBonusData(m_playerBonusData);
-	
+
 	// After wheel bonus reload, refresh CIP spell UI for grades that alter
 	// area / targets / duration (S 0x60 SpellDataModification).
 	sendSpellDataModifications();
