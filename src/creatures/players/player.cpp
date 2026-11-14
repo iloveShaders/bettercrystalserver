@@ -13807,8 +13807,7 @@ void Player::maximiseWeaponProficiencySlot(const uint16_t itemId, const uint8_t 
 		sendTextMessage(MESSAGE_FAILURE, "This perk is already at its maximum rank.");
 		return;
 	}
-	// Charged only after every other check passes, so a rejected maximise never costs an orb. The stash is
-	// excluded deliberately: the orb has to be on the character, matching how dust is spent elsewhere.
+	// Charged only after every other check passes, so a rejected maximise never costs an orb.
 	if (!hasItemCountById(MAXIMISE_ORB_ID, MAXIMISE_ORB_COST, false)) {
 		sendTextMessage(MESSAGE_FAILURE, "You need a lunar ascension orb to maximise this perk.");
 		return;
@@ -13820,6 +13819,7 @@ void Player::maximiseWeaponProficiencySlot(const uint16_t itemId, const uint8_t 
 	slot->value = MAX_RANK;
 	applyEquippedWeaponProficiency(itemId);
 	sendWeaponProficiencyInfo(itemId);
+	sendResourceBalance(RESOURCE_LUNAR_ASCENSION_ORBS, getItemTypeCount(ITEM_LUNAR_ASCENSION_ORB));
 }
 
 void Player::clearWeaponProficiencySlot(const uint16_t itemId, const uint8_t proficiencyLevel, const uint8_t perkPosition) {
