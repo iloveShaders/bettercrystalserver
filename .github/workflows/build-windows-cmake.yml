@@ -71,6 +71,12 @@ jobs:
 
       - name: Get latest CMake and ninja
         uses: lukka/get-cmake@main
+        with:
+          # Pinned: CMake 4.5.0 made source_group(TREE ...) strict, which breaks
+          # boost-locale 1.90.0 (libs/locale/CMakeLists.txt:236 lists
+          # include/boost/locale.hpp under the include/boost/locale tree root).
+          # 4.4.5 is the last version this repo built green with (run #263).
+          cmakeVersion: "4.4.5"
 
       - name: Run CMake
         uses: lukka/run-cmake@main
