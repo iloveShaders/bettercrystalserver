@@ -17,6 +17,7 @@
 
 #include "server/network/protocol/protocolgame.hpp"
 
+#include "config/configmanager.hpp"
 #include "creatures/players/cyclopedia/player_title.hpp"
 #include "creatures/players/player.hpp"
 #include "creatures/players/vocations/vocation.hpp"
@@ -140,7 +141,9 @@ namespace {
 
 	SocialCharacter readSocialCharacter(const DBResult_ptr &result) {
 		const auto vocation = g_vocations().getVocation(result->getNumber<uint16_t>("vocation"));
-		const auto world = g_game().worlds().getWorldConfigsById(result->getNumber<uint8_t>("world_id"));
+		// This fork is single-world: there is no world registry and the players
+		// table has no world_id column, so report the configured server name.
+		const auto world = g_configManager().getString(SERVER_NAME);
 		Outfit_t outfit {};
 		outfit.lookType = result->getNumber<uint16_t>("looktype");
 		outfit.lookHead = result->getNumber<uint8_t>("lookhead");
@@ -152,7 +155,7 @@ namespace {
 			result->getNumber<uint32_t>("id"),
 			result->getNumber<uint32_t>("account_id"),
 			result->getString("name"),
-			world ? world->name : std::string {},
+			world,
 			vocation ? vocation->getVocName() : std::string {},
 			static_cast<uint16_t>(std::min<uint32_t>(result->getNumber<uint32_t>("level"), UINT16_MAX)),
 			result->getNumber<uint32_t>("lastlogin"),
@@ -160,7 +163,7 @@ namespace {
 		};
 	}
 
-	constexpr auto SocialCharacterColumns = "p.id, p.account_id, p.name, p.world_id, p.vocation, p.level, p.lastlogin, p.looktype, p.lookhead, p.lookbody, p.looklegs, p.lookfeet, p.lookaddons";
+	constexpr auto SocialCharacterColumns = "p.id, p.account_id, p.name, p.vocation, p.level, p.lastlogin, p.looktype, p.lookhead, p.lookbody, p.looklegs, p.lookfeet, p.lookaddons";
 
 	std::optional<SocialCharacter> findSocialCharacter(const std::string &name) {
 		if (name.empty() || name.size() > 32) {

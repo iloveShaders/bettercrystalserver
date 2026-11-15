@@ -6209,7 +6209,7 @@ void ProtocolGame::sendClientCheck() {
 	writeToOutputBuffer(msg);
 }
 
-void ProtocolGame::sendSpellDataModification(const std::vector<std::tuple<uint16_t, uint32_t, uint8_t>> &entries) {
+void ProtocolGame::sendSpellDataModification(const std::vector<std::tuple<uint16_t, uint8_t, uint32_t>> &entries) {
 	if (!player || oldProtocol) {
 		return;
 	}
