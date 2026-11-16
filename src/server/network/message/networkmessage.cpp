@@ -20,14 +20,13 @@
 #include <boost/locale.hpp>
 
 // Pre-computed powers of ten, replacing runtime std::pow in addDouble/getDouble.
-// NOTE: indices 0..9 only. Every caller must clamp `precision` before indexing —
-// getDouble() reads it straight off the wire, so an unclamped index would be an
+// NOTE: indices 0..9 only. Every caller must bounds-check `precision` before indexing —
+// getDouble() reads it straight off the wire, so an unchecked index would be an
 // out-of-bounds read on a malformed packet.
 static constexpr double POW10[] = {
 	1.0, 10.0, 100.0, 1000.0, 10000.0,
 	100000.0, 1000000.0, 10000000.0, 100000000.0, 1000000000.0
 };
-static constexpr uint8_t POW10_MAX_PRECISION = 9;
 
 int32_t NetworkMessage::decodeHeader() {
 	// Ensure there are enough bytes to read the header (2 bytes)
@@ -223,10 +222,11 @@ void NetworkMessage::addString(const std::string &value, const std::source_locat
 }
 
 void NetworkMessage::addDouble(double value, uint8_t precision /*= 4*/) {
-	// POW10 has 10 entries; clamp so an out-of-range precision can never index past it.
-	const uint8_t safePrecision = std::min<uint8_t>(precision, POW10_MAX_PRECISION);
-	addByte(safePrecision);
-	add<uint32_t>((value * POW10[safePrecision]) + std::numeric_limits<int32_t>::max());
+	addByte(precision);
+	// Table for the common precisions, std::pow beyond it: keeps the full uint8_t range
+	// supported and makes an out-of-bounds POW10 index impossible.
+	const double scale = precision < std::size(POW10) ? POW10[precision] : std::pow(10.0, precision);
+	add<uint32_t>((value * scale) + std::numeric_limits<int32_t>::max());
 }
 
 double NetworkMessage::getDouble() {
@@ -236,10 +236,10 @@ double NetworkMessage::getDouble() {
 	auto scaledValue = get<uint32_t>();
 	// Convert the scaled value back to double using the precision factor
 	double adjustedValue = static_cast<double>(scaledValue) - static_cast<double>(std::numeric_limits<int32_t>::max());
-	// Convert back to the original double value using the pre-computed power of ten.
-	// `precision` comes straight off the wire, so it MUST be clamped before indexing POW10.
-	const uint8_t safePrecision = std::min<uint8_t>(precision, POW10_MAX_PRECISION);
-	return adjustedValue / POW10[safePrecision];
+	// Convert back to the original double value using the power of ten.
+	// `precision` comes straight off the wire, so it MUST be bounds-checked before indexing POW10.
+	const double scale = precision < std::size(POW10) ? POW10[precision] : std::pow(10.0, precision);
+	return adjustedValue / scale;
 }
 
 void NetworkMessage::addByte(uint8_t value, std::source_location location /*= std::source_location::current()*/) {
