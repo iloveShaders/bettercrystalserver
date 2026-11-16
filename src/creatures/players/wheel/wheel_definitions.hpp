@@ -292,15 +292,27 @@ struct SlotInfo {
 };
 
 namespace WheelSpells {
+	// Percentage bonuses are float so that fractional values survive to the read site.
+	// Gem mod grades multiply the base by 1.0 / 1.1 / 1.2 / 1.5 (wheel_gems.cpp:239-247),
+	// and CipSoft's published values keep the fraction: a base 15% supreme mod is
+	// officially 15 / 16.5 / 18 / 22.5 per grade. Assigning the product to an int
+	// TRUNCATED it, so 8 * 1.1 = 8.8 became 8 and the first gem upgrade delivered
+	// literally nothing for every base 5 / 6 / 7 / 8 modifier.
+	//
+	// Rounding now happens exactly once, at each read boundary, in the unit the
+	// destination field actually uses:
+	//   io_wheel.cpp  registerWheelSpellTable -> whole percent (Spell boost arrays are int)
+	//   player_wheel.cpp getSpellBonus       -> whole percent for damage/heal
+	//                                           1/100 percent for criticalDamage/Chance
 	struct Increase {
 		bool area = false;
-		int damage = 0;
-		int heal = 0;
+		float damage = 0;
+		float heal = 0;
 		int aditionalTarget = 0;
 		int damageReduction = 0;
 		int duration = 0;
-		int criticalDamage = 0;
-		int criticalChance = 0;
+		float criticalDamage = 0;
+		float criticalChance = 0;
 	};
 
 	struct Decrease {

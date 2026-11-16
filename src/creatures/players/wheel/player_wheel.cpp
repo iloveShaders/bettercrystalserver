@@ -34,6 +34,8 @@
 #include "server/network/protocol/protocolgame.hpp"
 #include "utils/tools.hpp"
 
+#include <cmath>
+
 static PlayerWheelGem emptyGem = {};
 
 const std::array<int32_t, COMBAT_COUNT> m_resistance = { 0 };
@@ -1539,6 +1541,17 @@ void PlayerWheel::addSpellBonus(const std::string &spellName, const WheelSpells:
 	m_spellsBonuses[spellName] = bonus;
 }
 
+// Returns the bonus in the unit the matching CombatDamage field uses, NOT a uniform
+// "percent". WheelSpells::Increase keeps fractions (see wheel_definitions.hpp); this is
+// the single place they are rounded for the gem/stage-perk route:
+//   DAMAGE / HEAL          -> whole percent. CombatDamage::damageMultiplier and
+//                             ::healingMultiplier are applied as value / 100.0
+//                             (combat.cpp:276, :833), so one percent is all they resolve.
+//   CRITICAL_DAMAGE/CHANCE -> 1/100 percent, which is what those fields already hold
+//                             (combat.cpp:157 "+4% base crit chance" == 400). Scaling
+//                             before the round keeps the official fractional values
+//                             exactly: a 16.5% gem bonus lands as 1650, not 1700.
+//                             Callers must therefore NOT multiply these two by 100.
 int32_t PlayerWheel::getSpellBonus(const std::string &spellName, WheelSpellBoost_t boost) const {
 	using enum WheelSpellBoost_t;
 
@@ -1554,15 +1567,15 @@ int32_t PlayerWheel::getSpellBonus(const std::string &spellName, WheelSpellBoost
 		case SECONDARY_GROUP_COOLDOWN:
 			return decrease.secondaryGroupCooldown;
 		case CRITICAL_CHANCE:
-			return increase.criticalChance;
+			return static_cast<int32_t>(std::lround(increase.criticalChance * 100.0f));
 		case CRITICAL_DAMAGE:
-			return increase.criticalDamage;
+			return static_cast<int32_t>(std::lround(increase.criticalDamage * 100.0f));
 		case DAMAGE:
-			return increase.damage;
+			return static_cast<int32_t>(std::lround(increase.damage));
 		case DAMAGE_REDUCTION:
 			return increase.damageReduction;
 		case HEAL:
-			return increase.heal;
+			return static_cast<int32_t>(std::lround(increase.heal));
 		case LIFE_LEECH:
 			return leech.life;
 		case MANA_LEECH:
@@ -3674,7 +3687,11 @@ std::shared_ptr<Spell> PlayerWheel::getCombatDataSpell(CombatDamage &damage) {
 
 		if (spell->getWheelOfDestinyUpgraded()) {
 			damage.criticalDamage += spell->getWheelOfDestinyBoost(WheelSpellBoost_t::CRITICAL_DAMAGE, spellGrade) * 100;
-			damage.criticalChance += spell->getWheelOfDestinyBoost(WheelSpellBoost_t::CRITICAL_CHANCE, spellGrade);
+			// The augment table stores crit chance as whole percent while CombatDamage::criticalChance
+			// is 1/100 percent (the roll compares it against uniform_random(1, 100) * 100), so this
+			// needs the same x100 the criticalDamage line above has. Without it the table's
+			// "+10% crit chance" entries were delivered as +0.10%.
+			damage.criticalChance += spell->getWheelOfDestinyBoost(WheelSpellBoost_t::CRITICAL_CHANCE, spellGrade) * 100;
 			damage.damageMultiplier += spell->getWheelOfDestinyBoost(WheelSpellBoost_t::DAMAGE, spellGrade);
 			damage.damageReductionMultiplier += spell->getWheelOfDestinyBoost(WheelSpellBoost_t::DAMAGE_REDUCTION, spellGrade);
 			damage.healingMultiplier += spell->getWheelOfDestinyBoost(WheelSpellBoost_t::HEAL, spellGrade);
@@ -3684,7 +3701,8 @@ std::shared_ptr<Spell> PlayerWheel::getCombatDataSpell(CombatDamage &damage) {
 			damage.lifeLeechChance += spell->getWheelOfDestinyBoost(WheelSpellBoost_t::LIFE_LEECH_CHANCE, spellGrade);
 		}
 
-		damage.criticalDamage += (getSpellBonus(spellName, WheelSpellBoost_t::CRITICAL_DAMAGE) * 100);
+		// No x100 on the next two: getSpellBonus already returns them in 1/100 percent.
+		damage.criticalDamage += getSpellBonus(spellName, WheelSpellBoost_t::CRITICAL_DAMAGE);
 		damage.criticalChance += getSpellBonus(spellName, WheelSpellBoost_t::CRITICAL_CHANCE);
 		damage.damageMultiplier += getSpellBonus(spellName, WheelSpellBoost_t::DAMAGE);
 		damage.damageReductionMultiplier += getSpellBonus(spellName, WheelSpellBoost_t::DAMAGE_REDUCTION);

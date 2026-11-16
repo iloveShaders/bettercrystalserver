@@ -363,7 +363,7 @@ void WheelModifierContext::addStrategies(WheelGemSupremeModifier_t modifier, uin
 			m_strategies.emplace_back(std::make_unique<GemModifierSpellBonusStrategy>(m_wheel, "Front Sweep", bonus));
 			break;
 		case WheelGemSupremeModifier_t::Knight_Groundshaker_DamageIncrease:
-			bonus.increase.damage = static_cast<int>(std::round(6.5 * gradeMultiplier));
+			bonus.increase.damage = 6.5 * gradeMultiplier; // fraction kept; rounded once in getSpellBonus
 			m_strategies.emplace_back(std::make_unique<GemModifierSpellBonusStrategy>(m_wheel, "Groundshaker", bonus));
 			break;
 		case WheelGemSupremeModifier_t::Knight_Groundshaker_CriticalExtraDamage:
@@ -593,7 +593,7 @@ void WheelModifierContext::addStrategies(WheelGemSupremeModifier_t modifier, uin
 			m_strategies.emplace_back(std::make_unique<GemModifierSpellBonusStrategy>(m_wheel, "Forceful Uppercut", bonus));
 			break;
 		case WheelGemSupremeModifier_t::Monk_FurryofBlows_DamageIncrease:
-			bonus.increase.damage = static_cast<int>(std::round(6.5 * gradeMultiplier));
+			bonus.increase.damage = 6.5 * gradeMultiplier; // fraction kept; rounded once in getSpellBonus
 			m_strategies.emplace_back(std::make_unique<GemModifierSpellBonusStrategy>(m_wheel, "Flurry of Blows", bonus));
 			break;
 		case WheelGemSupremeModifier_t::Monk_FurryofBlows_CriticalExtraDamage:

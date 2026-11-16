@@ -19,6 +19,8 @@
 
 #include "creatures/players/wheel/wheel_definitions.hpp"
 
+#include <cmath>
+
 class PlayerWheel;
 
 enum CombatType_t : uint8_t;
@@ -56,10 +58,15 @@ private:
 
 class GemModifierStatStrategy final : public GemModifierStrategy {
 public:
-	explicit GemModifierStatStrategy(PlayerWheel &wheel, WheelStat_t stat, int32_t value) :
+	// Takes a double because every call site passes `base * gradeMultiplier`, and that
+	// multiplier is 1.0 / 1.1 / 1.2 / 1.5 (wheel_gems.cpp:41-47, :239-247). Binding the
+	// product straight to int32_t TRUNCATED it: Dodge 28 * 1.1 = 30.8 was stored as 30
+	// (0.30%) where the official value is 0.31%, and the knight Vocation_Mixed capacity
+	// 125 * 1.1 = 137.5 was stored as 137. Round once, here, for every stat call site.
+	explicit GemModifierStatStrategy(PlayerWheel &wheel, WheelStat_t stat, double value) :
 		GemModifierStrategy(wheel),
 		m_stat(stat),
-		m_value(value) { }
+		m_value(static_cast<int32_t>(std::lround(value))) { }
 
 	void execute() override;
 
