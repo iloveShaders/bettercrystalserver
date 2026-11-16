@@ -1028,6 +1028,17 @@ void Player::updateInventoryImbuement() {
 }
 
 uint16_t Player::getLoyaltySkill(skills_t skill) const {
+	// SKILL_MAGLEVEL (13) and SKILL_LEVEL (14) sit past SKILL_LAST (12), so they have no entry in
+	// skills[]. Magic level has its own loyalty getter; anything else out of range is rejected rather
+	// than used as an index. Upstream PR #982.
+	if (skill == SKILL_MAGLEVEL) {
+		const auto loyaltyMagicLevel = getLoyaltyMagicLevel();
+		return loyaltyMagicLevel > 65535 ? 65535 : static_cast<uint16_t>(loyaltyMagicLevel);
+	}
+	if (skill < SKILL_FIRST || skill > SKILL_LAST) {
+		return 0;
+	}
+
 	uint16_t level = getBaseSkill(skill);
 	absl::uint128 currReqTries = vocation->getReqSkillTries(skill, level);
 	absl::uint128 nextReqTries = vocation->getReqSkillTries(skill, level + 1);
@@ -1067,10 +1078,28 @@ uint16_t Player::getLoyaltySkill(skills_t skill) const {
 }
 
 uint16_t Player::getBaseSkill(uint8_t skill) const {
+	// Upstream PR #982. The parameter is uint8_t, so a negative skills_t arrives as 255 and is caught
+	// by the upper bound -- no separate lower bound is needed here.
+	if (skill == SKILL_MAGLEVEL) {
+		const auto baseMagicLevel = getBaseMagicLevel();
+		return baseMagicLevel > 65535 ? 65535 : static_cast<uint16_t>(baseMagicLevel);
+	}
+	if (skill > SKILL_LAST) {
+		return 0;
+	}
+
 	return skills[skill].level;
 }
 
 double_t Player::getSkillPercent(skills_t skill) const {
+	// Upstream PR #982. Magic level keeps its progress in magLevelPercent, not in skills[].
+	if (skill == SKILL_MAGLEVEL) {
+		return getMagicLevelPercent();
+	}
+	if (skill < SKILL_FIRST || skill > SKILL_LAST) {
+		return 0;
+	}
+
 	return skills[skill].percent;
 }
 
@@ -7715,8 +7744,16 @@ uint16_t Player::getSkillLevel(skills_t skill) const {
 	// past SKILL_LAST with SKILL_MAGLEVEL (13) and SKILL_LEVEL (14). Passing either would read past the end of
 	// BOTH arrays, and past skills[] again inside getLoyaltySkill/getBaseSkill. Reject anything outside the
 	// storable range instead of indexing with it. Magic level is read with getMagicLevel(); character level
-	// with getLevel(). Note the `skill == SKILL_MAGLEVEL` branch further down is therefore unreachable -- it is
-	// left in place only to keep this function byte-identical to upstream apart from this guard.
+	// with getLevel(). The SKILL_MAGLEVEL branch below now answers up front (upstream PR #982), so a caller
+	// gets the real magic level instead of 0. getMagicLevel() already includes varStats[STAT_MAGICPOINTS],
+	// WheelStat_t::MAGIC, the Positional Tactics MAGIC revelation bonus and
+	// equippedWeaponProficiency.skillBonus[SKILL_MAGLEVEL] -- it is the complete value. That makes the
+	// `else if (skill == SKILL_MAGLEVEL)` branch lower down unreachable, and it must STAY dead: reaching it
+	// would add the two wheel magic bonuses a second time. Kept only to stay aligned with upstream.
+	if (skill == SKILL_MAGLEVEL) {
+		const auto magicLevel = getMagicLevel();
+		return magicLevel > 65535 ? 65535 : static_cast<uint16_t>(magicLevel);
+	}
 	if (skill < SKILL_FIRST || skill > SKILL_LAST) {
 		return 0;
 	}
