@@ -6232,7 +6232,7 @@ void ProtocolGame::sendGemAtelierGemRevealed(uint16_t gemIndex) {
 
 	NetworkMessage out;
 	out.addByte(0xC5);
-	out.add<uint32_t>(gemIndex);
+	out.add<uint16_t>(gemIndex);
 	writeToOutputBuffer(out);
 }
 
