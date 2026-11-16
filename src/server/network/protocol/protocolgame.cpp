@@ -6542,8 +6542,14 @@ void ProtocolGame::sendSaleItemList(const std::vector<ShopBlock> &shopVector, co
 		if (search != inventoryMap.end()) {
 			customCurrencyValue += static_cast<uint64_t>(search->second);
 		}
-		// CIP: non-gold NPC currency is 0x3C (0x02 is guild bank gold).
-		sendResourceBalance(oldProtocol ? RESOURCE_INVENTORY_MONEY : RESOURCE_NPC_TRADE_QUEST_FLAG_CURRENCY, customCurrencyValue);
+		// 2026-11-16 REVERTED to 0x02 (was RESOURCE_NPC_TRADE_QUEST_FLAG_CURRENCY, 0x3C, from #977).
+		// The CIP 15.30 client does not consume a plain u64 balance for resource type 0x3C, so the
+		// leftover bytes slipped the stream and the client read the next 0x00 as an opcode --
+		// "Unknown Gameserver Message: 0" -- the instant ANY non-gold NPC shop window opened
+		// (Equipment Merchant, Task Potion Merchant). Confirmed from a client packet dump: the
+		// 0x7A shop body parsed cleanly, then EE 00 <bank u64> EE 3C <u64> and the stream died there.
+		// 0x02 is the type this client accepts for NPC currency and is what shipped before #977.
+		sendResourceBalance(oldProtocol ? RESOURCE_INVENTORY_MONEY : RESOURCE_INVENTORY_CURRENCY_CUSTOM, customCurrencyValue);
 	}
 
 	NetworkMessage msg;
