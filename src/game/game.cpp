@@ -972,13 +972,17 @@ std::shared_ptr<Thing> Game::internalGetThing(const std::shared_ptr<Player> &pla
 
 		if (player && tile->hasFlag(TILESTATE_SUPPORTS_HANGABLE)) {
 			// do extra checks here if the thing is accessable
-			if (thing && thing->getItem()) {
+			if (thing && thing->getItem() && thing->getItem()->isHangable()) {
+				const Position &playerPos = player->getPosition();
+				const Position &tilePos = tile->getPosition();
+				// Only the tile directly behind the wall is out of reach; both axes must
+				// match or diagonally adjacent players lose access to the hangable.
 				if (tile->hasProperty(CONST_PROP_ISVERTICAL)) {
-					if (player->getPosition().x + 1 == tile->getPosition().x && thing->getItem()->isHangable()) {
+					if (playerPos.x + 1 == tilePos.x && playerPos.y == tilePos.y) {
 						thing = nullptr;
 					}
 				} else { // horizontal
-					if (player->getPosition().y + 1 == tile->getPosition().y && thing->getItem()->isHangable()) {
+					if (playerPos.y + 1 == tilePos.y && playerPos.x == tilePos.x) {
 						thing = nullptr;
 					}
 				}
