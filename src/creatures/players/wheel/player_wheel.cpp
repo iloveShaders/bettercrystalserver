@@ -1345,7 +1345,7 @@ void PlayerWheel::revealGem(WheelGemQuality_t quality) {
 	// (TGemAtelierPageController selectGem / GEM_ATELIER_SELECT_GEM), not item type id.
 	if (m_player.client && !m_player.client->oldProtocol) {
 		const uint16_t revealedIndex = getGemIndex(gem.uuid);
-		if (revealedIndex != 0xFF) {
+		if (revealedIndex != 0xFFFF) {
 			m_player.client->sendGemAtelierGemRevealed(revealedIndex);
 		}
 	}
@@ -1403,7 +1403,7 @@ uint16_t PlayerWheel::getGemIndex(const std::string &uuid) const {
 		}
 	}
 	g_logger().error("[{}] Failed to find gem with uuid {}", __FUNCTION__, uuid);
-	return 0xFF;
+	return 0xFFFF;
 }
 
 void PlayerWheel::destroyGem(uint16_t index) {
@@ -1587,12 +1587,23 @@ int32_t PlayerWheel::getSpellBonus(const std::string &spellName, WheelSpellBoost
 
 void PlayerWheel::addGems(NetworkMessage &msg) const {
 	const auto activeGems = getActiveGems();
-	msg.addByte(activeGems.size());
-	g_logger().debug("[{}] Player {} has {} active gems", __FUNCTION__, m_player.getName(), activeGems.size());
+	std::vector<uint16_t> activeGemIndexes;
+	activeGemIndexes.reserve(activeGems.size());
 	for (const auto &gem : activeGems) {
-		auto index = getGemIndex(gem.uuid);
+		const uint16_t index = getGemIndex(gem.uuid);
+		if (index == 0xFFFF) {
+			// Stale active gem: its uuid is no longer in the revealed list. Advertising a
+			// bogus index here comes straight back in the next wheel save as an
+			// out-of-range setActiveGem, so drop it instead.
+			continue;
+		}
 		g_logger().debug("[{}] Adding active gem: {} with index {}", __FUNCTION__, gem.toString(), index);
-		msg.add<uint16_t>(getGemIndex(gem.uuid));
+		activeGemIndexes.emplace_back(index);
+	}
+	g_logger().debug("[{}] Player {} has {} active gems", __FUNCTION__, m_player.getName(), activeGemIndexes.size());
+	msg.addByte(static_cast<uint8_t>(activeGemIndexes.size()));
+	for (const uint16_t index : activeGemIndexes) {
+		msg.add<uint16_t>(index);
 	}
 
 	msg.add<uint16_t>(m_revealedGems.size());
@@ -2265,6 +2276,10 @@ void PlayerWheel::addInitialGems() {
 					gem.basicModifier2 = selectBasicModifier2(gem.basicModifier1);
 				}
 				gem.save(gemsKV());
+				// Keep the in-memory list in step with KV. Without this the starter gems only
+				// show up after the next relog, so the very window that triggered this call is
+				// built from an empty revealed list.
+				m_revealedGems.emplace_back(gem);
 			}
 		}
 		gemsKV()->set("initialGems", true);
