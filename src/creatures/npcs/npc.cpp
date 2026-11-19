@@ -601,10 +601,24 @@ void Npc::onPlayerSellAllLoot(uint32_t playerId, uint16_t itemId, bool ignore, u
 			}
 		}
 
-		// false: the default path force-closes every container slot that is not held in an
-		// inventory slot, which shut the player's depot, locker, corpse and ground-bag
-		// windows every single time they emptied a loot pouch.
-		player->openPlayerContainers(false);
+		// Refresh ONLY the pouch, and do it from the player's LIVE open-container list.
+		//
+		// This used to call openPlayerContainers(false). That function is the login restore
+		// path: it rebuilds the client's container windows from each item's OPENCONTAINER
+		// attribute, and that attribute is written in exactly one place --
+		// IOLoginDataSave::savePlayerItems, which clears it and re-stamps it from
+		// getOpenContainers() at SAVE time. Mid-session it is therefore a snapshot of whatever
+		// was open at the last save, so emptying a pouch restored THAT layout: a player who had
+		// the Store Inbox open when they last saved, and has since opened the loot pouch in the
+		// same window, had the window flip back to "Your Store Inbox" on every single sale.
+		// addContainer() also resets index to 0, so it threw away the page the player was on.
+		//
+		// onSendContainer walks the live openContainers instead: it resends the pouch on the cid
+		// it is actually open at, keeps containerInfo.index, and touches no other window. If the
+		// pouch is not open it sends nothing. The reason the old call passed false -- not
+		// force-closing the player's depot, locker, corpse and ground-bag windows -- still holds,
+		// because this closes nothing at all.
+		player->onSendContainer(container);
 	}
 }
 
