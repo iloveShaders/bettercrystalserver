@@ -9484,7 +9484,35 @@ void Player::sendRemoveContainerItem(const std::shared_ptr<Container> &container
 			sendContainer(containerId, container, false, firstIndex);
 		}
 
-		client->sendRemoveContainerItem(containerId, std::max<uint16_t>(slot, firstIndex), container->getItemByIndex(container->capacity() + firstIndex));
+		// 0x72 names a slot INSIDE the page the client currently holds, and that page is only
+		// capacity() entries wide -- sendContainer tells the client exactly that byte. A
+		// paginated container can be far bigger than its page: the loot pouch pairs a 32-slot
+		// page with lootPouchMaxLimit items. Running the absolute index through
+		// std::max<uint16_t>(slot, firstIndex) clamped only the LOWER bound, so every removal
+		// behind the visible page handed the client a slot past the end of its own container
+		// view. Emptying a full pouch at an NPC fires one of those per item removed, and the
+		// client drops the connection.
+		//
+		// sendUpdateContainerItem, directly above, already window-tests the slot this way.
+		const uint32_t pageEnd = static_cast<uint32_t>(firstIndex) + container->capacity();
+		if (slot >= pageEnd) {
+			// Behind the page: nothing the client is showing moved. The container's total size
+			// did change, but that only drives the pagination arrows and is corrected by the
+			// next full sendContainer.
+			continue;
+		}
+
+		if (slot < firstIndex) {
+			// Ahead of the page: every item on the page shifts down by one, which no
+			// single-slot removal can express -- resend the page instead.
+			sendContainer(containerId, container, false, firstIndex);
+			continue;
+		}
+
+		// getItemByIndex(capacity() + firstIndex) is the item that slides into the last visible
+		// slot. Container::removeThing calls this BEFORE itemlist.erase(), so that index still
+		// resolves to the first item behind the page -- do not "correct" it.
+		client->sendRemoveContainerItem(containerId, slot, container->getItemByIndex(container->capacity() + firstIndex));
 	}
 }
 
