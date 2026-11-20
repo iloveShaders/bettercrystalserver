@@ -32,46 +32,54 @@ void MapSector::addCreature(const std::shared_ptr<Creature> &c) {
 	}
 }
 
+namespace {
+	// Swap-and-pop removal. Returns false when the creature was not in the list.
+	bool eraseCreatureFromList(std::vector<std::shared_ptr<Creature>> &list, const std::shared_ptr<Creature> &c) {
+		auto iter = std::ranges::find(list, c);
+		if (iter == list.end()) {
+			return false;
+		}
+
+		*iter = list.back();
+		list.pop_back();
+		return true;
+	}
+} // namespace
+
 void MapSector::removeCreature(const std::shared_ptr<Creature> &c) {
-	auto iter = std::ranges::find(creature_list, c);
-	if (iter == creature_list.end()) {
-		g_logger().error("[{}]: Creature not found in creature_list!", __FUNCTION__);
+	if (!c) {
 		return;
 	}
 
-	assert(iter != creature_list.end());
-	*iter = creature_list.back();
-	creature_list.pop_back();
+	const bool inCreatureList = eraseCreatureFromList(creature_list, c);
 
+	// Never short-circuit on a miss. All four lists hold shared_ptr, and Spectators (a
+	// friend of this class) reads player_list / monster_list / npc_list directly, so
+	// returning early after a failed creature_list lookup used to leave a phantom entry
+	// pinned in the typed list for the rest of uptime: never freed, and still handed out
+	// by spectator lookups. Each list is now cleaned independently of the others.
+	bool inTypedList = true;
+	const char* typedListName = "creature_list";
 	if (c->getPlayer()) {
-		iter = std::ranges::find(player_list, c);
-		if (iter == player_list.end()) {
-			g_logger().error("[{}]: Player not found in player_list!", __FUNCTION__);
-			return;
-		}
-
-		assert(iter != player_list.end());
-		*iter = player_list.back();
-		player_list.pop_back();
+		typedListName = "player_list";
+		inTypedList = eraseCreatureFromList(player_list, c);
 	} else if (c->getMonster()) {
-		iter = std::ranges::find(monster_list, c);
-		if (iter == monster_list.end()) {
-			g_logger().error("[{}]: Monster not found in player_list!", __FUNCTION__);
-			return;
-		}
-
-		assert(iter != monster_list.end());
-		*iter = monster_list.back();
-		monster_list.pop_back();
+		typedListName = "monster_list";
+		inTypedList = eraseCreatureFromList(monster_list, c);
 	} else if (c->getNpc()) {
-		iter = std::ranges::find(npc_list, c);
-		if (iter == npc_list.end()) {
-			g_logger().error("[{}]: NPC not found in player_list!", __FUNCTION__);
-			return;
-		}
+		typedListName = "npc_list";
+		inTypedList = eraseCreatureFromList(npc_list, c);
+	}
 
-		assert(iter != npc_list.end());
-		*iter = npc_list.back();
-		npc_list.pop_back();
+	if (!inCreatureList || !inTypedList) {
+		// Either this creature is registered in a different sector than the one its
+		// current tile belongs to, or it is being de-registered twice (Game::removeCreature
+		// only sets isRemoved() at the very end, so Lua running in onRemoveCreature or in a
+		// STEP_OUT move event can re-enter the whole removal). The old message named
+		// neither the creature nor the place, which made it untrackable.
+		g_logger().error(
+			"[{}]: '{}' not found in this sector (creature_list: {}, {}: {}) at position '{}'",
+			__FUNCTION__, c->getName(), inCreatureList, typedListName, inTypedList, c->getPosition().toString()
+		);
 	}
 }
