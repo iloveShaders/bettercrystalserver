@@ -713,11 +713,46 @@ void Game::setGameState(GameState_t newState) {
 			saveMotdNum();
 			g_saveManager().saveAll();
 
-			// kick all players that are still online
-			auto it = players.begin();
-			while (it != players.end()) {
-				it->second->removePlayer(true);
-				it = players.begin();
+			// Kick all players that are still online.
+			// Snapshot first. removePlayer() mutates `players`, and the previous
+			// `while (it != players.end()) { ...; it = players.begin(); }` form had no
+			// progress guarantee: Game::removeCreature() returns false WITHOUT calling
+			// removeList() when the creature is already flagged removed or its parent is
+			// gone. Creature::m_tile / m_parent are weak_ptrs, so a player whose Tile
+			// object was destroyed under it is stranded with getParent() == nullptr while
+			// still listed in `players`. The loop then re-read begin() forever: 100% CPU
+			// on the dispatcher thread, shutdown() never queued, serviceManager.run()
+			// never returns, process never exits (killed three times by hand at the 03:00
+			// restart before this was found).
+			std::vector<std::shared_ptr<Player>> playersToKick;
+			playersToKick.reserve(players.size());
+			for (const auto &[_, onlinePlayer] : players) {
+				playersToKick.emplace_back(onlinePlayer);
+			}
+
+			for (const auto &onlinePlayer : playersToKick) {
+				onlinePlayer->removePlayer(true);
+			}
+
+			// Whatever is still listed could not be detached from the world. Drop it from
+			// the player lists directly so shutdown can finish; the snapshot below keeps
+			// each Player alive until the end of this block, so no ~Player() runs inside
+			// the loop. The log line names the character, which identifies what stranded
+			// it (look for the matching "tile on position ... not exist" error above).
+			if (!players.empty()) {
+				std::vector<std::shared_ptr<Player>> stuckPlayers;
+				stuckPlayers.reserve(players.size());
+				for (const auto &[_, stuckPlayer] : players) {
+					stuckPlayers.emplace_back(stuckPlayer);
+				}
+
+				for (const auto &stuckPlayer : stuckPlayers) {
+					g_logger().error(
+						"[{}] player '{}' could not be removed (has tile: {}, has parent: {}, flagged removed: {}), forcing removal so shutdown can finish",
+						__FUNCTION__, stuckPlayer->getName(), stuckPlayer->getTile() != nullptr, stuckPlayer->getParent() != nullptr, stuckPlayer->isRemoved()
+					);
+					removePlayer(stuckPlayer);
+				}
 			}
 
 			// Remove players still lingering on the death screen after a disconnect.
@@ -749,14 +784,22 @@ void Game::setGameState(GameState_t newState) {
 			g_saveManager().saveAll();
 
 			/* kick all players without the CanAlwaysLogin flag */
-			auto it = players.begin();
-			while (it != players.end()) {
-				if (!it->second->hasFlag(PlayerFlags_t::CanAlwaysLogin)) {
-					it->second->removePlayer(true);
-					it = players.begin();
-				} else {
-					++it;
+			// Snapshot first, for the same reason as GAME_STATE_SHUTDOWN above: the old
+			// begin()-rescan form spun forever on any player removeCreature() refuses to
+			// deregister. This state runs before SHUTDOWN on the daily save when
+			// globalServerSaveClose is on, so it hangs the same way. No forced removal
+			// here: CLOSED is not terminal, so a player that resists is left online
+			// rather than turned into a ghost entry.
+			std::vector<std::shared_ptr<Player>> playersToKick;
+			playersToKick.reserve(players.size());
+			for (const auto &[_, onlinePlayer] : players) {
+				if (!onlinePlayer->hasFlag(PlayerFlags_t::CanAlwaysLogin)) {
+					playersToKick.emplace_back(onlinePlayer);
 				}
+			}
+
+			for (const auto &onlinePlayer : playersToKick) {
+				onlinePlayer->removePlayer(true);
 			}
 
 			break;
@@ -1412,6 +1455,12 @@ bool Game::removeCreature(const std::shared_ptr<Creature> &creature, bool isLogo
 
 	auto parent = creature->getParent();
 	if (!parent) {
+		// Stranded creature: its Tile object is gone (m_tile / m_parent are weak_ptrs),
+		// so it stays registered in the game lists and every later removeCreature()
+		// call on it returns false here, before removeList() can unregister it. For a
+		// player that is what used to hang the shutdown kick loop in setGameState().
+		// Logged so the producer can be identified instead of failing silently.
+		g_logger().error("[{}] creature '{}' has no parent at position '{}', it stays registered", __FUNCTION__, creature->getName(), creature->getPosition().toString());
 		return false;
 	}
 
