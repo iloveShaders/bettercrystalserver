@@ -426,6 +426,10 @@ public:
 	PlayerWheelGem &getGem(uint16_t index);
 	PlayerWheelGem &getGem(const std::string &uuid);
 	uint16_t getGemIndex(const std::string &uuid) const;
+	/// Maps a gem position the client sent back (it is relative to the last wheel window
+	/// it received) onto the current position in m_revealedGems. Returns 0xFFFF when that
+	/// gem no longer exists, e.g. it was dismantled after that window was sent.
+	uint16_t resolveClientGemIndex(uint16_t clientIndex) const;
 	void revealGem(WheelGemQuality_t quality);
 	/// Emit CIP SpellDataModification (S 0x60) for current wheel spell grades.
 	void sendSpellDataModifications() const;
@@ -508,6 +512,10 @@ private:
 	std::array<PlayerWheelGem, 4> m_activeGems;
 	std::vector<PlayerWheelGem> m_revealedGems;
 	std::vector<PlayerWheelGem> m_destroyedGems;
+	// Gem uuids in the order the last wheel window advertised them. destroyGem renumbers
+	// m_revealedGems, but an already-open Gem Atelier keeps the old positions, so saves
+	// have to be resolved against what the client was actually told.
+	std::vector<std::string> m_sentGemOrder;
 
 	float m_harmonySanctuary = 1.0f;
 };

@@ -1406,6 +1406,21 @@ uint16_t PlayerWheel::getGemIndex(const std::string &uuid) const {
 	return 0xFFFF;
 }
 
+uint16_t PlayerWheel::resolveClientGemIndex(uint16_t clientIndex) const {
+	if (clientIndex >= m_sentGemOrder.size()) {
+		// Nothing was advertised at that position; leave it to the caller's guards.
+		return clientIndex;
+	}
+
+	const auto &uuid = m_sentGemOrder[clientIndex];
+	for (size_t i = 0; i < m_revealedGems.size(); ++i) {
+		if (m_revealedGems[i].uuid == uuid) {
+			return static_cast<uint16_t>(i);
+		}
+	}
+	return 0xFFFF;
+}
+
 void PlayerWheel::destroyGem(uint16_t index) {
 	const auto &gem = getGem(index);
 	if (!gem) {
@@ -1765,6 +1780,15 @@ void PlayerWheel::sendOpenWheelWindow(NetworkMessage &msg, uint32_t ownerId) {
 	addPromotionScrolls(msg);
 	msg.addByte(hasMonkQuest() ? 20 : 0); // The Way of The Monk Quest
 	msg.add<uint16_t>(getExtraPointsFromHuntingTaskShop());
+	// Remember the order we are about to advertise. The client answers saves with
+	// positions taken from this window, and destroyGem renumbers m_revealedGems in
+	// between, so the save path has to resolve against what the client was told.
+	m_sentGemOrder.clear();
+	m_sentGemOrder.reserve(m_revealedGems.size());
+	for (const auto &gem : m_revealedGems) {
+		m_sentGemOrder.emplace_back(gem.uuid);
+	}
+
 	addGems(msg);
 	addGradeModifiers(msg);
 
@@ -1925,6 +1949,10 @@ void PlayerWheel::saveSlotPointsOnPressSaveButton(NetworkMessage &msg) {
 		const bool hasGem = msg.getByte();
 		uint16_t gemIndex = 0;
 		if (hasGem) {
+			// Zero-based position in m_revealedGems, as the client received it in the last
+			// wheel window. It goes stale the moment the list is renumbered underneath an
+			// open atelier (destroyGem erases, shifting every later gem down by one), which
+			// is what the setActiveGem affinity/range errors below are reporting.
 			gemIndex = msg.get<uint16_t>();
 		}
 		if (slotSaveFailed) {
@@ -1935,7 +1963,14 @@ void PlayerWheel::saveSlotPointsOnPressSaveButton(NetworkMessage &msg) {
 			removeActiveGem(affinity);
 			continue;
 		}
-		setActiveGem(affinity, gemIndex);
+		const uint16_t resolvedIndex = resolveClientGemIndex(gemIndex);
+		if (resolvedIndex == 0xFFFF) {
+			// That gem was dismantled after the window the client is answering from, so
+			// the vessel is empty now.
+			removeActiveGem(affinity);
+			continue;
+		}
+		setActiveGem(affinity, resolvedIndex);
 	}
 
 	// Player's bonus data is loaded, initialized, registered, and the function logs
