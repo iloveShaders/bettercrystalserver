@@ -790,15 +790,34 @@ uint16_t IOBountyTasks::getBountyTalismanBonus(const std::shared_ptr<Player> &pl
 	}
 
 	const auto &bountyData = player->getBountyTaskData();
-	if (bountyData.state != BOUNTY_STATE_ACTIVE) {
+
+	// The talisman bonus applies to the active bounty task creature AND to the player's
+	// weekly kill task creatures (matches global Tibia, which extended the talisman
+	// beyond the single selected bounty creature).
+	bool raceMatches = (bountyData.state == BOUNTY_STATE_ACTIVE && bountyData.activeTask.raceId == raceId);
+
+	// Weekly kill tasks run independently of the bounty task, so this is deliberately NOT
+	// gated on BOUNTY_STATE_ACTIVE: a player with no bounty task selected still gets the
+	// bonus on their weekly creatures. Only the specific kill tasks count - the "any
+	// creature" counter matches every bestiary creature and would turn the talisman into a
+	// permanent global bonus. Tasks already finished are skipped, matching
+	// IOWeeklyTasks::onCreatureKill, which stops crediting them once completed.
+	if (!raceMatches && g_configManager().getBoolean(WEEKLY_TASKS_ENABLED)) {
+		const auto &weeklyData = player->getWeeklyTaskData();
+		for (const auto &killTask : weeklyData.killTasks) {
+			if (killTask.raceId == raceId && killTask.currentKills < killTask.totalKills) {
+				raceMatches = true;
+				break;
+			}
+		}
+	}
+
+	if (!raceMatches) {
 		return 0;
 	}
 
-	if (bountyData.activeTask.raceId != raceId) {
-		return 0;
-	}
-
-	// Return cached bonus in hundredths of a percent (pre-calculated on load/upgrade)
+	// Return cached bonus in hundredths of a percent (pre-calculated on load/upgrade).
+	// Talisman levels live in bountyData regardless of which task matched above.
 	const auto &tier = bountyData.talismanTiers[pathIndex];
 	return static_cast<uint16_t>(tier.bonusHundredths);
 }
