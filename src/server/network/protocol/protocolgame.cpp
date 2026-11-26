@@ -5661,7 +5661,14 @@ void ProtocolGame::sendBlessStatus() {
 		msg.add<uint16_t>(blessCount >= 5 ? 0x01 : 0x00);
 	} else {
 		bool glow = player->getVocationId() > VOCATION_NONE && ((g_configManager().getBoolean(INVENTORY_GLOW) && blessCount >= 5) || player->getLevel() < g_configManager().getNumber(ADVENTURERSBLESSING_LEVEL));
-		msg.add<uint16_t>(blessingsMask > 0 ? blessingsMask : (glow ? 1 : 0)); // Bitwise blessings mask or glow flag
+		// Bit 0 is the inventory-glow flag; bits 1-8 are the blessings (same encoding as 0x9B).
+		// They must be combined, not chosen between: returning the mask alone cleared bit 0 and
+		// silently killed the glow for exactly the players who had enough blessings to earn it.
+		uint16_t blessStatus = blessingsMask;
+		if (glow) {
+			blessStatus |= 1;
+		}
+		msg.add<uint16_t>(blessStatus); // Bitwise blessings mask + glow flag
 		msg.addByte((blessCount >= 7) ? 3 : ((blessCount >= 5) ? 2 : 1)); // 1 = Disabled | 2 = normal | 3 = green
 	}
 
