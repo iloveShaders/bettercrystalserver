@@ -1406,18 +1406,27 @@ uint16_t PlayerWheel::getGemIndex(const std::string &uuid) const {
 	return 0xFFFF;
 }
 
-uint16_t PlayerWheel::resolveClientGemIndex(uint16_t clientIndex) const {
-	if (clientIndex >= m_sentGemOrder.size()) {
-		// Nothing was advertised at that position; leave it to the caller's guards.
+uint16_t PlayerWheel::resolveClientGemIndex(uint16_t clientIndex, WheelGemAffinity_t vesselAffinity) const {
+	// A client that rebuilt its atelier from the newest window answers with live positions.
+	if (clientIndex < m_revealedGems.size() && m_revealedGems[clientIndex].affinity == vesselAffinity) {
 		return clientIndex;
 	}
 
-	const auto &uuid = m_sentGemOrder[clientIndex];
-	for (size_t i = 0; i < m_revealedGems.size(); ++i) {
-		if (m_revealedGems[i].uuid == uuid) {
-			return static_cast<uint16_t>(i);
+	// An atelier left open keeps the numbering of an earlier window, and destroyGem has
+	// renumbered m_revealedGems since, so map the position through everything we ever
+	// advertised this session and match it back up by uuid.
+	if (clientIndex < m_sentGemOrder.size()) {
+		const auto &uuid = m_sentGemOrder[clientIndex];
+		for (size_t i = 0; i < m_revealedGems.size(); ++i) {
+			if (m_revealedGems[i].uuid == uuid && m_revealedGems[i].affinity == vesselAffinity) {
+				g_logger().debug("[{}] Player {} sent stale gem position {}, resolved to {} via uuid {}", __FUNCTION__, m_player.getName(), clientIndex, i, uuid);
+				return static_cast<uint16_t>(i);
+			}
 		}
 	}
+
+	// Dismantled since that window, or too stale to identify: the vessel is empty now.
+	g_logger().debug("[{}] Player {} sent unresolvable gem position {} for affinity {} ({} revealed, {} ever advertised)", __FUNCTION__, m_player.getName(), clientIndex, fmt::underlying(vesselAffinity), m_revealedGems.size(), m_sentGemOrder.size());
 	return 0xFFFF;
 }
 
@@ -1780,13 +1789,14 @@ void PlayerWheel::sendOpenWheelWindow(NetworkMessage &msg, uint32_t ownerId) {
 	addPromotionScrolls(msg);
 	msg.addByte(hasMonkQuest() ? 20 : 0); // The Way of The Monk Quest
 	msg.add<uint16_t>(getExtraPointsFromHuntingTaskShop());
-	// Remember the order we are about to advertise. The client answers saves with
-	// positions taken from this window, and destroyGem renumbers m_revealedGems in
-	// between, so the save path has to resolve against what the client was told.
-	m_sentGemOrder.clear();
-	m_sentGemOrder.reserve(m_revealedGems.size());
+	// Record every position we have ever advertised, append-only. Rebuilding this list per
+	// window was not enough: destroyGem shrinks m_revealedGems and immediately sends a new
+	// window, so a position the client still holds from an earlier one (e.g. 7 of 8 after
+	// two dismantles) fell outside it and reached getGem() as an out-of-range index.
 	for (const auto &gem : m_revealedGems) {
-		m_sentGemOrder.emplace_back(gem.uuid);
+		if (std::ranges::find(m_sentGemOrder, gem.uuid) == m_sentGemOrder.end()) {
+			m_sentGemOrder.emplace_back(gem.uuid);
+		}
 	}
 
 	addGems(msg);
@@ -1963,10 +1973,10 @@ void PlayerWheel::saveSlotPointsOnPressSaveButton(NetworkMessage &msg) {
 			removeActiveGem(affinity);
 			continue;
 		}
-		const uint16_t resolvedIndex = resolveClientGemIndex(gemIndex);
+		const uint16_t resolvedIndex = resolveClientGemIndex(gemIndex, affinity);
 		if (resolvedIndex == 0xFFFF) {
-			// That gem was dismantled after the window the client is answering from, so
-			// the vessel is empty now.
+			// The gem it refers to is gone (dismantled since that window), so the vessel is
+			// empty now. This also drops a dismantled gem that was still socketed.
 			removeActiveGem(affinity);
 			continue;
 		}

@@ -426,10 +426,12 @@ public:
 	PlayerWheelGem &getGem(uint16_t index);
 	PlayerWheelGem &getGem(const std::string &uuid);
 	uint16_t getGemIndex(const std::string &uuid) const;
-	/// Maps a gem position the client sent back (it is relative to the last wheel window
-	/// it received) onto the current position in m_revealedGems. Returns 0xFFFF when that
-	/// gem no longer exists, e.g. it was dismantled after that window was sent.
-	uint16_t resolveClientGemIndex(uint16_t clientIndex) const;
+	/// Maps a gem position the client sent back onto the current position in m_revealedGems.
+	/// The value can come from any wheel window the client has received, and destroyGem
+	/// renumbers the list in between, so both numberings are tried and the vessel's affinity
+	/// decides. Returns 0xFFFF when no gem of that affinity can be identified (the gem was
+	/// dismantled since, or the reference is too stale to resolve).
+	uint16_t resolveClientGemIndex(uint16_t clientIndex, WheelGemAffinity_t vesselAffinity) const;
 	void revealGem(WheelGemQuality_t quality);
 	/// Emit CIP SpellDataModification (S 0x60) for current wheel spell grades.
 	void sendSpellDataModifications() const;
@@ -512,9 +514,9 @@ private:
 	std::array<PlayerWheelGem, 4> m_activeGems;
 	std::vector<PlayerWheelGem> m_revealedGems;
 	std::vector<PlayerWheelGem> m_destroyedGems;
-	// Gem uuids in the order the last wheel window advertised them. destroyGem renumbers
-	// m_revealedGems, but an already-open Gem Atelier keeps the old positions, so saves
-	// have to be resolved against what the client was actually told.
+	// Every gem uuid this session has ever advertised, in first-advertised order; entries
+	// are never moved or dropped, so a position the client was given once keeps meaning the
+	// same gem even after destroyGem renumbers m_revealedGems under an open Gem Atelier.
 	std::vector<std::string> m_sentGemOrder;
 
 	float m_harmonySanctuary = 1.0f;
