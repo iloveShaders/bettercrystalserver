@@ -364,6 +364,15 @@ ReturnValue Actions::internalUseItem(const std::shared_ptr<Player> &player, cons
 			openContainer = reward;
 		}
 
+		// An actual reward bag sitting in the reward chest. The proxy branch above only covers the
+		// corpse-side container, which it identifies by getReward() being null, so a bag whose loot
+		// had already been taken fell straight through to the generic open below and showed a blank
+		// window. Refuse it with the same message an already-looted corpse gives. With autoloot the
+		// bag is emptied the moment it is created, so this is the common case rather than the edge.
+		if (const auto &openedReward = container->getReward(); openedReward && openedReward->empty()) {
+			return RETURNVALUE_REWARDCONTAINERISEMPTY;
+		}
+
 		const uint32_t corpseOwner = container->getCorpseOwner();
 		if (container->isRewardCorpse()) {
 			// only players who participated in the fight can open the corpse
